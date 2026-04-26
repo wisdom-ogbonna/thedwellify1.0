@@ -1,8 +1,10 @@
 import { Stack, useRouter, useSegments } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { useAuth, AuthProvider } from "../context/AuthContext";
 import * as Notifications from "expo-notifications";
+import "../global.css";
+
 /* =========================
    APP LAYOUT
 ========================= */
