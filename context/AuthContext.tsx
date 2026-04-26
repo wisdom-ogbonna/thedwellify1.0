@@ -4,7 +4,11 @@ import { API } from "../services/api";
 
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "../config/firebase";
-
+import * as Location from "expo-location";
+import {
+  startLocationTracking,
+  stopLocationTracking,
+} from "../services/locationTracker";
 /* =========================
    TYPES
 ========================= */
@@ -160,25 +164,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   /* =========================
    ONLINE / OFFLINE
 ========================= */
-  const goOnline = async () => {
-    try {
-      await API.post("/location/online");
-      setIsOnline(true);
-      await AsyncStorage.setItem("isOnline", "true");
-    } catch (error) {
-      console.log("Go online error:", error);
-    }
-  };
+const goOnline = async () => {
+  try {
+    // ✅ STEP 0: CHECK / REQUEST PERMISSION FIRST
+    let { status } = await Location.getForegroundPermissionsAsync();
 
-  const goOffline = async () => {
-    try {
-      await API.post("/location/offline");
-      setIsOnline(false);
-      await AsyncStorage.setItem("isOnline", "false");
-    } catch (error) {
-      console.log("Go offline error:", error);
+    if (status !== "granted") {
+      const res = await Location.requestForegroundPermissionsAsync();
+      status = res.status;
     }
-  };
+
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission required",
+        "Enable location access to go online"
+      );
+      return; // ⛔ STOP execution here
+    }
+
+    // ✅ STEP 1: GET LOCATION (now safe)
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+
+    const lat = loc.coords.latitude;
+    const lng = loc.coords.longitude;
+
+    console.log("📍 Initial location:", lat, lng);
+
+    // ✅ STEP 2: GO ONLINE FIRST
+    await API.post("/location/online");
+
+    // ✅ STEP 3: SEND FIRST LOCATION
+    await API.post("/location/update", {
+      lat,
+      lng,
+      load: 0,
+      rating: 5,
+    });
+
+    // ✅ STEP 4: START TRACKING
+    await startLocationTracking();
+
+    setIsOnline(true);
+    await AsyncStorage.setItem("isOnline", "true");
+
+    console.log("✅ Agent is now online");
+  } catch (error: any) {
+    console.log("❌ Go online error:", error?.response?.data || error);
+  }
+};
+
+const goOffline = async () => {
+  try {
+    // ✅ stop tracking FIRST
+    stopLocationTracking();
+
+    await API.post("/location/offline");
+
+    setIsOnline(false);
+    await AsyncStorage.setItem("isOnline", "false");
+
+  } catch (error) {
+    console.log("Go offline error:", error);
+  }
+};
   /* =========================
      LOGOUT
   ========================= */

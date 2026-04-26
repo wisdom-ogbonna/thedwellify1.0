@@ -2,16 +2,48 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { useAuth, AuthProvider } from "../context/AuthContext";
-
+import * as Notifications from "expo-notifications";
 /* =========================
    APP LAYOUT
 ========================= */
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true, // ✅ REQUIRED (iOS foreground popup)
+    shouldShowList: true, // ✅ shows in notification center
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
 function AppLayout() {
   const { user, role, isVerified, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
-
   const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data;
+
+        console.log("🔔 Notification tapped:", data);
+
+        router.push({
+          pathname: "/(agent)/requests",
+          params: {
+            requestId: String(data.requestId),
+            agentId: String(data.agentId),
+            propertyType: String(data.propertyType),
+            lat: String(data.lat),
+            lng: String(data.lng),
+          },
+        });
+      }
+    );
+
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);
@@ -93,12 +125,12 @@ function AppLayout() {
         return;
       }
     }
-
   }, [isMounted, user, role, isVerified, loading, segments, router]);
 
   /* =========================
      UI
   ========================= */
+
   return (
     <>
       <Stack screenOptions={{ headerShown: false }} />

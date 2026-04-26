@@ -2,124 +2,76 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
-  ActivityIndicator,
-  ScrollView,
-  RefreshControl,
-  Pressable,
-  Alert,
   StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl,
+  ScrollView,
+  Alert,
 } from "react-native";
-import { useAuth } from "../../context/AuthContext";
+
 import { API } from "../../services/api";
+import { registerForPushNotificationsAsync } from "../../services/notifications";
 
-type AgentProfile = {
-  name: string;
-  email: string;
-  phone?: string;
-  address: string;
-  agencyName?: string;
-  licenseId?: string;
-  verified: boolean;
-};
-
-export default function ProfileScreen() {
-  const { logout } = useAuth();
-
-  const [profile, setProfile] = useState<AgentProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function AgentDashboard() {
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
-  /* =========================
-     FETCH PROFILE
-  ========================= */
-  const fetchProfile = async () => {
+  // 🔥 SEND TOKEN TO BACKEND
+  const sendTokenToBackend = async () => {
     try {
-      const res = await API.get("/agent/profile");
+      setLoading(true);
 
-      setProfile(res.data);
+      const pushData = await registerForPushNotificationsAsync();
+
+      if (!pushData) {
+        setStatus("Failed to get push token");
+        return;
+      }
+
+      const payload: any = {
+        platform: pushData.platform,
+      };
+
+      if (pushData.platform === "ios") {
+        payload.expoPushToken = pushData.token;
+      } else {
+        payload.fcmToken = pushData.token;
+      }
+
+      console.log("Sending payload:", payload);
+
+      const res = await API.post("/notifications/agent", payload);
+
+      console.log("Response:", res.data);
+
+      setStatus("✅ Push token saved successfully");
     } catch (error: any) {
-      const status = error?.response?.status;
-
-      console.log("Profile error:", error?.response || error);
-
-      // 🔐 Invalid session
-      if (status === 401) {
-        await logout();
-        return;
-      }
-
-      // 👤 Profile not found
-      if (status === 404) {
-        Alert.alert("Error", "Profile not found. Please complete setup.");
-        return;
-      }
+      console.log("Error:", error?.response?.data || error.message);
+      setStatus("❌ Failed to save token");
 
       Alert.alert(
         "Error",
-        error?.response?.data?.error || "Failed to load profile"
+        error?.response?.data?.error || "Something went wrong"
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  /* =========================
-     INITIAL LOAD
-  ========================= */
+  // 🔥 INITIAL LOAD
   useEffect(() => {
-    fetchProfile();
+    sendTokenToBackend();
   }, []);
 
-  /* =========================
-     PULL TO REFRESH
-  ========================= */
-  const onRefresh = useCallback(() => {
+  // 🔥 PULL TO REFRESH
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    fetchProfile();
+    await sendTokenToBackend();
+    setRefreshing(false);
   }, []);
 
-  /* =========================
-     LOGOUT
-  ========================= */
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
-  };
-
-  /* =========================
-     LOADING STATE
-  ========================= */
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  /* =========================
-     EMPTY STATE
-  ========================= */
-  if (!profile) {
-    return (
-      <View style={styles.center}>
-        <Text>No profile data available</Text>
-      </View>
-    );
-  }
-
-  /* =========================
-     UI
-  ========================= */
   return (
     <ScrollView
       contentContainerStyle={styles.container}
@@ -127,115 +79,65 @@ export default function ProfileScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.name}>{profile.name}</Text>
-        <Text style={styles.email}>{profile.email}</Text>
+      <Text style={styles.title}>Agent Dashboard</Text>
 
-        <Text
-          style={[
-            styles.badge,
-            profile.verified ? styles.verified : styles.pending,
-          ]}
-        >
-          {profile.verified ? "Verified" : "Pending Verification"}
-        </Text>
-      </View>
-
-      {/* DETAILS */}
       <View style={styles.card}>
-        <Text style={styles.label}>Phone</Text>
-        <Text style={styles.value}>{profile.phone || "N/A"}</Text>
+        <Text style={styles.label}>Notification Status</Text>
 
-        <Text style={styles.label}>Address</Text>
-        <Text style={styles.value}>{profile.address}</Text>
-
-        <Text style={styles.label}>Agency Name</Text>
-        <Text style={styles.value}>
-          {profile.agencyName || "Not provided"}
-        </Text>
-
-        <Text style={styles.label}>License ID</Text>
-        <Text style={styles.value}>
-          {profile.licenseId || "Not provided"}
-        </Text>
+        {loading ? (
+          <ActivityIndicator size="large" />
+        ) : (
+          <Text style={styles.status}>
+            {status || "Initializing..."}
+          </Text>
+        )}
       </View>
 
-      {/* LOGOUT */}
-      <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </Pressable>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={sendTokenToBackend}
+      >
+        <Text style={styles.buttonText}>Retry / Update Token</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
-/* =========================
-   STYLES
-========================= */
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#f5f7fb",
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  header: {
-    marginBottom: 25,
-  },
-  name: {
+  title: {
     fontSize: 24,
-    fontWeight: "800",
-  },
-  email: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  badge: {
-    marginTop: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  verified: {
-    backgroundColor: "#DCFCE7",
-    color: "#166534",
-  },
-  pending: {
-    backgroundColor: "#FEF3C7",
-    color: "#92400E",
+    fontWeight: "bold",
+    marginBottom: 20,
   },
   card: {
-    backgroundColor: "#F9FAFB",
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 30,
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    elevation: 3,
   },
   label: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 10,
   },
-  value: {
-    fontSize: 15,
+  status: {
+    fontSize: 16,
     fontWeight: "600",
-    marginTop: 2,
   },
-  logoutBtn: {
-    backgroundColor: "#000",
-    padding: 16,
-    borderRadius: 14,
+  button: {
+    backgroundColor: "#007bff",
+    padding: 15,
+    borderRadius: 10,
     alignItems: "center",
   },
-  logoutText: {
+  buttonText: {
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "bold",
   },
 });

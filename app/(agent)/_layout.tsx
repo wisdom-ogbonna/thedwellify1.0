@@ -23,6 +23,15 @@ export default function AgentLayout() {
           ),
         }}
       />
+           <Tabs.Screen
+        name="products"
+        options={{
+          title: "products",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      /> 
 
 
     </Tabs>
