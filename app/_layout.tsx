@@ -14,9 +14,23 @@ import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import "../global.css";
 
+
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true, // ✅ REQUIRED (iOS foreground popup)
+    shouldShowList: true, // ✅ shows in notification center
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 /* =========================
    APP CONTENT
 ========================= */
+
+
+
+
 function AppContent() {
   const { colors } = useTheme();
   const { user, role, isVerified, loading } = useAuth();
