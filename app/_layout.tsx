@@ -5,7 +5,7 @@ import {
   useTheme,
 } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
-import { Stack, useRouter, useSegments, Slot } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import React, { useState, useEffect } from "react";
 import NetInfo from "@react-native-community/netinfo";
 import OfflineModal from "./(utilities)/offlineModal";
@@ -27,8 +27,9 @@ function AppContent() {
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
+        // Using absolute path
         router.push({
-          pathname: "./(utilities)/requests",
+          pathname: "/(utilities)/requests",
           params: {
             requestId: String(data.requestId),
             agentId: String(data.agentId),
@@ -48,6 +49,7 @@ function AppContent() {
     const inAuthGroup = segments[0] === "(auth)";
     const inAgentGroup = segments[0] === "(agent)";
     const inClientGroup = segments[0] === "(client)";
+    const inUtilitiesGroup = segments[0] === "(utilities)"; // Added this
     const currentScreen = segments[1];
 
     if (!user && !inAuthGroup) {
@@ -60,10 +62,11 @@ function AppContent() {
       if (role === "client" && currentScreen !== "clientsetup")
         router.replace("/(auth)/clientsetup");
     } else if (user && role && isVerified) {
-      if (role === "agent" && !inAgentGroup)
-        router.replace("/(agent)/dashboard");
-      if (role === "client" && !inClientGroup)
-        router.replace("/(client)/dashboard");
+      if (!inAgentGroup && !inClientGroup && !inUtilitiesGroup) {
+        router.replace(
+          role === "agent" ? "/(agent)/dashboard" : "/(client)/dashboard",
+        );
+      }
     }
   }, [user, role, isVerified, loading, segments, router]);
 

@@ -49,9 +49,8 @@ export default function RequestDetailsScreen() {
         <Pressable
           onPress={() => router.replace("/(agent)/dashboard")}
           className="p-2 rounded-full"
-          style={{ backgroundColor: colors.border }}
         >
-          <X size={20} color={colors.text} />
+          <X size={30} color={colors.text} weight="bold" />
         </Pressable>
       </View>
 
@@ -109,7 +108,7 @@ export default function RequestDetailsScreen() {
                 "/(agent)/dashboard",
               )
             }
-            className="flex-1 py-5 rounded-full items-center"
+            className="flex-1 py-5 rounded-full items-center justify-center"
             style={{ backgroundColor: colors.primary }}
           >
             {loading ? (

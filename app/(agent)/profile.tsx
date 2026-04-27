@@ -13,14 +13,14 @@ import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
-import { useRouter } from "expo-router"; // Added router
-import { ClipboardText } from "phosphor-react-native"; // Added icon
+import { useRouter } from "expo-router";
+import { ArrowRight, ClipboardText } from "phosphor-react-native";
 
 export default function ProfileScreen() {
   const { logout, isOnline, goOnline, goOffline } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -110,7 +110,7 @@ export default function ProfileScreen() {
 
       {/* Requests Navigation Card (High visibility) */}
       <Pressable
-        onPress={() => router.push("../(utilities)/requests")}
+        onPress={() => router.push({ pathname: "/(utilities)/requests" })}
         className="border-2 rounded-3xl p-6 mb-8 flex-row items-center justify-between"
         style={{
           borderColor: colors.primary,
@@ -127,7 +127,7 @@ export default function ProfileScreen() {
           className="text-xs font-bold uppercase opacity-60"
           style={{ color: colors.text }}
         >
-          →
+          <ArrowRight size={16} color={colors.text} />
         </Text>
       </Pressable>
 

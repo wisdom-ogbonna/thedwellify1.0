@@ -14,7 +14,7 @@ export default function HistoryScreen() {
 
   const fetchHistory = async () => {
     try {
-      const res = await API.get("/client/history");
+      const res = await API.get("api/client/history");
       setHistory(res.data);
     } catch (e) {
       console.error(e);

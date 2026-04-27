@@ -37,21 +37,21 @@ export default function ClientLayout() {
           ),
         }}
       />
+        <Tabs.Screen
+          name="history"
+          options={{
+            title: "History",
+            tabBarIcon: ({ color, focused }) => (
+              <Clock size={24} color={color} weight={focused ? "bold" : "thin"} />
+            ),
+          }}
+        />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
             <User size={24} color={color} weight={focused ? "bold" : "thin"} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: "History",
-          tabBarIcon: ({ color, focused }) => (
-            <Clock size={24} color={color} weight={focused ? "bold" : "thin"} />
           ),
         }}
       />
