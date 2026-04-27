@@ -105,7 +105,7 @@ export default function RequestDetailsScreen() {
               handleAction(
                 "/client/request/accept",
                 "Request accepted",
-                "/(agent)/dashboard",
+                "/(utilities)/inspection?requestId=" + requestId,
               )
             }
             className="flex-1 py-5 rounded-full items-center justify-center"

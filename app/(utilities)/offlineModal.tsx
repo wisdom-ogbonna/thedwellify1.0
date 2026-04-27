@@ -1,14 +1,22 @@
-import React from "react";
-import { Modal, View, Text, Pressable, BackHandler } from "react-native";
 import { useTheme } from "@react-navigation/native";
-
+import React from "react";
+import {
+  ActivityIndicator,
+  BackHandler,
+  Modal,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 
 export default function OfflineModal({
   visible,
   onRetry,
+  isLoading = false,
 }: {
   visible: boolean;
   onRetry: () => void;
+  isLoading?: boolean;
 }) {
   const { colors } = useTheme();
 
@@ -33,10 +41,15 @@ export default function OfflineModal({
             onPress={onRetry}
             className="py-4 rounded-full items-center mb-4"
             style={{ backgroundColor: colors.primary }}
+            disabled={isLoading}
           >
-            <Text className="font-bold text-white uppercase tracking-widest">
-              Retry
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator size={20} color="#FFFFFF" />
+            ) : (
+              <Text className="font-bold text-white uppercase tracking-widest">
+                Retry
+              </Text>
+            )}
           </Pressable>
 
           <Pressable
