@@ -1,299 +1,129 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
   ActivityIndicator,
-  ScrollView,
-  RefreshControl,
   Pressable,
-  Alert,
-  StyleSheet,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
-
-type ClientProfile = {
-  name: string;
-  email: string;
-  verified: boolean;
-};
+import { useTheme } from "@react-navigation/native";
 
 export default function ClientDashboard() {
   const { logout } = useAuth();
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets(); // 1. Use insets instead of SafeAreaView wrapper
 
-  const [profile, setProfile] = useState<ClientProfile | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  /* =========================
-     FETCH PROFILE
-  ========================= */
   const fetchProfile = async () => {
     try {
       const res = await API.get("/client/profile");
-
       setProfile(res.data);
-    } catch (error: any) {
-      const status = error?.response?.status;
-
-      console.log("Dashboard error:", error?.response || error);
-
-      if (status === 401) {
-        await logout();
-        return;
-      }
-
-      if (status === 404) {
-        Alert.alert("Error", "Profile not found. Please complete setup.");
-        return;
-      }
-
-      Alert.alert(
-        "Error",
-        error?.response?.data?.error || "Failed to load dashboard"
-      );
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  /* =========================
-     INITIAL LOAD
-  ========================= */
   useEffect(() => {
     fetchProfile();
   }, []);
 
-  /* =========================
-     REFRESH
-  ========================= */
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchProfile();
-  }, []);
-
-  /* =========================
-     LOGOUT
-  ========================= */
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
-  };
-
-  /* =========================
-     LOADING
-  ========================= */
-  if (loading) {
+  if (loading)
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View
+        className="flex-1 justify-center"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ActivityIndicator color={colors.text} />
       </View>
     );
-  }
 
-  /* =========================
-     EMPTY
-  ========================= */
-  if (!profile) {
-    return (
-      <View style={styles.center}>
-        <Text>No dashboard data</Text>
-      </View>
-    );
-  }
-
-  /* =========================
-     UI
-  ========================= */
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+      // 2. Apply insets here to prevent bleeding
+      contentContainerStyle={{
+        paddingTop: insets.top + 32,
+        paddingBottom: insets.bottom + 32,
+        paddingHorizontal: 32,
+      }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl
+          refreshing={false}
+          onRefresh={fetchProfile}
+          tintColor={colors.primary}
+        />
       }
     >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.welcome}>Welcome 👋</Text>
-        <Text style={styles.name}>{profile.name}</Text>
-
+      {/* Header */}
+      <View className="mb-10">
         <Text
-          style={[
-            styles.badge,
-            profile.verified ? styles.verified : styles.pending,
-          ]}
+          className="text-sm font-bold uppercase tracking-widest opacity-40"
+          style={{ color: colors.text }}
         >
-          {profile.verified ? "Verified" : "Unverified"}
+          Dashboard
+        </Text>
+        <Text
+          className="text-5xl font-black tracking-tighter mt-2"
+          style={{ color: colors.text }}
+        >
+          {profile.name.split(" ")[0]}.
         </Text>
       </View>
 
-      {/* QUICK ACTIONS */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-
-        <View style={styles.grid}>
-          <Pressable style={styles.card}>
-            <Text style={styles.cardTitle}>Search Properties</Text>
-            <Text style={styles.cardDesc}>
-              Find houses, apartments & more
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.card}>
-            <Text style={styles.cardTitle}>Saved Listings</Text>
-            <Text style={styles.cardDesc}>
-              View your saved properties
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.card}>
-            <Text style={styles.cardTitle}>Contact Agents</Text>
-            <Text style={styles.cardDesc}>
-              Chat with verified agents
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.card}>
-            <Text style={styles.cardTitle}>My Requests</Text>
-            <Text style={styles.cardDesc}>
-              Track your inquiries
-            </Text>
-          </Pressable>
-        </View>
+      {/* Grid Actions */}
+      <View className="flex-row flex-wrap justify-between">
+        {[
+          { title: "Properties", desc: "Find home" },
+          { title: "Saved", desc: "Shortlist" },
+          { title: "Agents", desc: "Chat" },
+          { title: "Requests", desc: "Track" },
+        ].map((item, i) => (
+          <View key={i} className="w-[48%] mb-4">
+            <Pressable
+              className="h-28 p-5 rounded-3xl border-2 justify-center"
+              style={{ borderColor: colors.border }}
+            >
+              <Text
+                className="font-bold text-base"
+                style={{ color: colors.text }}
+              >
+                {item.title}
+              </Text>
+              <Text
+                className="opacity-40 text-xs font-medium mt-1"
+                style={{ color: colors.text }}
+              >
+                {item.desc}
+              </Text>
+            </Pressable>
+          </View>
+        ))}
       </View>
 
-      {/* ACCOUNT */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-
-        <View style={styles.accountCard}>
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{profile.email}</Text>
-        </View>
+      {/* Account Info */}
+      <View
+        className="mt-8 border-t-2 pt-8"
+        style={{ borderColor: colors.border }}
+      >
+        <Text
+          className="text-xs font-bold uppercase tracking-widest opacity-30 mb-4"
+          style={{ color: colors.text }}
+        >
+          Account
+        </Text>
+        <Text className="font-semibold text-lg" style={{ color: colors.text }}>
+          {profile.email}
+        </Text>
       </View>
-
-      {/* LOGOUT */}
-      <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </Pressable>
     </ScrollView>
   );
 }
-
-/* =========================
-   STYLES
-========================= */
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: "#F9FAFB",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  /* HEADER */
-  header: {
-    marginBottom: 25,
-  },
-  welcome: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  badge: {
-    marginTop: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  verified: {
-    backgroundColor: "#DCFCE7",
-    color: "#166534",
-  },
-  pending: {
-    backgroundColor: "#FEF3C7",
-    color: "#92400E",
-  },
-
-  /* SECTIONS */
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-
-  /* GRID */
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  card: {
-    width: "48%",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  cardDesc: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 6,
-  },
-
-  /* ACCOUNT */
-  accountCard: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 14,
-  },
-  label: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-
-  /* LOGOUT */
-  logoutBtn: {
-    backgroundColor: "#000",
-    padding: 16,
-    borderRadius: 14,
-    alignItems: "center",
-  },
-  logoutText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-});

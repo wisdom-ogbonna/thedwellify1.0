@@ -2,27 +2,23 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ActivityIndicator,
-  TouchableOpacity,
-  RefreshControl,
+  Pressable,
   ScrollView,
-  Alert,
+  RefreshControl,
 } from "react-native";
-
+import { useTheme } from "@react-navigation/native";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notifications";
 
 export default function AgentDashboard() {
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
-  // 🔥 SEND TOKEN TO BACKEND
   const sendTokenToBackend = async () => {
     try {
       setLoading(true);
-
       const pushData = await registerForPushNotificationsAsync();
 
       if (!pushData) {
@@ -30,114 +26,89 @@ export default function AgentDashboard() {
         return;
       }
 
-      const payload: any = {
-        platform: pushData.platform,
-      };
+      const payload: any = { platform: pushData.platform };
+      pushData.platform === "ios"
+        ? (payload.expoPushToken = pushData.token)
+        : (payload.fcmToken = pushData.token);
 
-      if (pushData.platform === "ios") {
-        payload.expoPushToken = pushData.token;
-      } else {
-        payload.fcmToken = pushData.token;
-      }
-
-      console.log("Sending payload:", payload);
-
-      const res = await API.post("/notifications/agent", payload);
-
-      console.log("Response:", res.data);
-
-      setStatus("✅ Push token saved successfully");
-    } catch (error: any) {
-      console.log("Error:", error?.response?.data || error.message);
-      setStatus("❌ Failed to save token");
-
-      Alert.alert(
-        "Error",
-        error?.response?.data?.error || "Something went wrong"
-      );
+      await API.post("/notifications/agent", payload);
+      setStatus("Token Synced");
+    } catch (error) {
+      setStatus("Sync Failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔥 INITIAL LOAD
   useEffect(() => {
     sendTokenToBackend();
   }, []);
 
-  // 🔥 PULL TO REFRESH
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await sendTokenToBackend();
-    setRefreshing(false);
-  }, []);
-
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+      contentContainerStyle={{ padding: 32, paddingTop: 64 }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={sendTokenToBackend}
+          tintColor={colors.primary}
+        />
       }
     >
-      <Text style={styles.title}>Agent Dashboard</Text>
+      {/* Header */}
+      <View className="mb-12">
+        <Text
+          className="text-xs font-bold uppercase tracking-widest opacity-40"
+          style={{ color: colors.text }}
+        >
+          System
+        </Text>
+        <Text
+          className="text-5xl font-black tracking-tighter mt-2"
+          style={{ color: colors.text }}
+        >
+          Status.
+        </Text>
+      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Notification Status</Text>
-
+      {/* Notification Status */}
+      <View
+        className="border-2 rounded-3xl p-8"
+        style={{ borderColor: colors.border }}
+      >
+        <Text
+          className="text-xs font-bold uppercase tracking-widest opacity-40 mb-4"
+          style={{ color: colors.text }}
+        >
+          Push Notification
+        </Text>
         {loading ? (
-          <ActivityIndicator size="large" />
+          <ActivityIndicator color={colors.primary} />
         ) : (
-          <Text style={styles.status}>
-            {status || "Initializing..."}
+          <Text
+            className="text-xl font-semibold"
+            style={{ color: colors.text }}
+          >
+            {status}
           </Text>
         )}
       </View>
 
-      <TouchableOpacity
-        style={styles.button}
+      {/* Manual Sync Button */}
+      <Pressable
         onPress={sendTokenToBackend}
+        className="mt-8 h-16 border-2 rounded-full items-center justify-center"
+        style={{ borderColor: colors.border }}
       >
-        <Text style={styles.buttonText}>Retry / Update Token</Text>
-      </TouchableOpacity>
+        <Text
+          className="font-bold uppercase tracking-widest text-sm"
+          style={{ color: colors.text }}
+        >
+          Sync Token
+        </Text>
+      </Pressable>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: "#f5f7fb",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  card: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    elevation: 3,
-  },
-  label: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 10,
-  },
-  status: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  button: {
-    backgroundColor: "#007bff",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-});

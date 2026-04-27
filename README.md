@@ -48,3 +48,10 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+ios build id
+0cc23b1e-3b4d-44bf-8c76-c4a6819056b3
+
+android build id
+af0536c7-3a54-4b48-9746-7db20a90f837

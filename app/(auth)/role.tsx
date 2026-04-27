@@ -1,145 +1,109 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-} from "react-native";
+import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
 import { auth } from "../../config/firebase";
+import { useTheme } from "@react-navigation/native";
 
 export default function RoleScreen() {
   const { setUserRole, checkProfile } = useAuth();
+  const { colors } = useTheme();
   const [loading, setLoading] = useState<"agent" | "client" | null>(null);
 
   const selectRole = async (role: "agent" | "client") => {
     try {
       setLoading(role);
+      const res = await API.post("/role/assign", { role });
+      if (!res?.data?.success) throw new Error("Role assignment failed");
 
-      // 🔐 1. Call backend (UID comes from token automatically)
-      const res = await API.post("/role/assign", {
-        role,
-      });
-
-      if (!res?.data?.success) {
-        throw new Error("Role assignment failed");
-      }
-
-      // 🔥 2. Refresh Firebase token to get updated claims
       const firebaseUser = auth.currentUser;
+      if (!firebaseUser) throw new Error("Session lost.");
 
-      if (!firebaseUser) {
-        throw new Error("User session lost. Please login again.");
-      }
-
-      await firebaseUser.getIdToken(true); // 🔥 FORCE REFRESH
-
+      await firebaseUser.getIdToken(true);
       const tokenResult = await firebaseUser.getIdTokenResult();
       const roleFromClaims = tokenResult.claims.role as
         | "agent"
         | "client"
         | undefined;
 
-      if (!roleFromClaims) {
-        throw new Error("Role not found in token. Try again.");
-      }
+      if (!roleFromClaims) throw new Error("Role not found in token.");
 
-      // 🔥 3. Sync role to app state
       await setUserRole(roleFromClaims);
-
-      // 🔍 4. Check profile (non-blocking is okay too)
       await checkProfile(roleFromClaims);
-
-      Alert.alert("Success", "Role assigned successfully");
     } catch (err: any) {
-      console.log("❌ ROLE ERROR:", err?.response?.data || err.message);
-
-      Alert.alert(
-        "Error",
-        err?.response?.data?.error ||
-          err.message ||
-          "Role assignment failed"
-      );
+      Alert.alert("Error", err?.response?.data?.error || "Assignment failed");
     } finally {
       setLoading(null);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Select Your Role</Text>
+    <View
+      className="flex-1 px-8 justify-center"
+      style={{ backgroundColor: colors.background }}
+    >
+      <View className="mb-12">
+        <Text
+          className="text-4xl font-black tracking-tighter"
+          style={{ color: colors.text }}
+        >
+          Choose your path.
+        </Text>
+        <Text
+          className="text-lg mt-2 opacity-60"
+          style={{ color: colors.text }}
+        >
+          Are you looking to list properties or find your dream home?
+        </Text>
+      </View>
 
-      {/* Agent */}
+      {/* Agent Card */}
       <Pressable
-        style={[
-          styles.btn,
-          loading === "agent" && styles.disabled,
-        ]}
         onPress={() => selectRole("agent")}
         disabled={!!loading}
+        className="h-32 rounded-3xl mb-4 p-6 justify-center border-2"
+        style={{
+          borderColor: colors.primary,
+          backgroundColor: loading === "agent" ? colors.border : "transparent",
+        }}
       >
         {loading === "agent" ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.primary} />
         ) : (
-          <Text style={styles.txt}>I am an Agent</Text>
+          <>
+            <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+              Agent
+            </Text>
+            <Text className="opacity-50" style={{ color: colors.text }}>
+              Manage and list properties
+            </Text>
+          </>
         )}
       </Pressable>
 
-      {/* Client */}
+      {/* Client Card */}
       <Pressable
-        style={[
-          styles.btn,
-          styles.client,
-          loading === "client" && styles.disabled,
-        ]}
         onPress={() => selectRole("client")}
         disabled={!!loading}
+        className="h-32 rounded-3xl p-6 justify-center border-2"
+        style={{
+          borderColor: colors.primary,
+          backgroundColor: loading === "client" ? colors.border : "transparent",
+        }}
       >
         {loading === "client" ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.primary} />
         ) : (
-          <Text style={styles.txt}>I am a Client</Text>
+          <>
+            <Text className="text-2xl font-bold" style={{ color: colors.text }}>
+              Client
+            </Text>
+            <Text className="opacity-50" style={{ color: colors.text }}>
+              Find your next home
+            </Text>
+          </>
         )}
       </Pressable>
     </View>
   );
 }
-
-/* =========================
-   STYLES
-========================= */
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 30,
-  },
-  btn: {
-    backgroundColor: "#000",
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 15,
-    alignItems: "center",
-  },
-  client: {
-    backgroundColor: "#333",
-  },
-  disabled: {
-    opacity: 0.7,
-  },
-  txt: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-});

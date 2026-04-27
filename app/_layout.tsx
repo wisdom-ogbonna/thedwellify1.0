@@ -1,38 +1,34 @@
-import { Stack, useRouter, useSegments } from "expo-router";
-import { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
-import { useAuth, AuthProvider } from "../context/AuthContext";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+  useTheme,
+} from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
+import { Stack, useRouter, useSegments, Slot } from "expo-router";
+import React, { useState, useEffect } from "react";
+import NetInfo from "@react-native-community/netinfo";
+import OfflineModal from "./(utilities)/offlineModal";
+import { ActivityIndicator, useColorScheme, View } from "react-native";
+import { Colors } from "../constants/theme";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import "../global.css";
 
 /* =========================
-   APP LAYOUT
+   APP CONTENT
 ========================= */
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true, // ✅ REQUIRED (iOS foreground popup)
-    shouldShowList: true, // ✅ shows in notification center
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
-
-function AppLayout() {
+function AppContent() {
+  const { colors } = useTheme();
   const { user, role, isVerified, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
-
-        console.log("🔔 Notification tapped:", data);
-
         router.push({
-          pathname: "/(agent)/requests",
+          pathname: "./(utilities)/requests",
           params: {
             requestId: String(data.requestId),
             agentId: String(data.agentId),
@@ -41,129 +37,91 @@ function AppLayout() {
             lng: String(data.lng),
           },
         });
-      }
+      },
     );
-
     return () => sub.remove();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  /* =========================
-     ROUTE GUARD
-  ========================= */
-  useEffect(() => {
-    if (!isMounted || loading) return;
-    if (!Array.isArray(segments) || segments.length === 0) return;
+    if (loading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
     const inAgentGroup = segments[0] === "(agent)";
     const inClientGroup = segments[0] === "(client)";
+    const currentScreen = segments[1];
 
-    const currentScreen = segments[1]; // safe access
-
-    /* =========================
-       1. NOT LOGGED IN
-    ========================= */
-    if (!user) {
-      if (!inAuthGroup) {
-        router.replace("/(auth)/phone");
-      }
-      return;
-    }
-
-    /* =========================
-       2. NO ROLE
-    ========================= */
-    if (!role) {
-      if (!(inAuthGroup && currentScreen === "role")) {
-        router.replace("/(auth)/role");
-      }
-      return;
-    }
-
-    /* =========================
-       3. NOT VERIFIED
-    ========================= */
-    if (!isVerified) {
-      if (role === "agent") {
-        if (!(inAgentGroup && currentScreen === "setup")) {
-          router.replace("/(auth)/agentsetup");
-        }
-      } else {
-        if (!(inClientGroup && currentScreen === "setup")) {
-          router.replace("/(auth)/clientsetup");
-        }
-      }
-      return;
-    }
-
-    /* =========================
-       4. VERIFIED USERS
-    ========================= */
-
-    // 🚫 Prevent cross-role access
-    if (role === "agent" && inClientGroup) {
-      router.replace("/(agent)/dashboard");
-      return;
-    }
-
-    if (role === "client" && inAgentGroup) {
-      router.replace("/(client)/dashboard");
-      return;
-    }
-
-    // 🚀 Ensure user lands on dashboard if outside group
-    if (role === "agent") {
-      if (!inAgentGroup) {
+    if (!user && !inAuthGroup) {
+      router.replace("/(auth)/phone");
+    } else if (user && !role && !inAuthGroup) {
+      router.replace("/(auth)/role");
+    } else if (user && role && !isVerified) {
+      if (role === "agent" && currentScreen !== "agentsetup")
+        router.replace("/(auth)/agentsetup");
+      if (role === "client" && currentScreen !== "clientsetup")
+        router.replace("/(auth)/clientsetup");
+    } else if (user && role && isVerified) {
+      if (role === "agent" && !inAgentGroup)
         router.replace("/(agent)/dashboard");
-        return;
-      }
-    } else {
-      if (!inClientGroup) {
+      if (role === "client" && !inClientGroup)
         router.replace("/(client)/dashboard");
-        return;
-      }
     }
-  }, [isMounted, user, role, isVerified, loading, segments, router]);
+  }, [user, role, isVerified, loading, segments, router]);
 
-  /* =========================
-     UI
-  ========================= */
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
-  return (
-    <>
-      <Stack screenOptions={{ headerShown: false }} />
-
-      {(loading || !isMounted) && (
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "#fff", // match your theme if needed
-          }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
-      )}
-    </>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
 
 /* =========================
-   ROOT
+   ROOT LAYOUT
 ========================= */
 export default function RootLayout() {
+  const colorScheme = useColorScheme();
+  const [isConnected, setIsConnected] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected ?? true);
+    });
+    return unsubscribe;
+  }, []);
+
+  const theme = {
+    ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(colorScheme === "dark" ? DarkTheme.colors : DefaultTheme.colors),
+      background:
+        colorScheme === "dark"
+          ? Colors.dark.background
+          : Colors.light.background,
+      text: colorScheme === "dark" ? Colors.dark.text : Colors.light.text,
+      primary: colorScheme === "dark" ? Colors.dark.tint : Colors.light.tint,
+      border: colorScheme === "dark" ? "#333" : "#E5E5E5",
+    },
+  };
+
   return (
-    <AuthProvider>
-      <AppLayout />
-    </AuthProvider>
+    <ThemeProvider value={theme}>
+      <AuthProvider>
+        <OfflineModal
+          visible={!isConnected}
+          onRetry={() => NetInfo.refresh()}
+        />
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

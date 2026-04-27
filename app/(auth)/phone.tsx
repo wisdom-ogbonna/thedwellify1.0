@@ -9,44 +9,56 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import axios from "axios";
+import { useTheme } from "@react-navigation/native";
 
 export default function PhoneScreen() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { colors } = useTheme();
 
-  const isValid = phone.length > 9;
+  // Logic remains consistent
+  const getFormattedNumber = (input: string) => {
+    let clean = input.replace(/\D/g, "");
+    if (clean.length === 11 && clean.startsWith("0"))
+      clean = clean.substring(1);
+    return clean;
+  };
+
+  const processedPhone = getFormattedNumber(phone);
+  const isValid = processedPhone.length === 10;
 
   const sendOTP = async () => {
     if (!isValid) return;
-
     try {
       setLoading(true);
 
+      // 1. Send the request
       const res = await axios.post(
         "https://dwellify-backend-bq39.onrender.com/api/otp/send",
         {
-          phone_number: phone,
-        }
+          phone_number: `+234${processedPhone}`,
+        },
       );
 
       const pinId = res.data?.pin_id;
 
-      if (!pinId) throw new Error("Invalid response");
+      if (!pinId) {
+        throw new Error("Server did not return a pin_id");
+      }
 
       router.push({
         pathname: "/(auth)/otp",
         params: {
-          phone,
-          pinId,
+          phone: `+234${processedPhone}`,
+          pinId: pinId,
         },
       });
     } catch (err: any) {
-      alert(err?.response?.data?.error || err.message);
+      alert(err?.response?.data?.error || "Connection failed");
     } finally {
       setLoading(false);
     }
@@ -54,129 +66,82 @@ export default function PhoneScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.inner}>
-          
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome 👋</Text>
-            <Text style={styles.subtitle}>
-              Enter your phone number to continue
+        <View className="flex-1 px-8 justify-center">
+          {/* Aesthetic Header */}
+          <View className="mb-12">
+            <Text
+              className="text-4xl font-black tracking-tighter"
+              style={{ color: colors.text }}
+            >
+              Find your home.
+            </Text>
+            <Text
+              className="text-lg mt-2 font-medium opacity-60"
+              style={{ color: colors.text }}
+            >
+              Enter your mobile to get started.
             </Text>
           </View>
 
-          {/* Input */}
-          <View style={styles.inputCard}>
-            <Text style={styles.label}>Phone Number</Text>
+          {/* Premium Input Container */}
+          <View
+            className="border-b-2 pb-2 flex-row items-center"
+            style={{ borderColor: isValid ? colors.primary : colors.border }}
+          >
+            <Text
+              className="text-xl font-bold mr-3"
+              style={{ color: colors.text }}
+            >
+              +234
+            </Text>
             <TextInput
-              placeholder="+234 801 234 5678"
+              placeholder="80 1234 5678"
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(t) => setPhone(t.replace(/\D/g, "").slice(0, 11))}
               keyboardType="phone-pad"
-              style={styles.input}
-              placeholderTextColor="#9CA3AF"
+              maxLength={11}
+              className="text-xl font-bold flex-1"
+              style={{ color: colors.text }}
+              placeholderTextColor={colors.border}
             />
           </View>
 
-          {/* Hint */}
-          <Text style={styles.hint}>
-            Use your active number (Nigeria format)
+          <Text
+            className="mt-4 text-xs font-semibold uppercase tracking-widest opacity-40"
+            style={{ color: colors.text }}
+          >
+            Nigeria Coverage
           </Text>
 
-          {/* Button */}
+          {/* Bold Action Button */}
           <Pressable
             onPress={sendOTP}
             disabled={!isValid || loading}
-            style={[
-              styles.button,
-              !isValid ? styles.buttonDisabled : styles.buttonActive,
-            ]}
+            className="mt-12 h-16 rounded-full items-center justify-center shadow-lg"
+            style={{ backgroundColor: !isValid ? colors.border : colors.primary }}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.background} />
             ) : (
-              <Text style={styles.buttonText}>Continue</Text>
+              <Text className="text-white font-bold text-lg">
+                Send Verification
+              </Text>
             )}
           </Pressable>
 
-          {/* Footer */}
-          <Text style={styles.footer}>
-            By continuing, you agree to our Terms & Privacy Policy
+          <Text
+            className="text-center text-[10px] mt-8 opacity-30"
+            style={{ color: colors.text }}
+          >
+            SECURE ACCESS BY DWELLIFY
           </Text>
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  inner: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: "center",
-  },
-  header: {
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#000",
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 16,
-    color: "#6B7280",
-  },
-  inputCard: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginBottom: 6,
-  },
-  input: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  hint: {
-    fontSize: 13,
-    color: "#9CA3AF",
-    marginBottom: 24,
-  },
-  button: {
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  buttonActive: {
-    backgroundColor: "#000",
-  },
-  buttonDisabled: {
-    backgroundColor: "#D1D5DB",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  footer: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginTop: 24,
-  },
-});
