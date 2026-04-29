@@ -1,14 +1,9 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-} from "react-native";
+import BottomSheet, { BottomSheetRefProps } from "@/components/bottom-sheet";
 import * as Location from "expo-location";
+import React, { useEffect, useRef, useState } from "react";
+import { Alert, Dimensions, ScrollView, View } from "react-native";
 import { API } from "../../services/api";
+import ClientEvent from "@/components/client-event";
 
 const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet"];
 
@@ -30,7 +25,7 @@ const getRealAddress = async (lat: number, lng: number) => {
     const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
 
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
     );
 
     const data = await res.json();
@@ -57,12 +52,21 @@ export default function RequestMatchScreen() {
 
   const [agent, setAgent] = useState<Agent | null>(null);
 
+  const ref = useRef<BottomSheetRefProps>(null);
+
+  const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+  const SNAP_25 = -SCREEN_HEIGHT * 0.10;
+  const SNAP_50 = -SCREEN_HEIGHT * 0.59;
+  const SNAP_80 = -SCREEN_HEIGHT * 0.80;
+
   /* =========================
      GET LOCATION
   ========================= */
   useEffect(() => {
     getLocation();
-  }, []);
+    ref.current?.scrollTo(SNAP_50);
+  }, [SNAP_50]);
 
   const getLocation = async () => {
     try {
@@ -92,7 +96,8 @@ export default function RequestMatchScreen() {
       const realAddress = await getRealAddress(latitude, longitude);
       setAddress(realAddress);
     } catch (error) {
-      Alert.alert("Error", "Failed to get location");
+      Alert.alert("Error: ", "Failed to get location");
+      console.error("Error: ", error);
     } finally {
       setLocationLoading(false);
     }
@@ -142,7 +147,7 @@ export default function RequestMatchScreen() {
 
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Something went wrong"
+        error?.response?.data?.message || "Something went wrong",
       );
     } finally {
       setLoading(false);
@@ -153,106 +158,30 @@ export default function RequestMatchScreen() {
      UI
   ========================= */
   return (
-    <View className="flex-1 bg-[#0B0F1A] px-5 pt-6">
+    <View className="flex-1 relative bg-[#0B0F1A]">
       <ScrollView showsVerticalScrollIndicator={false}>
-        
-        {/* TITLE */}
-        <Text className="text-white text-3xl font-bold mb-6">
-          Find Property
-        </Text>
-
-        {/* LOCATION */}
-        <View className="bg-[#121826] p-5 rounded-2xl mb-5">
-          <Text className="text-gray-400 mb-2">Your Location</Text>
-
-          {locationLoading ? (
-            <ActivityIndicator color="#6366F1" />
-          ) : (
-            <>
-              <Text className="text-white font-semibold">
-                {address}
-              </Text>
-
-              {lat && lng && (
-                <Text className="text-gray-500 text-xs mt-1">
-                  {lat.toFixed(4)}, {lng.toFixed(4)}
-                </Text>
-              )}
-            </>
-          )}
-
-          <Pressable onPress={getLocation} className="mt-3">
-            <Text className="text-indigo-400 font-semibold">
-              Refresh Location
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* PROPERTY TYPE */}
-        <View className="bg-[#121826] p-5 rounded-2xl mb-6">
-          <Text className="text-gray-400 mb-3">Property Type</Text>
-
-          <View className="flex-row gap-3">
-            {PROPERTY_TYPES.map((type) => {
-              const active = selectedType === type;
-
-              return (
-                <Pressable
-                  key={type}
-                  onPress={() => setSelectedType(type)}
-                  className={`flex-1 py-3 rounded-xl items-center ${
-                    active ? "bg-indigo-600" : "bg-[#1F2937]"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-semibold ${
-                      active ? "text-white" : "text-gray-300"
-                    }`}
-                  >
-                    {type}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* BUTTON */}
-        <Pressable
-          onPress={handleRequest}
-          disabled={loading}
-          className="bg-indigo-600 py-4 rounded-2xl items-center active:opacity-80"
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white font-bold text-base">
-              Request Match
-            </Text>
-          )}
-        </Pressable>
-
-        {/* AGENT RESULT */}
-        {agent && (
-          <View className="bg-green-900 p-5 rounded-2xl mt-6">
-            <Text className="text-white text-lg font-bold mb-2">
-              Agent Found 🎉
-            </Text>
-
-            <Text className="text-white">Name: {agent.name}</Text>
-            <Text className="text-white">Phone: {agent.phone}</Text>
-            <Text className="text-white">
-              Agency: {agent.agencyName}
-            </Text>
-            <Text className="text-white">
-              Rating: ⭐ {agent.rating}
-            </Text>
-            <Text className="text-white">
-              Distance: {agent.distanceKm} km
-            </Text>
-          </View>
-        )}
-
+        <BottomSheet ref={ref}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 120 }}
+            bounces={false}
+          >
+            <ClientEvent
+              locationLoading={locationLoading}
+              address={address}
+              lat={lat}
+              lng={lng}
+              getLocation={getLocation}
+              PROPERTY_TYPES={PROPERTY_TYPES}
+              selectedType={selectedType}
+              setSelectedType={setSelectedType}
+              handleRequest={handleRequest}
+              loading={loading}
+              setAgent={setAgent}
+              agent={agent}
+            />
+          </ScrollView>
+        </BottomSheet>
       </ScrollView>
     </View>
   );

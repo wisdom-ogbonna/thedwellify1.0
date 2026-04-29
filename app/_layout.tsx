@@ -1,3 +1,4 @@
+import NetInfo from "@react-native-community/netinfo";
 import {
   DarkTheme,
   DefaultTheme,
@@ -6,20 +7,18 @@ import {
 } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
-import React, { useState, useEffect } from "react";
-import NetInfo from "@react-native-community/netinfo";
-import OfflineModal from "./(utilities)/offlineModal";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
-
-
+import OfflineModal from "./(utilities)/offlineModal";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowBanner: true, 
-    shouldShowList: true, 
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -28,9 +27,6 @@ Notifications.setNotificationHandler({
 /* =========================
    APP CONTENT
 ========================= */
-
-
-
 
 function AppContent() {
   const { colors } = useTheme();
@@ -132,14 +128,16 @@ export default function RootLayout() {
   };
 
   return (
-    <ThemeProvider value={theme}>
-      <AuthProvider>
-        <OfflineModal
-          visible={!isConnected}
-          onRetry={() => NetInfo.refresh()}
-        />
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={theme}>
+        <AuthProvider>
+          <OfflineModal
+            visible={!isConnected}
+            onRetry={() => NetInfo.refresh()}
+          />
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
