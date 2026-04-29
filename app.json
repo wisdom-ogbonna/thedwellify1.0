@@ -53,7 +53,8 @@
         {
           "locationWhenInUsePermission": "Allow this app to access your location."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

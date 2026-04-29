@@ -1,129 +1,259 @@
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
   View,
+  Text,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "../../context/AuthContext";
+import * as Location from "expo-location";
 import { API } from "../../services/api";
-import { useTheme } from "@react-navigation/native";
 
-export default function ClientDashboard() {
-  const { logout } = useAuth();
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets(); // 1. Use insets instead of SafeAreaView wrapper
+const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet"];
 
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+type Agent = {
+  agentId: string;
+  name: string;
+  phone: string;
+  email: string;
+  agencyName: string;
+  rating: number;
+  distanceKm: number;
+};
 
-  const fetchProfile = async () => {
+/* =========================
+   GOOGLE REVERSE GEOCODE
+========================= */
+const getRealAddress = async (lat: number, lng: number) => {
+  try {
+    const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
+
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`
+    );
+
+    const data = await res.json();
+
+    if (data.results?.length > 0) {
+      return data.results[0].formatted_address;
+    }
+
+    return "Address not found";
+  } catch {
+    return "Address unavailable";
+  }
+};
+
+export default function RequestMatchScreen() {
+  const [loading, setLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(true);
+
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [address, setAddress] = useState("");
+
+  const [selectedType, setSelectedType] = useState("Hotel");
+
+  const [agent, setAgent] = useState<Agent | null>(null);
+
+  /* =========================
+     GET LOCATION
+  ========================= */
+  useEffect(() => {
+    getLocation();
+  }, []);
+
+  const getLocation = async () => {
     try {
-      const res = await API.get("/client/profile");
-      setProfile(res.data);
-    } catch (e) {
-      console.error(e);
+      setLocationLoading(true);
+
+      let { status } = await Location.getForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        const res = await Location.requestForegroundPermissionsAsync();
+        status = res.status;
+      }
+
+      if (status !== "granted") {
+        Alert.alert("Permission required", "Enable location to continue");
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const { latitude, longitude } = loc.coords;
+
+      setLat(latitude);
+      setLng(longitude);
+
+      const realAddress = await getRealAddress(latitude, longitude);
+      setAddress(realAddress);
+    } catch (error) {
+      Alert.alert("Error", "Failed to get location");
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  /* =========================
+     REQUEST + MATCH FLOW
+  ========================= */
+  const handleRequest = async () => {
+    if (!lat || !lng) {
+      Alert.alert("Error", "Location not available");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setAgent(null);
+
+      // ✅ STEP 1: CREATE REQUEST
+      const createRes = await API.post("/match/request", {
+        lat,
+        lng,
+        propertyType: selectedType,
+      });
+
+      const requestId = createRes.data?.requestId;
+
+      if (!requestId) {
+        throw new Error("No requestId returned");
+      }
+
+      console.log("REQUEST ID:", requestId);
+
+      // ✅ STEP 2: MATCH AGENT
+      const matchRes = await API.post(`/match/match/${requestId}`);
+
+      const agentData = matchRes.data?.agent;
+
+      if (!agentData) {
+        Alert.alert("No Agent", "Try again later");
+        return;
+      }
+
+      setAgent(agentData);
+    } catch (error: any) {
+      console.log(error);
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message || "Something went wrong"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  if (loading)
-    return (
-      <View
-        className="flex-1 justify-center"
-        style={{ backgroundColor: colors.background }}
-      >
-        <ActivityIndicator color={colors.text} />
-      </View>
-    );
-
+  /* =========================
+     UI
+  ========================= */
   return (
-    <ScrollView
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-      // 2. Apply insets here to prevent bleeding
-      contentContainerStyle={{
-        paddingTop: insets.top + 32,
-        paddingBottom: insets.bottom + 32,
-        paddingHorizontal: 32,
-      }}
-      refreshControl={
-        <RefreshControl
-          refreshing={false}
-          onRefresh={fetchProfile}
-          tintColor={colors.primary}
-        />
-      }
-    >
-      {/* Header */}
-      <View className="mb-10">
-        <Text
-          className="text-sm font-bold uppercase tracking-widest opacity-40"
-          style={{ color: colors.text }}
-        >
-          Dashboard
+    <View className="flex-1 bg-[#0B0F1A] px-5 pt-6">
+      <ScrollView showsVerticalScrollIndicator={false}>
+        
+        {/* TITLE */}
+        <Text className="text-white text-3xl font-bold mb-6">
+          Find Property
         </Text>
-        <Text
-          className="text-5xl font-black tracking-tighter mt-2"
-          style={{ color: colors.text }}
-        >
-          {profile.name.split(" ")[0]}.
-        </Text>
-      </View>
 
-      {/* Grid Actions */}
-      <View className="flex-row flex-wrap justify-between">
-        {[
-          { title: "Properties", desc: "Find home" },
-          { title: "Saved", desc: "Shortlist" },
-          { title: "Agents", desc: "Chat" },
-          { title: "Requests", desc: "Track" },
-        ].map((item, i) => (
-          <View key={i} className="w-[48%] mb-4">
-            <Pressable
-              className="h-28 p-5 rounded-3xl border-2 justify-center"
-              style={{ borderColor: colors.border }}
-            >
-              <Text
-                className="font-bold text-base"
-                style={{ color: colors.text }}
-              >
-                {item.title}
+        {/* LOCATION */}
+        <View className="bg-[#121826] p-5 rounded-2xl mb-5">
+          <Text className="text-gray-400 mb-2">Your Location</Text>
+
+          {locationLoading ? (
+            <ActivityIndicator color="#6366F1" />
+          ) : (
+            <>
+              <Text className="text-white font-semibold">
+                {address}
               </Text>
-              <Text
-                className="opacity-40 text-xs font-medium mt-1"
-                style={{ color: colors.text }}
-              >
-                {item.desc}
-              </Text>
-            </Pressable>
+
+              {lat && lng && (
+                <Text className="text-gray-500 text-xs mt-1">
+                  {lat.toFixed(4)}, {lng.toFixed(4)}
+                </Text>
+              )}
+            </>
+          )}
+
+          <Pressable onPress={getLocation} className="mt-3">
+            <Text className="text-indigo-400 font-semibold">
+              Refresh Location
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* PROPERTY TYPE */}
+        <View className="bg-[#121826] p-5 rounded-2xl mb-6">
+          <Text className="text-gray-400 mb-3">Property Type</Text>
+
+          <View className="flex-row gap-3">
+            {PROPERTY_TYPES.map((type) => {
+              const active = selectedType === type;
+
+              return (
+                <Pressable
+                  key={type}
+                  onPress={() => setSelectedType(type)}
+                  className={`flex-1 py-3 rounded-xl items-center ${
+                    active ? "bg-indigo-600" : "bg-[#1F2937]"
+                  }`}
+                >
+                  <Text
+                    className={`text-sm font-semibold ${
+                      active ? "text-white" : "text-gray-300"
+                    }`}
+                  >
+                    {type}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-        ))}
-      </View>
+        </View>
 
-      {/* Account Info */}
-      <View
-        className="mt-8 border-t-2 pt-8"
-        style={{ borderColor: colors.border }}
-      >
-        <Text
-          className="text-xs font-bold uppercase tracking-widest opacity-30 mb-4"
-          style={{ color: colors.text }}
+        {/* BUTTON */}
+        <Pressable
+          onPress={handleRequest}
+          disabled={loading}
+          className="bg-indigo-600 py-4 rounded-2xl items-center active:opacity-80"
         >
-          Account
-        </Text>
-        <Text className="font-semibold text-lg" style={{ color: colors.text }}>
-          {profile.email}
-        </Text>
-      </View>
-    </ScrollView>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white font-bold text-base">
+              Request Match
+            </Text>
+          )}
+        </Pressable>
+
+        {/* AGENT RESULT */}
+        {agent && (
+          <View className="bg-green-900 p-5 rounded-2xl mt-6">
+            <Text className="text-white text-lg font-bold mb-2">
+              Agent Found 🎉
+            </Text>
+
+            <Text className="text-white">Name: {agent.name}</Text>
+            <Text className="text-white">Phone: {agent.phone}</Text>
+            <Text className="text-white">
+              Agency: {agent.agencyName}
+            </Text>
+            <Text className="text-white">
+              Rating: ⭐ {agent.rating}
+            </Text>
+            <Text className="text-white">
+              Distance: {agent.distanceKm} km
+            </Text>
+          </View>
+        )}
+
+      </ScrollView>
+    </View>
   );
 }

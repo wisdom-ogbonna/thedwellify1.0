@@ -18,18 +18,50 @@ export default function InspectionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestId } = useLocalSearchParams();
-  const [loading, setLoading] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+  const [started, setStarted] = useState(false);
+
+  // ✅ START INSPECTION
   const startInspection = async () => {
+    if (!requestId) return;
+
     setLoading(true);
     try {
-      await API.post("/agent/inspection/start", { requestId });
+      await API.post("/client/inspection/start", { requestId });
+
+      setStarted(true); // switch UI state
+
       Alert.alert("Success", "Inspection started!");
-      
-      router.replace(`/(agent)/dashboard?requestId=${requestId}`);
     } catch (error: any) {
-      Alert.alert("Error", "Could not start inspection");
+      Alert.alert(
+        "Error",
+        error?.response?.data?.error || "Could not start inspection"
+      );
       console.error("Start Inspection Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ END INSPECTION
+  const endInspection = async () => {
+    if (!requestId) return;
+
+    setLoading(true);
+    try {
+      await API.post("/client/inspection/end", { requestId });
+
+      Alert.alert("Completed", "Inspection finished successfully!");
+
+      // ✅ Return to dashboard after completion
+      router.replace("/(agent)/dashboard");
+    } catch (error: any) {
+      Alert.alert(
+        "Error",
+        error?.response?.data?.error || "Could not end inspection"
+      );
+      console.error("End Inspection Error:", error);
     } finally {
       setLoading(false);
     }
@@ -40,6 +72,7 @@ export default function InspectionScreen() {
       className="flex-1"
       style={{ backgroundColor: colors.background, paddingTop: insets.top }}
     >
+      {/* Close */}
       <View className="px-8 py-4 flex-row justify-end">
         <Pressable
           onPress={() => router.replace("/(agent)/dashboard")}
@@ -56,13 +89,15 @@ export default function InspectionScreen() {
         >
           Active Session
         </Text>
+
         <Text
           className="text-5xl font-black tracking-tighter mb-12"
           style={{ color: colors.text }}
         >
-          Inspection.
+          Inspection
         </Text>
 
+        {/* Info Card */}
         <View
           className="border-2 rounded-3xl p-8 mb-8"
           style={{ borderColor: colors.border }}
@@ -71,31 +106,53 @@ export default function InspectionScreen() {
             className="text-lg font-semibold mb-2"
             style={{ color: colors.text }}
           >
-            Ready to begin property assessment?
+            {started
+              ? "Inspection in progress..."
+              : "Ready to begin property assessment?"}
           </Text>
+
           <Text className="opacity-60" style={{ color: colors.text }}>
-            This will record the start time and initialize the digital checklist
-            for Request #{requestId}.
+            Request ID: {requestId}
           </Text>
         </View>
 
-        <Pressable
-          onPress={startInspection}
-          disabled={loading}
-          className="py-6 rounded-full items-center justify-center flex-row gap-3"
-          style={{ backgroundColor: colors.primary }}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Play size={20} color="#fff" weight="fill" />
+        {/* ACTION BUTTON */}
+        {!started ? (
+          // 🔵 START BUTTON
+          <Pressable
+            onPress={startInspection}
+            disabled={loading}
+            className="py-6 rounded-full items-center justify-center flex-row gap-3"
+            style={{ backgroundColor: colors.primary }}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Play size={20} color="#fff" weight="fill" />
+                <Text className="font-bold text-white text-lg uppercase tracking-widest">
+                  Start Inspection
+                </Text>
+              </>
+            )}
+          </Pressable>
+        ) : (
+          // 🔴 END BUTTON
+          <Pressable
+            onPress={endInspection}
+            disabled={loading}
+            className="py-6 rounded-full items-center justify-center"
+            style={{ backgroundColor: "red" }}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
               <Text className="font-bold text-white text-lg uppercase tracking-widest">
-                Start Inspection
+                End Inspection
               </Text>
-            </>
-          )}
-        </Pressable>
+            )}
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );

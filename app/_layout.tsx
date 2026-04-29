@@ -18,12 +18,13 @@ import "../global.css";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowBanner: true, // ✅ REQUIRED (iOS foreground popup)
-    shouldShowList: true, // ✅ shows in notification center
+    shouldShowBanner: true, 
+    shouldShowList: true, 
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
 });
+
 /* =========================
    APP CONTENT
 ========================= */
