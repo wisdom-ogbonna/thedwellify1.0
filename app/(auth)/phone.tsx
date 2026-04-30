@@ -1,18 +1,18 @@
+import { useTheme } from "@react-navigation/native";
+import axios from "axios";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  Text,
+  TextInput,
   TouchableWithoutFeedback,
-  Keyboard,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import axios from "axios";
-import { useTheme } from "@react-navigation/native";
 
 export default function PhoneScreen() {
   const [phone, setPhone] = useState("");
@@ -123,7 +123,9 @@ export default function PhoneScreen() {
             onPress={sendOTP}
             disabled={!isValid || loading}
             className="mt-12 h-16 rounded-full items-center justify-center shadow-lg"
-            style={{ backgroundColor: !isValid ? colors.border : colors.primary }}
+            style={{
+              backgroundColor: !isValid ? colors.border : colors.primary,
+            }}
           >
             {loading ? (
               <ActivityIndicator color={colors.background} />

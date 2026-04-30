@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API } from "../services/api";
 
@@ -9,7 +9,7 @@ import {
   startLocationTracking,
   stopLocationTracking,
 } from "../services/locationTracker";
-import { Alert } from "react-native";
+
 /* =========================
    TYPES
 ========================= */
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     return unsubscribe;
-  });
+  }, []);
 
   /* =========================
      LOGIN (AFTER FIREBASE AUTH)
