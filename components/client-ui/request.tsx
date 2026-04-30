@@ -40,7 +40,7 @@ function Request({
 
         {locationLoading ? (
           <View className="py-2 items-start">
-            <ActivityIndicator color={colors.primary} />
+            <ActivityIndicator color={colors.text} />
           </View>
         ) : (
           <>

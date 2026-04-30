@@ -1,9 +1,11 @@
 import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 
 function Matched({ agent, setAgent }: any) {
   const { colors } = useTheme();
+  const router = useRouter();
   const { name, phone, agencyName, rating, distanceKm } = agent;
 
   return (
@@ -79,10 +81,21 @@ function Matched({ agent, setAgent }: any) {
         <Pressable
           style={{ backgroundColor: colors.text }}
           className="w-full py-4 mb-4 rounded-2xl items-center"
+          // Move onPress here and pass the agent data as params
+          onPress={() =>
+            router.push({
+              pathname: "/(utilities)/agent-available-properties",
+              params: {
+                agentId: agent.agentId,
+                name: agent.name,
+                agency: agent.agencyName,
+              },
+            })
+          }
         >
           <Text
             style={{ color: colors.background }}
-            className=" font-bold text-base"
+            className="font-bold text-base"
           >
             View Agent Profile
           </Text>
