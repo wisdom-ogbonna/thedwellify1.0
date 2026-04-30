@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 
-function Matched({ agent, setAgent }: any) {
+function Matched({ agent, request, setMatchData }: any) {
   const { colors } = useTheme();
   const router = useRouter();
   const { name, phone, agencyName, rating, distanceKm } = agent;
@@ -89,6 +89,13 @@ function Matched({ agent, setAgent }: any) {
                 agentId: agent.agentId,
                 name: agent.name,
                 agency: agent.agencyName,
+
+                // request data
+                requestId: request.requestId,
+                clientId: request.clientId,
+                propertyType: request.propertyType,
+                lat: String(request.lat),
+                lng: String(request.lng),
               },
             })
           }
@@ -102,7 +109,7 @@ function Matched({ agent, setAgent }: any) {
         </Pressable>
 
         <Pressable
-          onPress={() => setAgent(null)}
+          onPress={() => setMatchData(null)}
           className="w-full py-4 rounded-2xl items-center border border-gray-200"
         >
           <Text className="font-semibold text-base text-white">

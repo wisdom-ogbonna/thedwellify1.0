@@ -25,7 +25,7 @@ const getRealAddress = async (lat: number, lng: number) => {
     const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
 
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`
     );
 
     const data = await res.json();
@@ -50,15 +50,15 @@ export default function RequestMatchScreen() {
 
   const [selectedType, setSelectedType] = useState("Hotel");
 
-  const [agent, setAgent] = useState<Agent | null>(null);
+  const [matchData, setMatchData] = useState<any>(null);
 
   const ref = useRef<BottomSheetRefProps>(null);
 
   const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-  const SNAP_25 = -SCREEN_HEIGHT * 0.10;
+  const SNAP_25 = -SCREEN_HEIGHT * 0.1;
   const SNAP_50 = -SCREEN_HEIGHT * 0.59;
-  const SNAP_80 = -SCREEN_HEIGHT * 0.80;
+  const SNAP_80 = -SCREEN_HEIGHT * 0.8;
 
   /* =========================
      GET LOCATION
@@ -114,7 +114,7 @@ export default function RequestMatchScreen() {
 
     try {
       setLoading(true);
-      setAgent(null);
+      setMatchData(null);
 
       // ✅ STEP 1: CREATE REQUEST
       const createRes = await API.post("/match/request", {
@@ -134,20 +134,20 @@ export default function RequestMatchScreen() {
       // ✅ STEP 2: MATCH AGENT
       const matchRes = await API.post(`/match/match/${requestId}`);
 
-      const agentData = matchRes.data?.agent;
+      const { request, agent } = matchRes.data;
 
-      if (!agentData) {
+      if (!agent) {
         Alert.alert("No Agent", "Try again later");
         return;
       }
 
-      setAgent(agentData);
+      setMatchData({ request, agent });
     } catch (error: any) {
       console.log(error);
 
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Something went wrong",
+        error?.response?.data?.message || "Something went wrong"
       );
     } finally {
       setLoading(false);
@@ -177,8 +177,8 @@ export default function RequestMatchScreen() {
               setSelectedType={setSelectedType}
               handleRequest={handleRequest}
               loading={loading}
-              setAgent={setAgent}
-              agent={agent}
+              setMatchData={setMatchData}
+              matchData={matchData}
             />
           </ScrollView>
         </BottomSheet>

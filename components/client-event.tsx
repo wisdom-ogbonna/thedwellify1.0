@@ -13,15 +13,19 @@ function ClientEvent({
   setSelectedType,
   handleRequest,
   loading,
-  setAgent,
-  agent,
+matchData,
+setMatchData,
 }: any): React.JSX.Element {
-  const hasMatchedAgent = !!agent?.agentId;
+  const hasMatchedAgent = !!matchData?.agent?.agentId;
 
   return (
     <>
       {hasMatchedAgent ? (
-        <Matched agent={agent} setAgent={setAgent} />
+        <Matched
+  agent={matchData?.agent}
+  request={matchData?.request}
+  setMatchData={setMatchData}
+/>
       ) : (
         <Request
           locationLoading={locationLoading}
