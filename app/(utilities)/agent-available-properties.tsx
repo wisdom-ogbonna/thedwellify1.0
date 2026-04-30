@@ -74,7 +74,7 @@ const AvailableProperties: React.FC = () => {
 
   const handleBooking = () => {
     router.push({
-      pathname: "/(utilities)/agent-available-properties",
+      pathname: "/(utilities)/client-payment-start-inspection",
       params: {
         agentId,
         clientId,
