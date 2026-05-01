@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "696670443433",
+    "project_id": "dwellify-dbbd6",
+    "storage_bucket": "dwellify-dbbd6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:696670443433:android:6a9e8fd73b6f38d080d6b8",
+        "android_client_info": {
+          "package_name": "com.bytemark.dwellify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVc-Wfofz_fpi397Ror_9YgI7PiuBjzbc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
