@@ -19,22 +19,34 @@ export default function AgentDashboard() {
   const sendTokenToBackend = async () => {
     try {
       setLoading(true);
+
       const pushData = await registerForPushNotificationsAsync();
 
-      if (!pushData) {
+      if (!pushData || !pushData.token) {
         setStatus("Failed to get push token");
         return;
       }
 
-      const payload: any = { platform: pushData.platform };
-      pushData.platform === "ios"
-        ? (payload.expoPushToken = pushData.token)
-        : (payload.fcmToken = pushData.token);
+      const payload: any = {
+        platform: pushData.platform,
+      };
+
+      if (pushData.platform === "ios") {
+        payload.expoPushToken = pushData.token;
+      }
+
+      if (pushData.platform === "android") {
+        payload.fcmToken = pushData.token;
+      }
+
+      console.log("📤 Sending payload:", payload);
 
       await API.post("/notifications/agent", payload);
-      setStatus("Token Synced");
-    } catch (error) {
-      setStatus("Sync Failed");
+
+      setStatus("Token Synced ✅");
+    } catch (error: any) {
+      console.log("❌ Sync error:", error?.response || error);
+      setStatus("Sync Failed ❌");
     } finally {
       setLoading(false);
     }
@@ -84,6 +96,7 @@ export default function AgentDashboard() {
         >
           Push Notification
         </Text>
+
         {loading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
