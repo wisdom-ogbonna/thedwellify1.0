@@ -19,6 +19,7 @@ export default function AgentDashboard() {
   const [paying, setPaying] = useState(false);
   const [agentStatus, setAgentStatus] = useState(null);
   const [message, setMessage] = useState("");
+  const [requestId, setRequestId] = useState(null);
 
   /**
    * ✅ Sync push token
@@ -61,8 +62,15 @@ export default function AgentDashboard() {
 
       setAgentStatus(agent.status);
 
+      // 🔥 STORE requestId
+      setRequestId(agent.requestId || null);
+
       if (agent.status === "suspended") {
         setMessage("Your account is suspended. Please make payment.");
+      } else if (agent.status === "matched") {
+        setMessage("You have an active request. Start inspection.");
+      } else if (agent.status === "inspection_started") {
+        setMessage("Inspection in progress. Complete it when done.");
       } else {
         setMessage("Agent is active");
       }
@@ -74,57 +82,106 @@ export default function AgentDashboard() {
     }
   };
 
+  const startInspection = async () => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user || !requestId) {
+        alert("Missing request");
+        return;
+      }
+
+      setMessage("Starting inspection...");
+
+      await API.post("/client/inspection/start", {
+        requestId,
+        agentId: user.uid,
+      });
+
+      setMessage("Inspection started successfully");
+
+      // refresh status
+      fetchAgentStatus();
+    } catch (err) {
+      console.log("Start inspection error:", err.response?.data || err.message);
+      setMessage("Failed to start inspection");
+    }
+  };
+
+  const endInspection = async () => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user || !requestId) {
+        alert("Missing request");
+        return;
+      }
+
+      setMessage("Ending inspection...");
+
+      await API.post("/client/inspection/end", {
+        requestId,
+        agentId: user.uid,
+      });
+
+      setMessage("Inspection completed successfully");
+
+      // 🔄 refresh state
+      fetchAgentStatus();
+    } catch (err) {
+      console.log("End inspection error:", err.response?.data || err.message);
+      setMessage("Failed to end inspection");
+    }
+  };
   /**
    * ✅ Trigger payment (ONLY on button click 🔥)
    */
-const triggerPayment = async () => {
-  try {
-    const user = auth.currentUser;
+  const triggerPayment = async () => {
+    try {
+      const user = auth.currentUser;
 
-    if (!user) {
-      alert("User not authenticated");
-      return;
+      if (!user) {
+        alert("User not authenticated");
+        return;
+      }
+
+      setPaying(true);
+      setMessage("Redirecting to payment...");
+
+      const res = await API.post("/payment/pay", {
+        agentId: user.uid,
+      });
+
+      const { paymentUrl } = res.data;
+
+      if (!paymentUrl) {
+        setMessage("No payment link received");
+        return;
+      }
+
+      // 🔥 OPEN PAYSTACK
+      await WebBrowser.openBrowserAsync(paymentUrl);
+
+      // 🔥 AFTER USER RETURNS
+      setMessage("Checking payment status...");
+
+      // give webhook time to update
+      setTimeout(() => {
+        fetchAgentStatus();
+      }, 3000);
+    } catch (err) {
+      console.log("Payment error:", err.response?.data || err.message);
+      setMessage("Payment failed. Try again.");
+    } finally {
+      setPaying(false);
     }
-
-    setPaying(true);
-    setMessage("Redirecting to payment...");
-
-    const res = await API.post("/payment/pay", {
-      agentId: user.uid,
-    });
-
-    const { paymentUrl } = res.data;
-
-    if (!paymentUrl) {
-      setMessage("No payment link received");
-      return;
-    }
-
-    // 🔥 OPEN PAYSTACK
-    await WebBrowser.openBrowserAsync(paymentUrl);
-
-    // 🔥 AFTER USER RETURNS
-    setMessage("Checking payment status...");
-
-    // give webhook time to update
-    setTimeout(() => {
-      fetchAgentStatus();
-    }, 3000);
-
-  } catch (err) {
-    console.log("Payment error:", err.response?.data || err.message);
-    setMessage("Payment failed. Try again.");
-  } finally {
-    setPaying(false);
-  }
-};
+  };
 
   useEffect(() => {
     syncPushToken();
     fetchAgentStatus();
   }, []);
 
-  
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -149,8 +206,7 @@ const triggerPayment = async () => {
             <Text
               style={{
                 fontSize: 16,
-                color:
-                  agentStatus === "suspended" ? "red" : "green",
+                color: agentStatus === "suspended" ? "red" : "green",
                 marginBottom: 20,
               }}
             >
@@ -193,6 +249,54 @@ const triggerPayment = async () => {
                     Pay Now
                   </Text>
                 )}
+              </Pressable>
+            )}
+
+            {/* ✅ SHOW BUTTON IF MATCHED */}
+            {agentStatus === "matched" && requestId && (
+              <Pressable
+                onPress={startInspection}
+                style={{
+                  backgroundColor: "green",
+                  padding: 15,
+                  borderRadius: 10,
+                  width: "100%",
+                  marginTop: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#fff",
+                    textAlign: "center",
+                    fontWeight: "600",
+                  }}
+                >
+                  Start Inspection
+                </Text>
+              </Pressable>
+            )}
+
+            {/* ✅ SHOW BUTTON IF INSPECTION STARTED */}
+            {agentStatus === "inspection_started" && requestId && (
+              <Pressable
+                onPress={endInspection}
+                style={{
+                  backgroundColor: "#2563eb",
+                  padding: 15,
+                  borderRadius: 10,
+                  width: "100%",
+                  marginTop: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#fff",
+                    textAlign: "center",
+                    fontWeight: "600",
+                  }}
+                >
+                  End Inspection
+                </Text>
               </Pressable>
             )}
           </>
