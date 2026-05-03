@@ -5,6 +5,9 @@ import {
   ScrollView,
   Text,
   View,
+  useColorScheme,
+  Appearance,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
@@ -18,6 +21,8 @@ export default function ClientDashboard() {
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const scheme = useColorScheme();
 
   const fetchProfile = async () => {
     try {
@@ -33,6 +38,32 @@ export default function ClientDashboard() {
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  const handleThemeChange = () => {
+    Alert.alert(
+      "Appearance Settings",
+      "Select the app's theme mode:",
+      [
+        {
+          text: "Light Mode",
+          onPress: () => Appearance.setColorScheme("light"),
+        },
+        {
+          text: "Dark Mode",
+          onPress: () => Appearance.setColorScheme("dark"),
+        },
+        {
+          text: "System Default",
+          onPress: () => Appearance.setColorScheme(null),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   if (loading)
     return (
@@ -71,13 +102,42 @@ export default function ClientDashboard() {
       </View>
 
       {/* Account Info */}
-      <View className="space-y-6 mb-12">
+      <View className="space-y-6 mb-8">
         <DetailItem label="Email" value={profile.email} />
         <DetailItem label="Phone" value={profile.phone || "Not provided"} />
         <DetailItem
           label="Status"
           value={profile.verified ? "Verified" : "Pending"}
         />
+      </View>
+
+      {/* Theme Selection Card */}
+      <View
+        className="border-2 rounded-3xl p-6 mb-8 flex-row justify-between items-center"
+        style={{ borderColor: colors.border }}
+      >
+        <Text
+          className="font-bold uppercase tracking-widest text-xs opacity-40"
+          style={{ color: colors.text }}
+        >
+          Theme
+        </Text>
+        <Pressable
+          onPress={handleThemeChange}
+          className="px-4 py-2 rounded-full"
+          style={{ backgroundColor: colors.primary + "15" }}
+        >
+          <Text
+            className="font-bold text-[10px] uppercase"
+            style={{ color: colors.text }}
+          >
+            {scheme === "dark"
+              ? "Dark Mode"
+              : scheme === "light"
+                ? "Light Mode"
+                : "System Default"}
+          </Text>
+        </Pressable>
       </View>
 
       {/* Quick Actions Grid */}
@@ -100,7 +160,11 @@ export default function ClientDashboard() {
       </View>
 
       {/* Logout */}
-      <Pressable onPress={logout} style={{ backgroundColor: colors.primary }} className="mt-15 py-5 rounded-4xl items-center">
+      <Pressable
+        onPress={logout}
+        style={{ backgroundColor: colors.primary }}
+        className="mt-15 py-5 rounded-4xl items-center"
+      >
         <Text
           className="font-bold text-md uppercase tracking-widest opacity-90"
           style={{ color: "#ffffff" }}
