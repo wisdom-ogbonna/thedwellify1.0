@@ -60,7 +60,8 @@ function AppContent() {
     const inAuthGroup = segments[0] === "(auth)";
     const inAgentGroup = segments[0] === "(agent)";
     const inClientGroup = segments[0] === "(client)";
-    const inUtilitiesGroup = segments[0] === "(utilities)"; // Added this
+    const inUtilitiesGroup = segments[0] === "(utilities)";
+    const inProductGroup = segments[0] === "(product)";
     const currentScreen = segments[1];
 
     if (!user && !inAuthGroup) {
@@ -73,7 +74,7 @@ function AppContent() {
       if (role === "client" && currentScreen !== "clientsetup")
         router.replace("/(auth)/clientsetup");
     } else if (user && role && isVerified) {
-      if (!inAgentGroup && !inClientGroup && !inUtilitiesGroup) {
+      if (!inAgentGroup && !inClientGroup && !inUtilitiesGroup && !inProductGroup) {
         router.replace(
           role === "agent" ? "/(agent)/dashboard" : "/(client)/dashboard",
         );

@@ -1,7 +1,6 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
 
 export const registerForPushNotificationsAsync = async () => {
   if (!Device.isDevice) {
@@ -9,8 +8,7 @@ export const registerForPushNotificationsAsync = async () => {
     return null;
   }
 
-  const { status: existingStatus } =
-    await Notifications.getPermissionsAsync();
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
   let finalStatus = existingStatus;
 
@@ -24,26 +22,31 @@ export const registerForPushNotificationsAsync = async () => {
     return null;
   }
 
-  // 🔥 THIS IS THE FIX
-  const projectId =
-    Constants?.expoConfig?.extra?.eas?.projectId ||
-    Constants?.easConfig?.projectId;
+  try {
+    let token = null;
 
-  if (!projectId) {
-    console.log("❌ Missing projectId");
+    if (Platform.OS === "android") {
+      // ✅ ANDROID → FCM TOKEN
+      const tokenData = await Notifications.getDevicePushTokenAsync();
+      token = tokenData.data;
+
+      console.log("✅ FCM Token:", token);
+
+      // REQUIRED for Android notifications
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+        vibrationPattern: [0, 250, 250, 250],
+      });
+    }
+
+    return {
+      token,
+      platform: Platform.OS,
+    };
+  } catch (error) {
+    console.log("❌ Error getting FCM token:", error);
     return null;
   }
-
-  const tokenData = await Notifications.getExpoPushTokenAsync({
-    projectId,
-  });
-
-  const token = tokenData.data;
-
-  console.log("✅ Expo Push Token:", token);
-
-  return {
-    token,
-    platform: Platform.OS,
-  };
 };
