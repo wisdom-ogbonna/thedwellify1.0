@@ -1,19 +1,19 @@
+import { useTheme } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { CloudArrowUp, Image as ImageIcon, X } from "phosphor-react-native";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ScrollView,
+  ActivityIndicator,
   Alert,
   Image,
-  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import { X, Image as ImageIcon, CloudArrowUp } from "phosphor-react-native";
 import { API } from "../../services/api";
 
 const TYPES = ["Apartment", "Hotel", "Shortlet"];
@@ -44,7 +44,7 @@ export default function CreateProduct() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsMultipleSelection: true,
         quality: 0.7,
       });
@@ -97,21 +97,27 @@ export default function CreateProduct() {
       });
 
       await API.post("/products/add-rental-product", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
         onUploadProgress: (progressEvent) => {
-          const percent = Math.round(
-            (progressEvent.loaded * 100) / (progressEvent.total || 1),
-          );
+          const total = progressEvent.total ?? 1;
+          const percent = Math.round((progressEvent.loaded * 100) / total);
           setUploadProgress(percent);
         },
       });
 
       Alert.alert("Success", "Listing created successfully");
-
-      // Correctly pop back to the previous screen on success
-      router.back();
+      router.replace("/(agent)/products");
     } catch (err: any) {
-      console.log(err.response?.data || err.message);
-      Alert.alert("Error", "Failed to create listing");
+      console.log("Error details:", err);
+      if (err.response) {
+        console.log("Response data:", err.response.data);
+      }
+      Alert.alert(
+        "Error",
+        "Failed to create listing: " + (err.message || "Network Error"),
+      );
     } finally {
       setLoading(false);
       setUploadProgress(0);

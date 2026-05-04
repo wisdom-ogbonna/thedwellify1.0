@@ -110,7 +110,7 @@ const ClientPaymentStartInspection: React.FC = () => {
             </Text>
 
             <Pressable
-              onPress={() => router.replace("/ClientDashboard")}
+              onPress={() => router.replace("/(client)/dashboard")}
               style={{ backgroundColor: colors.primary }}
               className="mt-6 px-6 py-4 rounded-xl"
             >
