@@ -1,13 +1,21 @@
 import React from "react";
+import { useRouter } from "expo-router";
 import { View, Text, Image, Pressable } from "react-native";
 import { MapPin } from "phosphor-react-native";
 import { useTheme } from "@react-navigation/native";
 
 const PropertyCard = ({ item }: { item: any }) => {
   const { colors } = useTheme();
+  const router = useRouter();
 
   return (
     <Pressable
+      onPress={() =>
+        router.push({
+          pathname: "/(product)/[id]",
+          params: { id: item.id },
+        })
+      }
       style={{
         backgroundColor: colors.card,
         borderColor: colors.border,
@@ -55,10 +63,7 @@ const PropertyCard = ({ item }: { item: any }) => {
         </View>
 
         <View className="flex-row items-baseline">
-          <Text
-            style={{ color: colors.text }}
-            className="text-2xl font-black"
-          >
+          <Text style={{ color: colors.text }} className="text-2xl font-black">
             {item.price?.toLocaleString()}
           </Text>
         </View>
