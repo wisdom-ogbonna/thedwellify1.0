@@ -1,16 +1,16 @@
-import { useTheme } from "@react-navigation/native";
-import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
+  ScrollView,
+  View,
+  Text,
   ActivityIndicator,
   Pressable,
-  ScrollView,
-  Text,
-  View,
 } from "react-native";
-import { auth } from "../../config/firebase";
+import { useTheme } from "@react-navigation/native";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notifications";
+import { auth } from "../../config/firebase";
+import * as WebBrowser from "expo-web-browser";
 
 export default function AgentDashboard() {
   const { colors } = useTheme();
@@ -18,46 +18,28 @@ export default function AgentDashboard() {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [agentStatus, setAgentStatus] = useState(null);
-  const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [requestId, setRequestId] = useState(null);
 
   /**
    * ✅ Sync push token
    */
-  const sendTokenToBackend = async () => {
+  const syncPushToken = async () => {
     try {
-      setLoading(true);
-
       const pushData = await registerForPushNotificationsAsync();
+      if (!pushData) return;
 
-      if (!pushData || !pushData.token) {
-        setStatus("Failed to get push token");
-        return;
-      }
-
-      const payload: any = {
-        platform: pushData.platform,
-      };
+      const payload = { platform: pushData.platform };
 
       if (pushData.platform === "ios") {
         payload.expoPushToken = pushData.token;
-      }
-
-      if (pushData.platform === "android") {
+      } else {
         payload.fcmToken = pushData.token;
       }
 
-      console.log("📤 Sending payload:", payload);
-
       await API.post("/notifications/agent", payload);
-
-      setStatus("Token Synced ✅");
-    } catch (error: any) {
-      console.log("❌ Sync error:", error?.response || error);
-      setStatus("Sync Failed ❌");
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.log("Push token sync failed:", err);
     }
   };
 
@@ -92,7 +74,7 @@ export default function AgentDashboard() {
       } else {
         setMessage("Agent is active");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.log("Fetch agent error:", err);
       setMessage("Failed to fetch agent status");
     } finally {
@@ -120,7 +102,7 @@ export default function AgentDashboard() {
 
       // refresh status
       fetchAgentStatus();
-    } catch (err: any) {
+    } catch (err) {
       console.log("Start inspection error:", err.response?.data || err.message);
       setMessage("Failed to start inspection");
     }
@@ -146,7 +128,7 @@ export default function AgentDashboard() {
 
       // 🔄 refresh state
       fetchAgentStatus();
-    } catch (err: any) {
+    } catch (err) {
       console.log("End inspection error:", err.response?.data || err.message);
       setMessage("Failed to end inspection");
     }
@@ -187,7 +169,7 @@ export default function AgentDashboard() {
       setTimeout(() => {
         fetchAgentStatus();
       }, 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.log("Payment error:", err.response?.data || err.message);
       setMessage("Payment failed. Try again.");
     } finally {
@@ -196,7 +178,7 @@ export default function AgentDashboard() {
   };
 
   useEffect(() => {
-    sendTokenToBackend();
+    syncPushToken();
     fetchAgentStatus();
   }, []);
 
@@ -228,7 +210,7 @@ export default function AgentDashboard() {
                 marginBottom: 20,
               }}
             >
-              {status}
+              {agentStatus?.toUpperCase()}
             </Text>
 
             <Text

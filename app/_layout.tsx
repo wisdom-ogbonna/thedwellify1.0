@@ -15,6 +15,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
 import OfflineModal from "./(utilities)/offlineModal";
 
+/* =========================
+   NOTIFICATIONS CONFIG
+========================= */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -27,61 +30,101 @@ Notifications.setNotificationHandler({
 /* =========================
    APP CONTENT
 ========================= */
-
 function AppContent() {
   const { colors } = useTheme();
   const { user, role, isVerified, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
+  /* =========================
+     HANDLE NOTIFICATIONS
+  ========================= */
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
-        // Using absolute path
-        router.push({
-          pathname: "/(utilities)/requests",
-          params: {
-            requestId: String(data.requestId),
-            agentId: String(data.agentId),
-            propertyType: String(data.propertyType),
-            lat: String(data.lat),
-            lng: String(data.lng),
-          },
-        });
-      },
+
+        // ✅ Safe navigation
+        if (data?.requestId) {
+          router.push({
+            pathname: "/requests",
+            params: {
+              requestId: String(data.requestId),
+              agentId: String(data.agentId),
+              propertyType: String(data.propertyType),
+              lat: String(data.lat),
+              lng: String(data.lng),
+            },
+          });
+        }
+      }
     );
+
     return () => sub.remove();
   }, [router]);
 
+  /* =========================
+     AUTH + ROLE ROUTING
+  ========================= */
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === "(auth)";
-    const inAgentGroup = segments[0] === "(agent)";
-    const inClientGroup = segments[0] === "(client)";
-    const inUtilitiesGroup = segments[0] === "(utilities)";
-    const inProductGroup = segments[0] === "(product)";
-    const currentScreen = segments[1];
+    const root = segments[0] ?? "";
+    const screen = segments[1] ?? "";
 
-    if (!user && !inAuthGroup) {
-      router.replace("/(auth)/phone");
-    } else if (user && !role && !inAuthGroup) {
-      router.replace("/(auth)/role");
-    } else if (user && role && !isVerified) {
-      if (role === "agent" && currentScreen !== "agentsetup")
-        router.replace("/(auth)/agentsetup");
-      if (role === "client" && currentScreen !== "clientsetup")
-        router.replace("/(auth)/clientsetup");
-    } else if (user && role && isVerified) {
-      if (!inAgentGroup && !inClientGroup && !inUtilitiesGroup && !inProductGroup) {
-        router.replace(
-          role === "agent" ? "/(agent)/dashboard" : "/(client)/dashboard",
-        );
+    const inAuth = root === "(auth)";
+    const inAgent = root === "(agent)";
+    const inClient = root === "(client)";
+    const inUtilities = root === "(utilities)";
+    const inProduct = root === "(product)";
+
+    /* 🚫 NOT LOGGED IN */
+    if (!user) {
+      if (!inAuth) {
+        router.replace("/phone");
       }
+      return;
+    }
+
+    /* 🧩 ROLE NOT SELECTED */
+    if (!role) {
+      if (!inAuth) {
+        router.replace("/role");
+      }
+      return;
+    }
+
+    /* 🛠️ NOT VERIFIED */
+    if (!isVerified) {
+      if (role === "agent" && screen !== "agentsetup") {
+        router.replace("/agentsetup");
+        return;
+      }
+
+      if (role === "client" && screen !== "clientsetup") {
+        router.replace("/clientsetup");
+        return;
+      }
+
+      return;
+    }
+
+    /* ✅ FULLY READY */
+    const target =
+      role === "agent" ? "agent-dashboard" : "client-dashboard";
+
+    const isInsideApp =
+      inAgent || inClient || inUtilities || inProduct;
+
+    if (!isInsideApp && screen !== target) {
+      router.replace(`/${target}`);
+      return;
     }
   }, [user, role, isVerified, loading, segments, router]);
 
+  /* =========================
+     LOADING SCREEN
+  ========================= */
   if (loading) {
     return (
       <View
