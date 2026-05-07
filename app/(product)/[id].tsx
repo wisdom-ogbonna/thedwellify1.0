@@ -93,6 +93,21 @@ export default function ProductDetails() {
             className="w-full h-full"
             resizeMode="cover"
           />
+          <View
+            className="absolute top-13 right-5 px-3 py-3 border-[0.5px] rounded-sm flex-row items-center"
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+              borderColor: "rgba(0, 0, 0, 0.1)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <Text
+              className="text-[10px] tracking-[2px] font-bold uppercase"
+              style={{ color: "#000" }}
+            >
+              {product.propertyType}
+            </Text>
+          </View>
         </View>
 
         <View
@@ -117,43 +132,6 @@ export default function ProductDetails() {
             >
               {product.location}
             </Text>
-          </View>
-
-          {/* 3. STAT GRID */}
-          <View className="flex-row justify-between mb-10">
-            {[
-              { label: "Type", value: product.propertyType, icon: House },
-              {
-                label: "Status",
-                value: "Available",
-                icon: Record,
-                iconColor: "#10b981",
-              },
-              { label: "Size", value: "Spacious", icon: ArrowsOut },
-            ].map((stat, i) => (
-              <View
-                key={i}
-                className="bg-gray-50 dark:bg-gray-900 p-4 rounded-[28px] items-center flex-1 mx-1 border border-gray-100 dark:border-gray-800"
-              >
-                <stat.icon
-                  size={20}
-                  color={stat.iconColor || colors.text}
-                  weight={stat.iconColor ? "fill" : "regular"}
-                />
-                <Text
-                  className="text-[10px] uppercase font-bold mt-2 opacity-30"
-                  style={{ color: colors.text }}
-                >
-                  {stat.label}
-                </Text>
-                <Text
-                  className="text-[11px] font-black mt-0.5"
-                  style={{ color: colors.text }}
-                >
-                  {stat.value}
-                </Text>
-              </View>
-            ))}
           </View>
 
           {/* 4. VIDEO SECTION - Reverted to System Default */}
@@ -182,7 +160,7 @@ export default function ProductDetails() {
                   resizeMode={ResizeMode.COVER}
                   shouldPlay={false}
                   isLooping
-                  useNativeControls // REVERTED: Now uses standard system controls
+                  useNativeControls
                 />
               </View>
             </View>
