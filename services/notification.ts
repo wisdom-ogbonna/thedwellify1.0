@@ -9,8 +9,7 @@ export const registerForPushNotificationsAsync = async () => {
     return null;
   }
 
-  const { status: existingStatus } =
-    await Notifications.getPermissionsAsync();
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
   let finalStatus = existingStatus;
 

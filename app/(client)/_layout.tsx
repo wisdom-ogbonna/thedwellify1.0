@@ -29,7 +29,7 @@ export default function ClientLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="client-dashboard"
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
