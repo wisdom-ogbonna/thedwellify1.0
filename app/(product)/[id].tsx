@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@react-navigation/native";
 import { ArrowLeft, MapPin, Sparkle } from "phosphor-react-native";
 import { API } from "../../services/api";
+import { Video, ResizeMode } from "expo-av";
 
 const { width } = Dimensions.get("window");
 
@@ -115,7 +116,27 @@ export default function ProductDetails() {
           </View>
         </View>
       </View>
+      {product.video && (
+        <View className="px-6 mt-6">
+          <Text
+            className="text-2xs font-bold tracking-widest uppercase opacity-40 mb-3"
+            style={{ color: colors.text }}
+          >
+            Video Tour
+          </Text>
 
+          <View className="w-full h-[240px] rounded-3xl overflow-hidden bg-black">
+            <Video
+              source={{ uri: product.video }}
+              style={{ width: "100%", height: "100%" }}
+              useNativeControls
+              resizeMode={ResizeMode.COVER}
+              shouldPlay={false}
+              isLooping
+            />
+          </View>
+        </View>
+      )}
       {/* CONTENT PANEL */}
       <View
         className="px-6 py-8 -mt-6 rounded-t-[32px]"

@@ -29,7 +29,7 @@ export default function AgentLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="agent-dashboard"
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
