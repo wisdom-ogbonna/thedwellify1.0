@@ -1,22 +1,29 @@
-import { useTheme } from "@react-navigation/native";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
-import { CloudArrowUp, Image as ImageIcon, X } from "phosphor-react-native";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
+  View,
   Text,
   TextInput,
-  View,
+  Pressable,
+  ScrollView,
+  Alert,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import {
+  X,
+  Image as ImageIcon,
+  VideoCamera,
+  CloudArrowUp,
+} from "phosphor-react-native";
+import { Video, ResizeMode } from "expo-av";
 import { API } from "../../services/api";
 
 const TYPES = ["Apartment", "Hotel", "Shortlet"];
+const MAX_VIDEO_SIZE = 15 * 1024 * 1024; // 15MB
 
 export default function CreateProduct() {
   const router = useRouter();
@@ -25,50 +32,95 @@ export default function CreateProduct() {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
   const [propertyType, setPropertyType] = useState("");
+
   const [images, setImages] = useState<any[]>([]);
+  const [video, setVideo] = useState<any | null>(null);
+
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [progress, setProgress] = useState(0);
 
   /**
-   * 📸 Pick Images
+   * 📸 PICK IMAGES
    */
   const pickImages = async () => {
-    try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (!permission.granted) {
-        Alert.alert("Permission required", "Allow access to gallery");
-        return;
-      }
+    if (!permission.granted) {
+      Alert.alert("Permission required");
+      return;
+    }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsMultipleSelection: true,
-        quality: 0.7,
-      });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.7,
+    });
 
-      if (!result.canceled) {
-        setImages(result.assets);
-      }
-    } catch (err) {
-      console.log(err);
+    if (!result.canceled) {
+      setImages(result.assets);
     }
   };
 
   /**
-   * 🗑 Remove Image
+   * 🎥 PICK VIDEO (FIXED)
    */
+  const pickVideo = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Permission required");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos, // ✅ FIXED
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (result.canceled) return;
+
+    const file = result.assets[0];
+
+    // 🔥 Get file size safely
+    const fileSize = (file as any).fileSize || (file as any).size;
+
+    if (!fileSize) {
+      Alert.alert("Error", "Cannot read video size");
+      return;
+    }
+
+    // ❌ Validate size BEFORE upload
+    if (fileSize > MAX_VIDEO_SIZE) {
+      Alert.alert(
+        "Video too large",
+        "Video must be 15MB or less. Please compress or choose another video."
+      );
+      return;
+    }
+
+    // ❌ Validate format
+    if (!file.uri.endsWith(".mp4")) {
+      Alert.alert("Invalid format", "Only MP4 videos are allowed");
+      return;
+    }
+
+    setVideo(file);
+  };
+
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const removeVideo = () => setVideo(null);
+
   /**
-   * 🚀 Submit
+   * 🚀 SUBMIT
    */
-  const handleCreate = async () => {
-    if (!title || !price || !location || !propertyType) {
+  const handleSubmit = async () => {
+    if (!title || !price || !location || !propertyType || !description) {
       Alert.alert("Error", "All fields are required");
       return;
     }
@@ -80,6 +132,7 @@ export default function CreateProduct() {
 
     try {
       setLoading(true);
+      setProgress(0);
 
       const formData = new FormData();
 
@@ -87,7 +140,9 @@ export default function CreateProduct() {
       formData.append("price", price);
       formData.append("location", location);
       formData.append("propertyType", propertyType);
+      formData.append("description", description);
 
+      // IMAGES
       images.forEach((img, index) => {
         formData.append("images", {
           uri: img.uri,
@@ -96,137 +151,93 @@ export default function CreateProduct() {
         } as any);
       });
 
+      // VIDEO
+      if (video) {
+        formData.append("video", {
+          uri: video.uri,
+          name: "video.mp4",
+          type: "video/mp4",
+        } as any);
+      }
+
       await API.post("/products/add-rental-product", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-        onUploadProgress: (progressEvent) => {
-          const total = progressEvent.total ?? 1;
-          const percent = Math.round((progressEvent.loaded * 100) / total);
-          setUploadProgress(percent);
+        onUploadProgress: (event) => {
+          const percent = Math.round(
+            (event.loaded * 100) / (event.total || 1)
+          );
+          setProgress(percent);
         },
       });
 
       Alert.alert("Success", "Listing created successfully");
-      router.replace("/(agent)/products");
+      router.back();
     } catch (err: any) {
-      console.log("Error details:", err);
-      if (err.response) {
-        console.log("Response data:", err.response.data);
-      }
-      Alert.alert(
-        "Error",
-        "Failed to create listing: " + (err.message || "Network Error"),
-      );
+      console.log(err?.response?.data || err.message);
+      Alert.alert("Error", "Failed to create listing");
     } finally {
       setLoading(false);
-      setUploadProgress(0);
+      setProgress(0);
     }
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={["top"]}
-    >
-      <ScrollView
-        className="flex-1 px-6 py-4"
-        showsVerticalScrollIndicator={false}
-      >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView className="px-6 py-4">
+
         {/* HEADER */}
-        <View className="flex-row justify-between items-center mb-8 mt-4">
-          <Text
-            className="text-3xl font-black tracking-tight"
-            style={{ color: colors.text }}
-          >
+        <View className="flex-row justify-between items-center mb-6">
+          <Text className="text-3xl font-black" style={{ color: colors.text }}>
             Create Listing
           </Text>
 
-          <Pressable
-            onPress={() => router.back()}
-            className="p-4 rounded-2xl border-2"
-            style={{ borderColor: colors.border }}
-          >
-            <X size={22} color={colors.text} weight="bold" />
+          <Pressable onPress={() => router.back()}>
+            <X size={22} color={colors.text} />
           </Pressable>
         </View>
 
-        {/* TITLE */}
-        <Text
-          className="text-sm font-black uppercase tracking-widest mb-3"
-          style={{ color: colors.text, opacity: 0.8 }}
-        >
-          Listing Title
-        </Text>
-        <TextInput
-          placeholder="Enter listing title"
-          placeholderTextColor={colors.border}
-          value={title}
-          onChangeText={setTitle}
-          className="border-[3px] rounded-2xl p-5 mb-6 text-base font-bold"
+        {/* INPUTS */}
+        <TextInput placeholder="Title" value={title} onChangeText={setTitle}
+          className="border p-4 rounded-xl mb-3"
           style={{ borderColor: colors.border, color: colors.text }}
         />
 
-        {/* LOCATION */}
-        <Text
-          className="text-sm font-black uppercase tracking-widest mb-3"
-          style={{ color: colors.text, opacity: 0.8 }}
-        >
-          Location
-        </Text>
-        <TextInput
-          placeholder="Enter location"
-          placeholderTextColor={colors.border}
-          value={location}
-          onChangeText={setLocation}
-          className="border-[3px] rounded-2xl p-5 mb-6 text-base font-bold"
+        <TextInput placeholder="Location" value={location} onChangeText={setLocation}
+          className="border p-4 rounded-xl mb-3"
           style={{ borderColor: colors.border, color: colors.text }}
         />
 
-        {/* PRICE */}
-        <Text
-          className="text-sm font-black uppercase tracking-widest mb-3"
-          style={{ color: colors.text, opacity: 0.8 }}
-        >
-          Price (₦)
-        </Text>
-        <TextInput
-          placeholder="Enter price"
-          placeholderTextColor={colors.border}
-          value={price}
-          onChangeText={setPrice}
+        <TextInput placeholder="Price" value={price} onChangeText={setPrice}
           keyboardType="numeric"
-          className="border-[3px] rounded-2xl p-5 mb-6 text-base font-bold"
+          className="border p-4 rounded-xl mb-3"
+          style={{ borderColor: colors.border, color: colors.text }}
+        />
+
+        <TextInput
+          placeholder="Description"
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          className="border p-4 rounded-xl mb-4"
           style={{ borderColor: colors.border, color: colors.text }}
         />
 
         {/* PROPERTY TYPE */}
-        <Text
-          className="text-sm font-black uppercase tracking-widest mb-4"
-          style={{ color: colors.text, opacity: 0.8 }}
-        >
-          Property Type
-        </Text>
-
-        <View className="flex-row gap-3 mb-8 flex-wrap">
+        <View className="flex-row gap-2 mb-4">
           {TYPES.map((type) => (
             <Pressable
               key={type}
               onPress={() => setPropertyType(type)}
-              className="px-6 py-4 rounded-2xl border-[3px]"
+              className="px-4 py-2 rounded-lg border"
               style={{
                 backgroundColor:
                   propertyType === type ? colors.text : "transparent",
                 borderColor: colors.border,
               }}
             >
-              <Text
-                className="font-black text-base"
-                style={{
-                  color:
-                    propertyType === type ? colors.background : colors.text,
-                }}
-              >
+              <Text style={{ color: propertyType === type ? colors.background : colors.text }}>
                 {type}
               </Text>
             </Pressable>
@@ -234,98 +245,71 @@ export default function CreateProduct() {
         </View>
 
         {/* IMAGE PICKER */}
-        <Pressable
-          onPress={pickImages}
-          className="p-8 border-[3px] border-dashed rounded-3xl items-center mb-8"
-          style={{ borderColor: colors.border }}
-        >
-          <ImageIcon
-            size={40}
-            color={colors.text}
-            style={{ marginBottom: 16, opacity: 0.6 }}
-          />
-          <Text
-            className="font-black text-lg text-center mt-2"
-            style={{ color: colors.text }}
-          >
-            Select Listing Images
-          </Text>
-          <Text
-            className="text-sm font-medium opacity-60 text-center mt-2"
-            style={{ color: colors.text }}
-          >
-            Select multiple high-resolution images
+        <Pressable onPress={pickImages} className="p-6 border-dashed border rounded-xl items-center mb-4">
+          <ImageIcon size={30} color={colors.text} />
+          <Text style={{ color: colors.text }}>Add Images</Text>
+        </Pressable>
+
+        {/* VIDEO PICKER (FIXED) */}
+        <Pressable onPress={pickVideo} className="p-6 border-dashed border rounded-xl items-center mb-4">
+          <VideoCamera size={30} color={colors.text} />
+          <Text style={{ color: colors.text }}>
+            Add Video (MP4, max 15MB)
           </Text>
         </Pressable>
 
         {/* IMAGE PREVIEW */}
-        {images.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mb-8"
-          >
-            {images.map((img, i) => (
-              <View key={i} className="mr-4 relative">
-                <Image
-                  source={{ uri: img.uri }}
-                  className="w-28 h-28 rounded-3xl"
-                />
+        <ScrollView horizontal className="mb-4">
+          {images.map((img, i) => (
+            <View key={i} className="mr-2 relative">
+              <Image source={{ uri: img.uri }} className="w-24 h-24 rounded-xl" />
+              <Pressable onPress={() => removeImage(i)} className="absolute top-1 right-1 bg-black/70 p-1 rounded-full">
+                <X size={12} color="#fff" />
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
 
-                {/* REMOVE BUTTON */}
-                <Pressable
-                  onPress={() => removeImage(i)}
-                  className="absolute top-2 right-2 p-2 rounded-full bg-black/70 items-center justify-center"
-                >
-                  <X size={14} color="#fff" weight="bold" />
-                </Pressable>
-              </View>
-            ))}
-          </ScrollView>
+        {/* VIDEO PREVIEW */}
+        {video && (
+          <View className="mb-4 relative">
+            <Video
+              source={{ uri: video.uri }}
+              style={{ width: "100%", height: 200, borderRadius: 12 }}
+              useNativeControls
+              resizeMode={ResizeMode.COVER}
+            />
+            <Pressable onPress={removeVideo} className="absolute top-2 right-2 bg-black/70 p-2 rounded-full">
+              <X size={14} color="#fff" />
+            </Pressable>
+          </View>
         )}
 
-        {/* UPLOAD PROGRESS */}
+        {/* PROGRESS */}
         {loading && (
-          <View
-            className="mt-4 p-5 rounded-2xl items-center justify-center flex-row border-[3px]"
-            style={{ borderColor: colors.border }}
-          >
-            <ActivityIndicator color={colors.text} size="large" />
-            <Text
-              className="text-sm font-black ml-4"
-              style={{ color: colors.text }}
-            >
-              Uploading... {uploadProgress}%
+          <View className="flex-row items-center mb-4">
+            <ActivityIndicator color={colors.text} />
+            <Text style={{ marginLeft: 10, color: colors.text }}>
+              Uploading... {progress}%
             </Text>
           </View>
         )}
 
-        {/* SUBMIT BUTTON */}
+        {/* SUBMIT */}
         <Pressable
-          onPress={handleCreate}
-          disabled={loading}
-          className="py-6 rounded-2xl items-center mt-8 shadow-sm border-[3px]"
-          style={{
-            backgroundColor: colors.text,
-            borderColor: colors.text,
-          }}
+          onPress={handleSubmit}
+          className="p-5 rounded-xl items-center"
+          style={{ backgroundColor: colors.text }}
         >
-          <View className="flex-row items-center justify-center">
-            <CloudArrowUp
-              size={24}
-              color={colors.background}
-              style={{ marginRight: 10 }}
-            />
-            <Text
-              className="font-black text-lg tracking-widest uppercase"
-              style={{ color: colors.background }}
-            >
-              {loading ? "Creating..." : "Create Listing"}
+          <View className="flex-row items-center">
+            <CloudArrowUp size={20} color={colors.background} />
+            <Text style={{ color: colors.background, marginLeft: 8 }}>
+              Create Listing
             </Text>
           </View>
         </Pressable>
 
-        <View className="h-36" />
+        <View className="h-20" />
       </ScrollView>
     </SafeAreaView>
   );
