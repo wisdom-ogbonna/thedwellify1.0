@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "phosphor-react-native";
 import { API } from "../../services/api";
+import { stopRingtone } from "../../services/ringtone";
 
 export default function RequestDetailsScreen() {
   const { colors } = useTheme();
@@ -24,11 +25,13 @@ export default function RequestDetailsScreen() {
   const handleAction = async (
     endpoint: string,
     successMsg: string,
-    nav: string,
+    nav: string
   ) => {
     if (!requestId) return;
     setLoading(true);
     try {
+      // ✅ STOP SOUND
+      await stopRingtone();
       await API.post(endpoint, { requestId });
       Alert.alert("Success", successMsg);
       router.replace(nav as any);
@@ -38,6 +41,13 @@ export default function RequestDetailsScreen() {
       setLoading(false);
     }
   };
+
+
+  useEffect(() => {
+  return () => {
+    stopRingtone();
+  };
+}, []);
 
   return (
     <View
@@ -86,7 +96,7 @@ export default function RequestDetailsScreen() {
               handleAction(
                 "/client/request/decline",
                 "Request declined",
-                "/(agent)/dashboard",
+                "/(agent)/dashboard"
               )
             }
             className="flex-1 py-5 rounded-full border-2 items-center"
@@ -105,7 +115,7 @@ export default function RequestDetailsScreen() {
               handleAction(
                 "/client/request/accept",
                 "Request accepted",
-                "/(utilities)/inspection?requestId=" + requestId,
+                "/(utilities)/inspection?requestId=" + requestId
               )
             }
             className="flex-1 py-5 rounded-full items-center justify-center"

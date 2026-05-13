@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
 import OfflineModal from "./(utilities)/offlineModal";
+import { setupNotifications } from "../services/notification";
 
 /* =========================
    NOTIFICATIONS CONFIG
@@ -39,12 +40,14 @@ function AppContent() {
   /* =========================
      HANDLE NOTIFICATIONS
   ========================= */
-  useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const data = response.notification.request.content.data;
 
-        // ✅ Safe navigation
+useEffect(() => {
+  const responseSub =
+    Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data =
+          response.notification.request.content.data;
+
         if (data?.requestId) {
           router.push({
             pathname: "/requests",
@@ -60,8 +63,10 @@ function AppContent() {
       }
     );
 
-    return () => sub.remove();
-  }, [router]);
+  return () => {
+    responseSub.remove();
+  };
+}, [router]);
 
   /* =========================
      AUTH + ROLE ROUTING
@@ -150,12 +155,15 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [isConnected, setIsConnected] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      setIsConnected(state.isConnected ?? true);
-    });
-    return unsubscribe;
-  }, []);
+useEffect(() => {
+  setupNotifications();
+
+  const unsubscribe = NetInfo.addEventListener((state) => {
+    setIsConnected(state.isConnected ?? true);
+  });
+
+  return unsubscribe;
+}, []);
 
   const theme = {
     ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),

@@ -1,5 +1,5 @@
 import { useTheme } from "@react-navigation/native";
-import axios from "axios";
+import { API } from "../../services/api";
 import { useLocalSearchParams } from "expo-router";
 import { signInWithCustomToken } from "firebase/auth";
 import React, { useState } from "react";
@@ -41,10 +41,11 @@ export default function OtpScreen() {
       setLoading(true);
 
       // 🔐 Step 1: Verify OTP with backend
-      const res = await axios.post(
-        "https://dwellify-backend-bq39.onrender.com/api/otp/verify",
-        { phone_number: phone, pin_id: pinId, pin: otp },
-      );
+const res = await API.post("/otp/verify", {
+  phone_number: phone,
+  pin_id: pinId,
+  pin: otp,
+});
 
       const { firebaseToken } = res.data;
       if (!firebaseToken) throw new Error("Invalid server response");
