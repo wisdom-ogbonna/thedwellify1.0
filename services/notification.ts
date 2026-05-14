@@ -12,7 +12,7 @@ export const setupNotifications = async () => {
 
       importance: Notifications.AndroidImportance.MAX,
 
-      sound: "ringtone.wav",
+      sound: "ringtone",
 
       vibrationPattern: [0, 500, 500, 500],
 
@@ -27,6 +27,7 @@ export const setupNotifications = async () => {
 export const registerForPushNotificationsAsync = async () => {
   if (!Device.isDevice) {
     alert("Must use physical device for Push Notifications");
+
     return null;
   }
 
@@ -36,11 +37,13 @@ export const registerForPushNotificationsAsync = async () => {
 
   if (existingStatus !== "granted") {
     const { status } = await Notifications.requestPermissionsAsync();
+
     finalStatus = status;
   }
 
   if (finalStatus !== "granted") {
     alert("Permission not granted");
+
     return null;
   }
 
@@ -48,19 +51,12 @@ export const registerForPushNotificationsAsync = async () => {
     let token = null;
 
     if (Platform.OS === "android") {
-      // ✅ ANDROID → FCM TOKEN
+      // ✅ REAL FCM TOKEN
       const tokenData = await Notifications.getDevicePushTokenAsync();
+
       token = tokenData.data;
 
       console.log("✅ FCM Token:", token);
-
-      // REQUIRED for Android notifications
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "default",
-        importance: Notifications.AndroidImportance.MAX,
-        sound: "default",
-        vibrationPattern: [0, 250, 250, 250],
-      });
     }
 
     return {
@@ -69,6 +65,7 @@ export const registerForPushNotificationsAsync = async () => {
     };
   } catch (error) {
     console.log("❌ Error getting FCM token:", error);
+
     return null;
   }
 };

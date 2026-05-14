@@ -39,7 +39,9 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/sounds/ringtone.wav"]
+          "sounds": [
+            "./assets/sounds/ringtone.wav"
+          ]
         }
       ],
       "expo-router",
@@ -65,7 +67,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "af0536c7-3a54-4b48-9746-7db20a90f837"
+        "projectId": "0cc23b1e-3b4d-44bf-8c76-c4a6819056b3"
       },
       "router": {}
     },
