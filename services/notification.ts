@@ -1,85 +1,74 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
 
 /**
  * ✅ SETUP NOTIFICATION CHANNELS
  */
 export const setupNotifications = async () => {
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(
-      "requests_v2",
-      {
-        name: "Incoming Requests",
+    await Notifications.setNotificationChannelAsync("requests_v2", {
+      name: "Incoming Requests",
 
-        importance:
-          Notifications.AndroidImportance.MAX,
+      importance: Notifications.AndroidImportance.MAX,
 
-        sound: "ringtone.wav",
+      sound: "ringtone.wav",
 
-        vibrationPattern: [0, 500, 500, 500],
+      vibrationPattern: [0, 500, 500, 500],
 
-        lockscreenVisibility:
-          Notifications.AndroidNotificationVisibility
-            .PUBLIC,
-      }
-    );
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
   }
 };
 
 /**
- * ✅ REGISTER PUSH TOKEN
+ * ✅ REGISTER ANDROID FCM TOKEN
  */
-export const registerForPushNotificationsAsync =
-  async () => {
-    if (!Device.isDevice) {
-      alert(
-        "Must use physical device for Push Notifications"
-      );
+export const registerForPushNotificationsAsync = async () => {
+  if (!Device.isDevice) {
+    alert("Must use physical device for Push Notifications");
+    return null;
+  }
 
-      return null;
-    }
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
 
-    let finalStatus = existingStatus;
+  if (existingStatus !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
 
-    if (existingStatus !== "granted") {
-      const { status } =
-        await Notifications.requestPermissionsAsync();
+  if (finalStatus !== "granted") {
+    alert("Permission not granted");
+    return null;
+  }
 
-      finalStatus = status;
-    }
+  try {
+    let token = null;
 
-    if (finalStatus !== "granted") {
-      alert("Permission not granted");
+    if (Platform.OS === "android") {
+      // ✅ ANDROID → FCM TOKEN
+      const tokenData = await Notifications.getDevicePushTokenAsync();
+      token = tokenData.data;
 
-      return null;
-    }
+      console.log("✅ FCM Token:", token);
 
-    const projectId =
-      Constants?.expoConfig?.extra?.eas?.projectId ||
-      Constants?.easConfig?.projectId;
-
-    if (!projectId) {
-      console.log("❌ Missing projectId");
-
-      return null;
-    }
-
-    const tokenData =
-      await Notifications.getExpoPushTokenAsync({
-        projectId,
+      // REQUIRED for Android notifications
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+        vibrationPattern: [0, 250, 250, 250],
       });
-
-    const token = tokenData.data;
-
-    console.log("✅ Expo Push Token:", token);
+    }
 
     return {
       token,
       platform: Platform.OS,
     };
-  };
+  } catch (error) {
+    console.log("❌ Error getting FCM token:", error);
+    return null;
+  }
+};
