@@ -1,35 +1,51 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Appearance,
   Pressable,
   ScrollView,
   Text,
   View,
   useColorScheme,
-  Appearance,
-  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@react-navigation/native";
+
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
-import { useTheme } from "@react-navigation/native";
 
 export default function ClientDashboard() {
   const { logout } = useAuth();
+
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
   const scheme = useColorScheme();
 
+  const [profile, setProfile] = useState<any>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+
+  /**
+   * =========================
+   * FETCH PROFILE
+   * =========================
+   */
   const fetchProfile = async () => {
     try {
+      setLoading(true);
+
       const res = await API.get("/client/profile");
+
       setProfile(res.data);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.log("PROFILE ERROR:", error);
+
+      Alert.alert(
+        "Error",
+        "Failed to load your profile. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -39,10 +55,15 @@ export default function ClientDashboard() {
     fetchProfile();
   }, []);
 
+  /**
+   * =========================
+   * THEME SWITCHER
+   * =========================
+   */
   const handleThemeChange = () => {
     Alert.alert(
       "Appearance Settings",
-      "Select the app's theme mode:",
+      "Choose your preferred theme",
       [
         {
           text: "Light Mode",
@@ -61,132 +82,281 @@ export default function ClientDashboard() {
           style: "cancel",
         },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 
-  if (loading)
+  /**
+   * =========================
+   * DELETE ACCOUNT
+   * =========================
+   */
+  const deleteAccount = async () => {
+    try {
+      setDeleting(true);
+
+      const res = await API.delete("/client/delete");
+
+      Alert.alert(
+        "Account Deleted",
+        res.data?.message || "Your account was deleted successfully.",
+        [
+          {
+            text: "OK",
+            onPress: async () => {
+              await logout();
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.log("DELETE ACCOUNT ERROR:", error);
+
+      const message =
+        error?.response?.data?.error ||
+        "Unable to delete account. Please try again.";
+
+      Alert.alert("Delete Failed", message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /**
+   * =========================
+   * CONFIRM DELETE
+   * =========================
+   */
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This action permanently removes your account and all associated data. This cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: deleteAccount,
+        },
+      ],
+      {
+        cancelable: true,
+      }
+    );
+  };
+
+  /**
+   * =========================
+   * LOADING
+   * =========================
+   */
+  if (loading) {
     return (
       <View
-        className="flex-1 justify-center"
-        style={{ backgroundColor: colors.background }}
+        className="flex-1 justify-center items-center"
+        style={{
+          backgroundColor: colors.background,
+        }}
       >
-        <ActivityIndicator color={colors.text} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
+  }
 
   return (
     <ScrollView
       className="flex-1"
-      style={{ backgroundColor: colors.background }}
+      style={{
+        backgroundColor: colors.background,
+      }}
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={{
-        paddingTop: insets.top + 32,
-        paddingBottom: insets.bottom + 32,
-        paddingHorizontal: 32,
+        paddingTop: insets.top + 24,
+        paddingBottom: insets.bottom + 40,
+        paddingHorizontal: 24,
       }}
     >
-      {/* Header */}
+      {/* =========================
+          HEADER
+      ========================= */}
       <View className="mb-12">
         <Text
           className="text-xs font-bold uppercase tracking-widest opacity-40"
-          style={{ color: colors.text }}
+          style={{
+            color: colors.text,
+          }}
         >
           Dashboard
         </Text>
+
         <Text
-          className="text-5xl font-black tracking-tighter mt-2"
-          style={{ color: colors.text }}
+          className="text-5xl font-black tracking-tight mt-2"
+          style={{
+            color: colors.text,
+          }}
         >
-          {profile.name.split(" ")[0]}.
+          {profile?.name?.split(" ")[0] || "User"}.
         </Text>
       </View>
 
-      {/* Account Info */}
-      <View className="space-y-6 mb-8">
-        <DetailItem label="Email" value={profile.email} />
-        <DetailItem label="Phone" value={profile.phone || "Not provided"} />
+      {/* =========================
+          ACCOUNT DETAILS
+      ========================= */}
+      <View className="mb-10">
+        <DetailItem label="Email" value={profile?.email || "N/A"} />
+
+        <DetailItem
+          label="Phone"
+          value={profile?.phone || "Not provided"}
+        />
+
         <DetailItem
           label="Status"
-          value={profile.verified ? "Verified" : "Pending"}
+          value={profile?.verified ? "Verified" : "Pending"}
         />
       </View>
 
-      {/* Theme Selection Card */}
+      {/* =========================
+          THEME CARD
+      ========================= */}
       <View
-        className="border-2 rounded-3xl p-6 mb-8 flex-row justify-between items-center"
-        style={{ borderColor: colors.border }}
+        className="border rounded-3xl p-6 mb-8 flex-row items-center justify-between"
+        style={{
+          borderColor: colors.border,
+        }}
       >
-        <Text
-          className="font-bold uppercase tracking-widest text-xs opacity-40"
-          style={{ color: colors.text }}
-        >
-          Theme
-        </Text>
-        <Pressable
-          onPress={handleThemeChange}
-          className="px-4 py-2 rounded-full"
-          style={{ backgroundColor: colors.primary + "15" }}
-        >
+        <View>
           <Text
-            className="font-bold text-[10px] uppercase"
-            style={{ color: colors.text }}
+            className="text-xs uppercase tracking-widest opacity-40 font-bold mb-1"
+            style={{
+              color: colors.text,
+            }}
+          >
+            Theme
+          </Text>
+
+          <Text
+            className="font-semibold text-base"
+            style={{
+              color: colors.text,
+            }}
           >
             {scheme === "dark"
               ? "Dark Mode"
               : scheme === "light"
-                ? "Light Mode"
-                : "System Default"}
+              ? "Light Mode"
+              : "System Default"}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={handleThemeChange}
+          className="px-5 py-3 rounded-full"
+          style={{
+            backgroundColor: colors.primary + "15",
+          }}
+        >
+          <Text
+            className="text-xs font-bold uppercase tracking-widest"
+            style={{
+              color: colors.primary,
+            }}
+          >
+            Change
           </Text>
         </Pressable>
       </View>
 
-      {/* Quick Actions Grid */}
-      <View className="flex-row flex-wrap justify-between">
-        {["Search", "Saved", "Agents", "Requests"].map((title) => (
-          <View key={title} className="w-[48%] mb-4">
-            <Pressable
-              className="h-28 border-2 rounded-3xl p-6 justify-end"
-              style={{ borderColor: colors.border }}
-            >
-              <Text
-                className="font-bold text-lg"
-                style={{ color: colors.text }}
-              >
-                {title}
-              </Text>
-            </Pressable>
-          </View>
-        ))}
-      </View>
 
-      {/* Logout */}
+
+      {/* =========================
+          SIGN OUT
+      ========================= */}
       <Pressable
         onPress={logout}
-        style={{ backgroundColor: colors.primary }}
-        className="mt-15 py-5 rounded-4xl items-center"
+        className="py-5 rounded-3xl items-center mb-4"
+        style={{
+          backgroundColor: colors.primary,
+        }}
       >
         <Text
-          className="font-bold text-md uppercase tracking-widest opacity-90"
-          style={{ color: "#ffffff" }}
+          className="font-bold uppercase tracking-widest"
+          style={{
+            color: "#ffffff",
+          }}
         >
           Sign Out
         </Text>
+      </Pressable>
+
+      {/* =========================
+          DELETE ACCOUNT
+      ========================= */}
+      <Pressable
+        onPress={handleDeleteAccount}
+        disabled={deleting}
+        className="py-5 rounded-3xl items-center border"
+        style={{
+          borderColor: "#ef4444",
+          opacity: deleting ? 0.7 : 1,
+        }}
+      >
+        {deleting ? (
+          <ActivityIndicator color="#ef4444" />
+        ) : (
+          <Text
+            className="font-bold uppercase tracking-widest"
+            style={{
+              color: "#ef4444",
+            }}
+          >
+            Delete Account
+          </Text>
+        )}
       </Pressable>
     </ScrollView>
   );
 }
 
-const DetailItem = ({ label, value }: { label: string; value: string }) => {
+/**
+ * =========================
+ * DETAIL ITEM
+ * =========================
+ */
+const DetailItem = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) => {
   const { colors } = useTheme();
+
   return (
-    <View className="border-b-2 pb-4" style={{ borderColor: colors.border }}>
+    <View
+      className="border-b pb-5 mb-5"
+      style={{
+        borderColor: colors.border,
+      }}
+    >
       <Text
         className="text-xs font-bold uppercase tracking-widest opacity-40 mb-1"
-        style={{ color: colors.text }}
+        style={{
+          color: colors.text,
+        }}
       >
         {label}
       </Text>
-      <Text className="text-lg font-semibold" style={{ color: colors.text }}>
+
+      <Text
+        className="text-lg font-semibold"
+        style={{
+          color: colors.text,
+        }}
+      >
         {value}
       </Text>
     </View>

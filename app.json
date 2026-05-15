@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.doph574.dwellifyapp",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Your location is used to show nearby properties and connect you with agents in your area. For example, we use your location to display homes close to you and improve map-based search results."
       }
     },
     "android": {
@@ -58,7 +59,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow this app to access your location."
+          "NSLocationWhenInUseUsageDescription": "Your location is used to show nearby properties and connect you with agents in your area. For example, we use your location to display homes close to you and improve map-based search results."
         }
       ],
       "expo-web-browser"
