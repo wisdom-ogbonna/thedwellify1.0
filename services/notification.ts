@@ -7,7 +7,7 @@ import { Platform } from "react-native";
  */
 export const setupNotifications = async () => {
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("requests_v2", {
+    await Notifications.setNotificationChannelAsync("requests_v3", {
       name: "Incoming Requests",
 
       importance: Notifications.AndroidImportance.MAX,
