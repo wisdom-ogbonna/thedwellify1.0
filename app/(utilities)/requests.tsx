@@ -12,7 +12,7 @@ import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "phosphor-react-native";
 import { API } from "../../services/api";
-import { stopRingtone } from "../../services/ringtone";
+// import { stopRingtone } from "../../services/ringtone";
 
 export default function RequestDetailsScreen() {
   const { colors } = useTheme();
@@ -31,7 +31,7 @@ export default function RequestDetailsScreen() {
     setLoading(true);
     try {
       // ✅ STOP SOUND
-      await stopRingtone();
+      // await stopRingtone();
       await API.post(endpoint, { requestId });
       Alert.alert("Success", successMsg);
       router.replace(nav as any);
@@ -43,11 +43,11 @@ export default function RequestDetailsScreen() {
   };
 
 
-  useEffect(() => {
-  return () => {
-    stopRingtone();
-  };
-}, []);
+//   useEffect(() => {
+//   return () => {
+//     stopRingtone();
+//   };
+// }, []);
 
   return (
     <View
