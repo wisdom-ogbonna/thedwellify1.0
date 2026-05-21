@@ -52,7 +52,6 @@ const AgentHeader: React.FC<AgentHeaderProps> = ({
 
       <View className="flex-row items-center gap-x-2">
         <View
-          style={{ backgroundColor: colors.background }}
           className="p-2.5 rounded-full"
         >
           <SealCheck
