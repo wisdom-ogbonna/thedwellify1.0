@@ -21,6 +21,7 @@ export default function ClientDashboard() {
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const scheme = useColorScheme();
 
@@ -74,6 +75,68 @@ export default function ClientDashboard() {
         <ActivityIndicator color={colors.text} />
       </View>
     );
+
+  /**
+   * =========================
+   * DELETE ACCOUNT
+   * =========================
+   */
+  const deleteAccount = async () => {
+    try {
+      setDeleting(true);
+
+      const res = await API.delete("/client/delete");
+
+      Alert.alert(
+        "Account Deleted",
+        res.data?.message || "Your account was deleted successfully.",
+        [
+          {
+            text: "OK",
+            onPress: async () => {
+              await logout();
+            },
+          },
+        ],
+      );
+    } catch (error: any) {
+      console.log("DELETE ACCOUNT ERROR:", error);
+
+      const message =
+        error?.response?.data?.error ||
+        "Unable to delete account. Please try again.";
+
+      Alert.alert("Delete Failed", message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /**
+   * =========================
+   * CONFIRM DELETE
+   * =========================
+   */
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This action permanently removes your account and all associated data. This cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: deleteAccount,
+        },
+      ],
+      {
+        cancelable: true,
+      },
+    );
+  };
 
   return (
     <ScrollView
@@ -171,6 +234,31 @@ export default function ClientDashboard() {
         >
           Sign Out
         </Text>
+      </Pressable>
+      {/* =========================
+          DELETE ACCOUNT
+      ========================= */}
+      <Pressable
+        onPress={handleDeleteAccount}
+        disabled={deleting}
+        className="py-5 rounded-3xl my-5 items-center border"
+        style={{
+          borderColor: "#ef4444",
+          opacity: deleting ? 0.7 : 1,
+        }}
+      >
+        {deleting ? (
+          <ActivityIndicator color="#ef4444" />
+        ) : (
+          <Text
+            className="font-bold uppercase tracking-widest"
+            style={{
+              color: "#ef4444",
+            }}
+          >
+            Delete Account
+          </Text>
+        )}
       </Pressable>
     </ScrollView>
   );
