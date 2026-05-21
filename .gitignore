@@ -5,7 +5,7 @@ node_modules/
 
 dwellify-dbbd6-firebase-adminsdk-fbsvc-ce53e02789.json
 app/(agent)/dashboard.tsx
-services/notification.ts
+
 
 # Expo
 .expo/

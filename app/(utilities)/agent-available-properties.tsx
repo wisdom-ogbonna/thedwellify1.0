@@ -8,6 +8,7 @@ import {
   Text,
   View,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -36,11 +37,9 @@ const AvailableProperties: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [error, setError] = useState("");
 
-  /**
-   * FETCH FROM BACKEND
-   */
   const fetchProperties = useCallback(async () => {
     if (!agentId) return;
 
@@ -49,9 +48,7 @@ const AvailableProperties: React.FC = () => {
       setError("");
 
       const query =
-        activeCategory !== "All"
-          ? `?propertyType=${activeCategory}`
-          : "";
+        activeCategory !== "All" ? `?propertyType=${activeCategory}` : "";
 
       const res = await API.get(`/agentid/${agentId}${query}`);
 
@@ -62,23 +59,19 @@ const AvailableProperties: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [agentId, activeCategory]);
 
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
 
-  /**
-   * FINAL SAFE FILTER (VERY IMPORTANT)
-   * ensures correct matching: Hotel → Hotel tab
-   */
   const filteredProperties = useMemo(() => {
     if (activeCategory === "All") return properties;
 
-    return properties.filter((item) =>
-      (item?.propertyType || "")
-        .toLowerCase()
-        .trim() === activeCategory.toLowerCase()
+    return properties.filter(
+      (item) =>
+        item?.propertyType?.toLowerCase()?.trim() ===
+        activeCategory.toLowerCase(),
     );
   }, [properties, activeCategory]);
 
@@ -110,33 +103,37 @@ const AvailableProperties: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+      }}
+    >
       <StatusBar
-        barStyle={
-          colors.text === "#FFFFFF"
-            ? "light-content"
-            : "dark-content"
-        }
+        barStyle={colors.text === "#FFFFFF" ? "light-content" : "dark-content"}
       />
 
-      {/* LOADING */}
-      {loading && (
+      {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      )}
-
-      {/* ERROR */}
-      {!loading && error ? (
+      ) : error ? (
         <View className="flex-1 items-center justify-center px-4">
-          <Text style={{ color: colors.text, textAlign: "center" }}>
+          <Text
+            style={{
+              color: colors.text,
+              textAlign: "center",
+            }}
+          >
             {error}
           </Text>
 
           <Pressable
             onPress={fetchProperties}
-            className="mt-4 px-4 py-2 rounded-lg"
-            style={{ backgroundColor: colors.primary }}
+            className="mt-4 px-4 py-3 rounded-xl"
+            style={{
+              backgroundColor: colors.primary,
+            }}
           >
             <Text style={{ color: "#fff" }}>Retry</Text>
           </Pressable>
@@ -163,8 +160,10 @@ const AvailableProperties: React.FC = () => {
             if (item.type === "filter") {
               return (
                 <View
-                  style={{ backgroundColor: colors.background }}
-                  className="pb-2"
+                  style={{
+                    backgroundColor: colors.background,
+                    paddingBottom: 12,
+                  }}
                 >
                   <CategoryFilter
                     categories={CATEGORIES}
@@ -173,7 +172,9 @@ const AvailableProperties: React.FC = () => {
                   />
 
                   <Text
-                    style={{ color: colors.text }}
+                    style={{
+                      color: colors.text,
+                    }}
                     className="text-lg font-bold px-4 pt-2"
                   >
                     Available Properties
@@ -188,28 +189,105 @@ const AvailableProperties: React.FC = () => {
               </View>
             );
           }}
-          contentContainerStyle={{ paddingBottom: 120 }}
+          contentContainerStyle={{
+            paddingBottom: 120,
+          }}
           showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* BOOK BUTTON */}
+      {/* Bottom Button */}
       <View
-        style={{ borderTopColor: colors.border }}
-        className="absolute bottom-0 w-full p-4"
+        style={{
+          backgroundColor: colors.background,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+          padding: 16,
+          elevation: 10, // Android shadow
+        }}
       >
         <Pressable
-          onPress={handleBooking}
-          style={{ backgroundColor: colors.primary }}
-          className="py-4 rounded-2xl items-center shadow-lg active:opacity-90"
+          onPress={() => setBookingModalOpen(true)}
+          style={{
+            backgroundColor: colors.primary,
+          }}
+          className="py-5 rounded-2xl items-center"
         >
-          <Text className="text-white text-lg font-bold">
-            Book Agent (₦7,000)
-          </Text>
+          <Text className="text-white text-lg font-bold">Book Agent Now</Text>
         </Pressable>
       </View>
+
+      {/* Modal */}
+      <ConfirmBookingModal
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        price={7000}
+        onConfirm={() => {
+          handleBooking();
+          setBookingModalOpen(false);
+        }}
+      />
     </SafeAreaView>
   );
 };
+
+type ModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  price: number;
+  onConfirm: () => void;
+};
+
+function ConfirmBookingModal({
+  isOpen,
+  onClose,
+  price,
+  onConfirm,
+}: ModalProps) {
+  return (
+    <Modal
+      visible={isOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "rgba(0,0,0,0.5)",
+          padding: 20,
+        }}
+      >
+        <View className="bg-white rounded-3xl p-6 w-full max-w-md">
+          <Text className="text-2xl font-bold mb-3">Confirm Booking</Text>
+
+          <Text className="mb-2 text-lg">
+            Are you sure you want to book this agent for an inspection?
+          </Text>
+
+          <Text className="mb-4 text-lg font-semibold">Price: ₦{price.toLocaleString()}</Text>
+
+          <View className="flex-row justify-between">
+            <Pressable
+              onPress={onClose}
+              className="px-7 py-3 rounded-xl border border-gray-300"
+            >
+              <Text className="text-lg font-semibold">Cancel</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={onConfirm}
+              className="px-7 py-3 rounded-xl bg-green-500"
+            >
+              <Text className="text-white text-lg font-semibold">Confirm</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 export default AvailableProperties;
