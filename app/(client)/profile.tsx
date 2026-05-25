@@ -267,8 +267,7 @@ export default function ClientDashboard() {
           >
             Change
           </Text>
-        </Pressable>
-      </View>
+        </View>
 
 
 

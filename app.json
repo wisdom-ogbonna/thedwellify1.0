@@ -40,7 +40,9 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/sounds/ringtone.wav"]
+          "sounds": [
+            "./assets/sounds/ringtone.wav"
+          ]
         }
       ],
       "expo-router",

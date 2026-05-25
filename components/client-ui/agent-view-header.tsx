@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Image } from "react-native";
 import { useTheme } from "@react-navigation/native";
-import { SealCheck, MapPin, Bell, CaretRight } from "phosphor-react-native";
+import { SealCheck, MapPin, Bell } from "phosphor-react-native";
 
 interface AgentHeaderProps {
   name: string;
@@ -40,12 +40,6 @@ const AgentHeader: React.FC<AgentHeaderProps> = ({
           >
             {name}
           </Text>
-          <SealCheck
-            size={18}
-            color="#1DA1F2"
-            weight="fill"
-            style={{ marginLeft: 4 }}
-          />
         </View>
 
         <Text
@@ -54,24 +48,18 @@ const AgentHeader: React.FC<AgentHeaderProps> = ({
         >
           {agencyName}
         </Text>
-
-        <View className="flex-row items-center mt-1">
-          <MapPin size={14} color={colors.text} weight="bold" />
-          <Text
-            style={{ color: colors.text }}
-            className="text-xs opacity-50 ml-1 font-medium"
-          >
-            {location}
-          </Text>
-        </View>
       </View>
 
       <View className="flex-row items-center gap-x-2">
         <View
-          style={{ backgroundColor: colors.background }}
           className="p-2.5 rounded-full"
         >
-          <Bell size={22} color={colors.text} weight="regular" />
+          <SealCheck
+            size={22}
+            color="#1DA1F2"
+            weight="fill"
+            style={{ marginLeft: 4 }}
+          />
         </View>
       </View>
     </View>

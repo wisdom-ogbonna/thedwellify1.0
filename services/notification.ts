@@ -3,83 +3,46 @@ import * as Device from "expo-device";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
-/**
- * ✅ SETUP NOTIFICATION CHANNELS
- */
-export const setupNotifications = async () => {
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(
-      "requests_v2",
-      {
-        name: "Incoming Requests",
-
-        importance:
-          Notifications.AndroidImportance.MAX,
-
-        sound: "ringtone.wav",
-
-        vibrationPattern: [0, 500, 500, 500],
-
-        lockscreenVisibility:
-          Notifications.AndroidNotificationVisibility
-            .PUBLIC,
-      }
-    );
+export const registerForPushNotificationsAsync = async () => {
+  if (!Device.isDevice) {
+    alert("Must use physical device for Push Notifications");
+    return null;
   }
-};
 
-/**
- * ✅ REGISTER PUSH TOKEN
- */
-export const registerForPushNotificationsAsync =
-  async () => {
-    if (!Device.isDevice) {
-      alert(
-        "Must use physical device for Push Notifications"
-      );
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
-      return null;
-    }
+  let finalStatus = existingStatus;
 
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
+  if (existingStatus !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
 
-    let finalStatus = existingStatus;
+  if (finalStatus !== "granted") {
+    alert("Permission not granted");
+    return null;
+  }
 
-    if (existingStatus !== "granted") {
-      const { status } =
-        await Notifications.requestPermissionsAsync();
+  // 🔥 THIS IS THE FIX
+  const projectId =
+    Constants?.expoConfig?.extra?.eas?.projectId ||
+    Constants?.easConfig?.projectId;
 
-      finalStatus = status;
-    }
+  if (!projectId) {
+    console.log("❌ Missing projectId");
+    return null;
+  }
 
-    if (finalStatus !== "granted") {
-      alert("Permission not granted");
+  const tokenData = await Notifications.getExpoPushTokenAsync({
+    projectId,
+  });
 
-      return null;
-    }
+  const token = tokenData.data;
 
-    const projectId =
-      Constants?.expoConfig?.extra?.eas?.projectId ||
-      Constants?.easConfig?.projectId;
+  console.log("✅ Expo Push Token:", token);
 
-    if (!projectId) {
-      console.log("❌ Missing projectId");
-
-      return null;
-    }
-
-    const tokenData =
-      await Notifications.getExpoPushTokenAsync({
-        projectId,
-      });
-
-    const token = tokenData.data;
-
-    console.log("✅ Expo Push Token:", token);
-
-    return {
-      token,
-      platform: Platform.OS,
-    };
+  return {
+    token,
+    platform: Platform.OS,
   };
+};
