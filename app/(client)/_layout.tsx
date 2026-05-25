@@ -11,9 +11,9 @@ export default function ClientLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.border,
+        tabBarInactiveTintColor: "#777777",
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: colors.border,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           height: 75,
@@ -29,11 +29,11 @@ export default function ClientLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="client-dashboard"
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <House size={24} color={color} weight={focused ? "bold" : "thin"} />
+            <House size={24} color={color} weight={focused ? "fill" : "regular"} />
           ),
         }}
       />
@@ -42,7 +42,7 @@ export default function ClientLayout() {
           options={{
             title: "History",
             tabBarIcon: ({ color, focused }) => (
-              <Clock size={24} color={color} weight={focused ? "bold" : "thin"} />
+              <Clock size={24} color={color} weight={focused ? "fill" : "regular"} />
             ),
           }}
         />
@@ -51,7 +51,7 @@ export default function ClientLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
-            <User size={24} color={color} weight={focused ? "bold" : "thin"} />
+            <User size={24} color={color} weight={focused ? "fill" : "regular"} />
           ),
         }}
       />

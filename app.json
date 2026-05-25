@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "dwellify-app",
+    "name": "Dwellify",
     "slug": "dwellify-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -36,6 +36,14 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/ringtone.wav"
+          ]
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { API } from "../../services/api";
-import { registerForPushNotificationsAsync } from "../../services/notifications";
+import { registerForPushNotificationsAsync } from "../../services/notification";
 import { auth } from "../../config/firebase";
 import * as WebBrowser from "expo-web-browser";
 

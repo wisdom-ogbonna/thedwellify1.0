@@ -13,6 +13,8 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import CountryFlag from "react-native-country-flag";
+import { API } from "../../services/api";
 
 export default function PhoneScreen() {
   const [phone, setPhone] = useState("");
@@ -35,14 +37,10 @@ export default function PhoneScreen() {
     if (!isValid) return;
     try {
       setLoading(true);
-
       // 1. Send the request
-      const res = await axios.post(
-        "https://dwellify-backend-bq39.onrender.com/api/otp/send",
-        {
-          phone_number: `+234${processedPhone}`,
-        },
-      );
+      const res = await API.post("/otp/send", {
+        phone_number: `+234${processedPhone}`,
+      });
 
       const pinId = res.data?.pin_id;
 
@@ -93,6 +91,8 @@ export default function PhoneScreen() {
             className="border-b-2 pb-2 flex-row items-center"
             style={{ borderColor: isValid ? colors.primary : colors.border }}
           >
+            <CountryFlag isoCode="ng" size={20} style={{ marginRight: 8 }} />
+
             <Text
               className="text-xl font-bold mr-3"
               style={{ color: colors.text }}
@@ -100,7 +100,7 @@ export default function PhoneScreen() {
               +234
             </Text>
             <TextInput
-              placeholder="80 1234 5678"
+              placeholder="801 234 5678"
               value={phone}
               onChangeText={(t) => setPhone(t.replace(/\D/g, "").slice(0, 11))}
               keyboardType="phone-pad"

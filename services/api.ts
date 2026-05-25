@@ -15,6 +15,7 @@ API.interceptors.request.use(
       const user = auth.currentUser;
 
       if (user) {
+
         const token = await user.getIdToken(); // 🔥 AUTO REFRESH HERE
         config.headers.Authorization = `Bearer ${token}`;
       }

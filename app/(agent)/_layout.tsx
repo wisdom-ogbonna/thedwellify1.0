@@ -10,10 +10,10 @@ export default function AgentLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.text,
+        tabBarActiveTintColor: "#777777",
         tabBarInactiveTintColor: colors.border,
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: colors.border,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           height: 75,
@@ -29,11 +29,11 @@ export default function AgentLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="agent-dashboard"
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <House size={24} color={color} weight={focused ? "bold" : "thin"} />
+            <House size={24} color={color} weight={focused ? "fill" : "regular"} />
           ),
         }}
       />
@@ -45,7 +45,7 @@ export default function AgentLayout() {
             <Package
               size={24}
               color={color}
-              weight={focused ? "bold" : "thin"}
+              weight={focused ? "fill" : "regular"}
             />
           ),
         }}
@@ -55,7 +55,7 @@ export default function AgentLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
-            <User size={24} color={color} weight={focused ? "bold" : "thin"} />
+            <User size={24} color={color} weight={focused ? "fill" : "regular"} />
           ),
         }}
       />

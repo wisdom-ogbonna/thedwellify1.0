@@ -8,6 +8,8 @@ import {
   Switch,
   Text,
   View,
+  useColorScheme,
+  Appearance,
 } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +23,7 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const scheme = useColorScheme();
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +55,18 @@ export default function ProfileScreen() {
     } finally {
       setToggling(false);
     }
+  };
+
+  const handleThemeChange = () => {
+    Alert.alert("Appearance Settings", "Select the app's theme mode:", [
+      { text: "Light Mode", onPress: () => Appearance.setColorScheme("light") },
+      { text: "Dark Mode", onPress: () => Appearance.setColorScheme("dark") },
+      {
+        text: "System Default",
+        onPress: () => Appearance.setColorScheme(null),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   if (loading)
@@ -98,17 +113,21 @@ export default function ProfileScreen() {
           </Text>
         </View>
         <View
-          className={`px-4 py-2 rounded-full ${profile.verified ? "bg-green-100" : "bg-amber-100"}`}
+          className={`px-4 py-2 rounded-full ${
+            profile.verified ? "bg-green-100" : "bg-amber-100"
+          }`}
         >
           <Text
-            className={`text-[10px] font-bold uppercase ${profile.verified ? "text-green-800" : "text-amber-800"}`}
+            className={`text-[10px] font-bold uppercase ${
+              profile.verified ? "text-green-800" : "text-amber-800"
+            }`}
           >
             {profile.verified ? "Verified" : "Pending"}
           </Text>
         </View>
       </View>
 
-      {/* Requests Navigation Card (High visibility) */}
+      {/* Requests Navigation Card */}
       <Pressable
         onPress={() => router.push({ pathname: "/(utilities)/requests" })}
         className="border-2 rounded-3xl p-6 mb-8 flex-row items-center justify-between"
@@ -123,36 +142,55 @@ export default function ProfileScreen() {
             View Requests
           </Text>
         </View>
-        <Text
-          className="text-xs font-bold uppercase opacity-60"
-          style={{ color: colors.text }}
-        >
-          <ArrowRight size={16} color={colors.text} />
-        </Text>
+        <ArrowRight size={16} color={colors.text} />
       </Pressable>
 
-      {/* Online Status Card */}
-      <View
-        className="border-2 rounded-3xl p-6 mb-8 flex-row justify-between items-center"
-        style={{ borderColor: colors.border }}
-      >
-        <Text
-          className="font-bold uppercase tracking-widest text-xs opacity-40"
-          style={{ color: colors.text }}
+      {/* Settings Grid */}
+      <View className="flex-row gap-4 mb-8">
+        {/* Online Status Card */}
+        <View
+          className="flex-1 border-2 rounded-3xl p-6 justify-between"
+          style={{ borderColor: colors.border }}
         >
-          Status
-        </Text>
-        <View className="flex-row items-center gap-4">
-          <Text className="font-black text-lg" style={{ color: colors.text }}>
-            {toggling ? "Updating..." : isOnline ? "Online" : "Offline"}
+          <Text
+            className="font-bold uppercase tracking-widest text-[10px] opacity-40 mb-4"
+            style={{ color: colors.text }}
+          >
+            Status
           </Text>
-          <Switch
-            value={isOnline}
-            onValueChange={handleToggle}
-            disabled={toggling}
-            trackColor={{ true: colors.primary }}
-          />
+          <View className="flex-row justify-between items-center">
+            <Text className="font-black text-sm" style={{ color: colors.text }}>
+              {toggling ? "Updating..." : isOnline ? "Online" : "Offline"}
+            </Text>
+            <Switch
+              value={isOnline}
+              onValueChange={handleToggle}
+              disabled={toggling}
+              trackColor={{ true: colors.primary }}
+            />
+          </View>
         </View>
+
+        {/* Theme Toggle Card */}
+        <Pressable
+          onPress={handleThemeChange}
+          className="flex-1 border-2 rounded-3xl p-6 justify-between"
+          style={{ borderColor: colors.border }}
+        >
+          <Text
+            className="font-bold uppercase tracking-widest text-[10px] opacity-40 mb-4"
+            style={{ color: colors.text }}
+          >
+            Theme
+          </Text>
+          <Text className="font-black text-sm" style={{ color: colors.text }}>
+            {scheme === "dark"
+              ? "Dark"
+              : scheme === "light"
+                ? "Light"
+                : "System"}
+          </Text>
+        </Pressable>
       </View>
 
       {/* Details List */}

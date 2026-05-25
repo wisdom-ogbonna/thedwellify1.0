@@ -9,7 +9,7 @@ const COLORS = {
   // 5. Green (Success)
   GREEN: "#10B981",
   // 6. Gray (For borders/placeholders/muted text)
-  GRAY: "#9CA3AF",
+  GRAY: "#A9A9A9",
 };
 
 export default COLORS;
