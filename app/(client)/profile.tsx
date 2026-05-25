@@ -42,7 +42,10 @@ export default function ClientDashboard() {
     } catch (error) {
       console.log("PROFILE ERROR:", error);
 
-      Alert.alert("Error", "Failed to load your profile. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to load your profile. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -79,7 +82,7 @@ export default function ClientDashboard() {
           style: "cancel",
         },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 
@@ -104,7 +107,7 @@ export default function ClientDashboard() {
               await logout();
             },
           },
-        ],
+        ]
       );
     } catch (error: any) {
       console.log("DELETE ACCOUNT ERROR:", error);
@@ -141,7 +144,7 @@ export default function ClientDashboard() {
       ],
       {
         cancelable: true,
-      },
+      }
     );
   };
 
@@ -205,7 +208,10 @@ export default function ClientDashboard() {
       <View className="mb-10">
         <DetailItem label="Email" value={profile?.email || "N/A"} />
 
-        <DetailItem label="Phone" value={profile?.phone || "Not provided"} />
+        <DetailItem
+          label="Phone"
+          value={profile?.phone || "Not provided"}
+        />
 
         <DetailItem
           label="Status"
@@ -241,8 +247,8 @@ export default function ClientDashboard() {
             {scheme === "dark"
               ? "Dark Mode"
               : scheme === "light"
-                ? "Light Mode"
-                : "System Default"}
+              ? "Light Mode"
+              : "System Default"}
           </Text>
         </View>
 
@@ -261,8 +267,9 @@ export default function ClientDashboard() {
           >
             Change
           </Text>
-        </Pressable>
-      </View>
+        </View>
+
+
 
       {/* =========================
           SIGN OUT
@@ -318,7 +325,13 @@ export default function ClientDashboard() {
  * DETAIL ITEM
  * =========================
  */
-const DetailItem = ({ label, value }: { label: string; value: string }) => {
+const DetailItem = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) => {
   const { colors } = useTheme();
 
   return (
