@@ -48,7 +48,9 @@ const AvailableProperties: React.FC = () => {
       setError("");
 
       const query =
-        activeCategory !== "All" ? `?propertyType=${activeCategory}` : "";
+        activeCategory !== "All"
+          ? `?propertyType=${activeCategory}`
+          : "";
 
       const res = await API.get(`/agentid/${agentId}${query}`);
 
@@ -59,7 +61,8 @@ const AvailableProperties: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [agentId, activeCategory]);
+  }, []);
+
 
   useEffect(() => {
     fetchProperties();

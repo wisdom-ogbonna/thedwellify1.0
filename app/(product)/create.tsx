@@ -120,7 +120,7 @@ export default function CreateProduct() {
    * 🚀 SUBMIT
    */
   const handleSubmit = async () => {
-    if (!title || !price || !location || !propertyType || !description) {
+    if (!title || !price || !location || !propertyType || !description || images.length === 0 || !video) {
       Alert.alert("Error", "All fields are required");
       return;
     }
@@ -173,7 +173,7 @@ export default function CreateProduct() {
       });
 
       Alert.alert("Success", "Listing created successfully");
-      router.back();
+      router.push("/(agent)/products");
     } catch (err: any) {
       console.log(err?.response?.data || err.message);
       Alert.alert("Error", "Failed to create listing");

@@ -1,6 +1,6 @@
-import { Tabs } from "expo-router";
-import { House, User, Package } from "phosphor-react-native";
 import { useTheme } from "@react-navigation/native";
+import { Tabs } from "expo-router";
+import { House, Package, User } from "phosphor-react-native";
 import React from "react";
 
 export default function AgentLayout() {
@@ -10,8 +10,8 @@ export default function AgentLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#777777",
-        tabBarInactiveTintColor: colors.border,
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: "#777777",
         tabBarStyle: {
           backgroundColor: colors.border,
           borderTopWidth: 1,
@@ -33,7 +33,11 @@ export default function AgentLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <House size={24} color={color} weight={focused ? "fill" : "regular"} />
+            <House
+              size={24}
+              color={color}
+              weight={focused ? "fill" : "regular"}
+            />
           ),
         }}
       />
@@ -55,7 +59,11 @@ export default function AgentLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
-            <User size={24} color={color} weight={focused ? "fill" : "regular"} />
+            <User
+              size={24}
+              color={color}
+              weight={focused ? "fill" : "regular"}
+            />
           ),
         }}
       />
