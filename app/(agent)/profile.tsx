@@ -75,7 +75,7 @@ export default function ProfileScreen() {
         className="flex-1 justify-center"
         style={{ backgroundColor: colors.background }}
       >
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.text} />
       </View>
     );
 
