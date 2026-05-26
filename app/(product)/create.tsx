@@ -120,7 +120,7 @@ export default function CreateProduct() {
    * 🚀 SUBMIT
    */
   const handleSubmit = async () => {
-    if (!title || !price || !location || !propertyType || !description) {
+    if (!title || !price || !location || !propertyType || !description || images.length === 0 || !video) {
       Alert.alert("Error", "All fields are required");
       return;
     }
