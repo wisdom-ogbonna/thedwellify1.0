@@ -147,7 +147,7 @@ export default function RequestMatchScreen() {
 
       Alert.alert(
         "Error",
-        error?.response?.data?.message || "Something went wrong"
+        error?.response?.data?.message || "There's currently no agents available with this property. Please try again later."
       );
     } finally {
       setLoading(false);
