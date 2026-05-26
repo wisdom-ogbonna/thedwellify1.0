@@ -8,10 +8,12 @@ const PropertyCard = ({ item }: { item: any }) => {
   const router = useRouter();
 
   const handleNavigation = () => {
-    router.push({
-      pathname: "/(utilities)/[id]",
-      params: { id: item.id },
-    });
+  router.push({
+    pathname: "/(utilities)/property-view",
+    params: {
+      propertyId: item.id,
+    },
+  });
   };
 
   return (
