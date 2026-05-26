@@ -5,8 +5,6 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 function Request({
   locationLoading,
   address,
-  lat,
-  lng,
   getLocation,
   PROPERTY_TYPES,
   selectedType,
@@ -18,9 +16,7 @@ function Request({
 
   return (
     <View className="px-1">
-      <Text
-        className="text-3xl font-extrabold mb-6 text-white"
-      >
+      <Text className="text-3xl font-extrabold mb-6 text-white">
         Find Property
       </Text>
 
@@ -50,12 +46,6 @@ function Request({
             >
               {address || "Locating..."}
             </Text>
-
-            {lat && lng && (
-              <Text className="text-gray-500 text-xs mt-1">
-                {lat.toFixed(4)}, {lng.toFixed(4)}
-              </Text>
-            )}
           </>
         )}
 

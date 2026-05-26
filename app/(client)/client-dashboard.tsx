@@ -169,8 +169,6 @@ export default function RequestMatchScreen() {
             <ClientEvent
               locationLoading={locationLoading}
               address={address}
-              lat={lat}
-              lng={lng}
               getLocation={getLocation}
               PROPERTY_TYPES={PROPERTY_TYPES}
               selectedType={selectedType}
