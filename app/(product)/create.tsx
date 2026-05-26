@@ -173,7 +173,7 @@ export default function CreateProduct() {
       });
 
       Alert.alert("Success", "Listing created successfully");
-      router.back();
+      router.push("/(agent)/products");
     } catch (err: any) {
       console.log(err?.response?.data || err.message);
       Alert.alert("Error", "Failed to create listing");
