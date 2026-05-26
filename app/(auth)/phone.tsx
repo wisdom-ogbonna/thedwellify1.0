@@ -88,7 +88,7 @@ export default function PhoneScreen() {
 
           {/* Premium Input Container */}
           <View
-            className="border-b-2 pb-2 flex-row items-center"
+            className="border-b-2 pb-2 flex-row justify-center items-center"
             style={{ borderColor: isValid ? colors.primary : colors.border }}
           >
             <CountryFlag isoCode="ng" size={20} style={{ marginRight: 8 }} />

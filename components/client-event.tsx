@@ -5,8 +5,6 @@ import Request from "./client-ui/request";
 function ClientEvent({
   locationLoading,
   address,
-  lat,
-  lng,
   getLocation,
   PROPERTY_TYPES,
   selectedType,
@@ -30,8 +28,6 @@ setMatchData,
         <Request
           locationLoading={locationLoading}
           address={address}
-          lat={lat}
-          lng={lng}
           getLocation={getLocation}
           PROPERTY_TYPES={PROPERTY_TYPES}
           selectedType={selectedType}
