@@ -41,6 +41,20 @@ export default function AgentLayout() {
           ),
         }}
       />
+
+            <Tabs.Screen
+        name="map"
+        options={{
+          title: "map",
+          tabBarIcon: ({ color, focused }) => (
+            <Package
+              size={24}
+              color={color}
+              weight={focused ? "fill" : "regular"}
+            />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="products"
         options={{
@@ -54,6 +68,7 @@ export default function AgentLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{
