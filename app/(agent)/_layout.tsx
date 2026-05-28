@@ -42,7 +42,7 @@ export default function AgentLayout() {
         }}
       />
 
-            <Tabs.Screen
+      <Tabs.Screen
         name="map"
         options={{
           title: "map",
