@@ -46,93 +46,147 @@ export default function AgentDashboard() {
   /**
    * ✅ Fetch agent status (ID from Firebase 🔥)
    */
-  const fetchAgentStatus = async () => {
-    try {
-      const user = auth.currentUser;
+const fetchAgentStatus = async () => {
+  try {
+    const user = auth.currentUser;
 
-      if (!user) {
-        setMessage("User not authenticated");
-        return;
-      }
-
-      const agentId = user.uid;
-
-      const res = await API.get(`/agent/live/${agentId}`);
-      const agent = res.data;
-
-      setAgentStatus(agent.status);
-
-      // 🔥 STORE requestId
-      setRequestId(agent.requestId || null);
-
-      if (agent.status === "suspended") {
-        setMessage("Your account is suspended. Please make payment.");
-      } else if (agent.status === "matched") {
-        setMessage("You have an active request. Start inspection.");
-      } else if (agent.status === "inspection_started") {
-        setMessage("Inspection in progress. Complete it when done.");
-      } else {
-        setMessage("Agent is active");
-      }
-    } catch (err) {
-      console.log("Fetch agent error:", err);
-      setMessage("Failed to fetch agent status");
-    } finally {
-      setLoading(false);
+    if (!user) {
+      setMessage("User not authenticated");
+      return;
     }
-  };
 
-  const startInspection = async () => {
-    try {
-      const user = auth.currentUser;
+    // 🔥 GET FIREBASE TOKEN
+    const token = await user.getIdToken();
 
-      if (!user || !requestId) {
-        alert("Missing request");
-        return;
-      }
+    const res = await API.get("/agent/live", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      setMessage("Starting inspection...");
+    const agent = res.data;
 
-      await API.post("/client/inspection/start", {
+    setAgentStatus(agent.status);
+
+    setRequestId(agent.requestId || null);
+
+    if (agent.status === "suspended") {
+      setMessage(
+        "Your account is suspended. Please make payment."
+      );
+
+    } else if (agent.status === "matched") {
+      setMessage(
+        "You have an active request. Start inspection."
+      );
+
+    } else if (
+      agent.status === "inspection_started"
+    ) {
+      setMessage(
+        "Inspection in progress. Complete it when done."
+      );
+
+    } else {
+      setMessage("Agent is active");
+    }
+
+  } catch (err) {
+    console.log(
+      "Fetch agent error:",
+      err.response?.data || err.message
+    );
+
+    setMessage("Failed to fetch agent status");
+
+  } finally {
+    setLoading(false);
+  }
+};
+
+const startInspection = async () => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user || !requestId) {
+      alert("Missing request");
+      return;
+    }
+
+    // 🔥 Firebase token
+    const token = await user.getIdToken();
+
+    setMessage("Starting inspection...");
+
+    await API.post(
+      "/client/inspection/start",
+      {
         requestId,
         agentId: user.uid,
-      });
-
-      setMessage("Inspection started successfully");
-
-      // refresh status
-      fetchAgentStatus();
-    } catch (err) {
-      console.log("Start inspection error:", err.response?.data || err.message);
-      setMessage("Failed to start inspection");
-    }
-  };
-
-  const endInspection = async () => {
-    try {
-      const user = auth.currentUser;
-
-      if (!user || !requestId) {
-        alert("Missing request");
-        return;
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
+    );
 
-      setMessage("Ending inspection...");
+    setMessage("Inspection started successfully");
 
-      await API.post("/client/inspection/end", {
+    // 🔄 Refresh status
+    fetchAgentStatus();
+
+  } catch (err) {
+    console.log(
+      "Start inspection error:",
+      err.response?.data || err.message
+    );
+
+    setMessage("Failed to start inspection");
+  }
+};
+
+const endInspection = async () => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user || !requestId) {
+      alert("Missing request");
+      return;
+    }
+
+    // 🔥 Firebase token
+    const token = await user.getIdToken();
+
+    setMessage("Ending inspection...");
+
+    await API.post(
+      "/client/inspection/end",
+      {
         requestId,
         agentId: user.uid,
-      });
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-      setMessage("Inspection completed successfully");
+    setMessage("Inspection completed successfully");
 
-      // 🔄 refresh state
-      fetchAgentStatus();
-    } catch (err) {
-      console.log("End inspection error:", err.response?.data || err.message);
-      setMessage("Failed to end inspection");
-    }
-  };
+    // 🔄 Refresh status
+    fetchAgentStatus();
+
+  } catch (err) {
+    console.log(
+      "End inspection error:",
+      err.response?.data || err.message
+    );
+
+    setMessage("Failed to end inspection");
+  }
+};
   /**
    * ✅ Trigger payment (ONLY on button click 🔥)
    */
