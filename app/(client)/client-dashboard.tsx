@@ -1,7 +1,6 @@
 import BottomSheet, { BottomSheetRefProps } from "@/components/bottom-sheet";
 import ClientEvent from "@/components/client-event";
 import * as Location from "expo-location";
-import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Dimensions, ScrollView, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
@@ -178,7 +177,6 @@ export default function RequestMatchScreen() {
 
   return (
     <View className="flex-1 relative bg-[#0B0F1A]">
-      <StatusBar style="dark" />
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}

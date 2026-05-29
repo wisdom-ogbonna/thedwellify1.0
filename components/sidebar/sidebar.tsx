@@ -28,8 +28,6 @@ type SidebarProps = {
   translateX: Animated.Value;
   onOverlayPress: () => void;
   items: SidebarItem[];
-  buttonName: string;
-  buttonOnPress: () => void;
 };
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -39,8 +37,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   translateX,
   onOverlayPress,
   items,
-  buttonName,
-  buttonOnPress,
 }) => {
   const { colors } = useTheme();
 
@@ -53,14 +49,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   );
   const utilityItems = items.filter((item) => !primaryItems.includes(item));
 
-  // Helper to safely append alpha values to hex color tokens if needed
   const getAlphaColor = (hex: string, alphaHex: string) => {
     return hex.startsWith("#") && hex.length === 7 ? `${hex}${alphaHex}` : hex;
   };
 
   return (
     <View className="absolute inset-0 z-50 h-screen">
-      {/* Backdrop Overlay - Keeps uniform dark contrast on both light/dark themes */}
       <Pressable
         className="absolute inset-0 bg-black/60"
         onPress={onOverlayPress}

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Image, Pressable, StatusBar } from "react-native";
+import { View, Text, Image, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/hooks/use-theme";
 import {
@@ -19,11 +19,6 @@ const AgentTracking = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar
-        barStyle="dark-content"
-        translucent
-        backgroundColor="transparent"
-      />
 
       {/* FULL SCREEN MAP PLACEHOLDER */}
       <View className="absolute inset-0 bg-gray-300 items-center justify-center">

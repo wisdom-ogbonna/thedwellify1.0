@@ -6,7 +6,6 @@ import {
   FlatList,
   Modal,
   Pressable,
-  StatusBar,
   Text,
   View,
 } from "react-native";
@@ -110,9 +109,6 @@ const AvailableProperties: React.FC = () => {
         backgroundColor: colors.background,
       }}
     >
-      <StatusBar
-        barStyle={colors.text === "#FFFFFF" ? "light-content" : "dark-content"}
-      />
 
       {loading ? (
         <View className="flex-1 items-center justify-center">

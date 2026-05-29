@@ -1,6 +1,6 @@
 import { useTheme } from "@/hooks/use-theme";
 import { Tabs } from "expo-router";
-import { House, MapPinIcon, Package, User } from "phosphor-react-native";
+import { House, MapPinIcon, User } from "phosphor-react-native";
 import React from "react";
 
 export default function AgentLayout() {
@@ -55,11 +55,11 @@ export default function AgentLayout() {
         }}
       />
       <Tabs.Screen
-        name="products"
+        name="agent-profile"
         options={{
-          title: "Products",
+          title: "Profile",
           tabBarIcon: ({ color, focused }) => (
-            <Package
+            <User
               size={24}
               color={color}
               weight={focused ? "fill" : "regular"}

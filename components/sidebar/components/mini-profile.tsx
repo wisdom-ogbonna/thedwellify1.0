@@ -33,7 +33,7 @@ export default function MiniProfile({ name, rating }: MiniProfileProps) {
 
   return (
     <TouchableOpacity
-      onPress={() => router.push("/(product)/agent-profile")}
+      onPress={() => router.push("/(agent)/agent-profile")}
       activeOpacity={0.85}
       className="flex-row items-center p-4 rounded-2xl w-full"
       style={{
