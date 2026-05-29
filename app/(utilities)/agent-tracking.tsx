@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Image, Pressable, StatusBar } from "react-native";
 import { useRouter } from "expo-router";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import {
   Phone,
   ChatTeardropText,

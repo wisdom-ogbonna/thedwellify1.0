@@ -1,25 +1,20 @@
 import React, { useCallback, useImperativeHandle } from "react";
-import { Dimensions, View, Pressable } from "react-native";
+import { Dimensions, Pressable, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Extrapolate,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  runOnJS,
 } from "react-native-reanimated";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import * as Haptics from "expo-haptics";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-const SNAP_POINTS = {
-  CLOSED: 0,
-  LOW: -SCREEN_HEIGHT * 0.10,
-  MID: -SCREEN_HEIGHT * 0.59,
-  HIGH: -SCREEN_HEIGHT * 0.80,
-};
 
 type BottomSheetProps = {
   children?: React.ReactNode;
@@ -33,67 +28,123 @@ export type BottomSheetRefProps = {
 const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
   ({ children }, ref) => {
     const { colors } = useTheme();
+
+    const insets = useSafeAreaInsets();
+
+    const tabBarHeight = useBottomTabBarHeight();
+
+    const usableHeight = SCREEN_HEIGHT - tabBarHeight - insets.bottom;
+
+    const SNAP_POINTS = {
+      CLOSED: -usableHeight * 0.11,
+      LOW: -usableHeight * 0.11,
+      MID: -usableHeight * 0.59,
+      HIGH: -usableHeight * 0.8,
+    };
+
     const translateY = useSharedValue(0);
-    const context = useSharedValue({ y: 0 });
+
+    const context = useSharedValue({
+      y: 0,
+    });
 
     const triggerHaptic = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     };
 
-    const scrollTo = useCallback((destination: number) => {
-      "worklet";
-      if (destination !== 0) runOnJS(triggerHaptic)();
+    const scrollTo = useCallback(
+      (destination: number) => {
+        "worklet";
 
-      translateY.value = withSpring(destination, {
-        damping: 20,
-        stiffness: 90,
-      });
-    }, [translateY]);
+        const clampedDestination = Math.max(
+          SNAP_POINTS.HIGH,
+          Math.min(SNAP_POINTS.CLOSED, destination),
+        );
+
+        if (clampedDestination !== 0) {
+          runOnJS(triggerHaptic)();
+        }
+
+        translateY.value = withSpring(clampedDestination, {
+          damping: 24,
+          stiffness: 140,
+          mass: 0.8,
+          overshootClamping: true,
+        });
+      },
+      [translateY],
+    );
 
     const close = useCallback(() => {
       scrollTo(SNAP_POINTS.CLOSED);
     }, [scrollTo]);
 
-    useImperativeHandle(ref, () => ({ scrollTo, close }), [scrollTo, close]);
+    useImperativeHandle(
+      ref,
+      () => ({
+        scrollTo,
+        close,
+      }),
+      [scrollTo, close],
+    );
 
     const gesture = Gesture.Pan()
+      .shouldCancelWhenOutside(false)
+      .activeOffsetY([-10, 10])
       .onStart(() => {
-        context.value = { y: translateY.value };
+        context.value = {
+          y: translateY.value,
+        };
       })
       .onUpdate((event) => {
-        translateY.value = event.translationY + context.value.y;
-        // Constraint: Don't pull higher than the HIGH snap point
-        translateY.value = Math.max(translateY.value, SNAP_POINTS.HIGH - 20);
+        let nextPosition = event.translationY + context.value.y;
+
+        // hard clamp between HIGH and CLOSED
+        nextPosition = Math.max(
+          SNAP_POINTS.HIGH,
+          Math.min(SNAP_POINTS.CLOSED, nextPosition),
+        );
+
+        translateY.value = nextPosition;
       })
       .onEnd((event) => {
-        // Snap logic including velocity for a "flick" feel
-        const totalTranslation = translateY.value + event.velocityY * 0.1;
+        const projected = translateY.value + event.velocityY * 0.12;
 
-        if (totalTranslation > SNAP_POINTS.LOW / 2) {
-          scrollTo(SNAP_POINTS.CLOSED);
-        } else if (totalTranslation > (SNAP_POINTS.LOW + SNAP_POINTS.MID) / 2) {
-          scrollTo(SNAP_POINTS.LOW);
-        } else if (
-          totalTranslation >
-          (SNAP_POINTS.MID + SNAP_POINTS.HIGH) / 2
-        ) {
-          scrollTo(SNAP_POINTS.MID);
-        } else {
-          scrollTo(SNAP_POINTS.HIGH);
-        }
+        const snapPoints = [
+          SNAP_POINTS.CLOSED,
+          SNAP_POINTS.LOW,
+          SNAP_POINTS.MID,
+          SNAP_POINTS.HIGH,
+        ];
+
+        let destination = snapPoints.reduce((prev, curr) =>
+          Math.abs(curr - projected) < Math.abs(prev - projected) ? curr : prev,
+        );
+
+        // HARD LIMITS
+        destination = Math.max(
+          SNAP_POINTS.HIGH,
+          Math.min(SNAP_POINTS.CLOSED, destination),
+        );
+
+        scrollTo(destination);
       });
 
     const rBottomSheetStyle = useAnimatedStyle(() => {
       const borderRadius = interpolate(
         translateY.value,
         [SNAP_POINTS.HIGH, SNAP_POINTS.LOW],
-        [32, 16],
+        [34, 18],
         Extrapolate.CLAMP,
       );
 
       return {
         borderRadius,
-        transform: [{ translateY: translateY.value }],
+        transform: [
+          {
+            translateY: translateY.value,
+          },
+        ],
       };
     });
 
@@ -101,49 +152,50 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
       return {
         opacity: interpolate(
           translateY.value,
-          [SNAP_POINTS.CLOSED, SNAP_POINTS.MID],
-          [0, 1],
+          [SNAP_POINTS.CLOSED, SNAP_POINTS.HIGH],
+          [0, 0],
           Extrapolate.CLAMP,
         ),
-        pointerEvents: translateY.value < -50 ? "auto" : "none",
       };
     });
 
     return (
       <>
-        {/* Backdrop */}
         <Animated.View
+          pointerEvents="none"
           style={[
             {
-              backgroundColor: "rgba(0,0,0,0.5)",
+              backgroundColor: "transparent",
               position: "absolute",
-              inset: 0,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
             },
             rBackdropStyle,
           ]}
-        >
-          <Pressable className="flex-1" onPress={close} />
-        </Animated.View>
+        />
 
-        {/* Sheet */}
         <GestureDetector gesture={gesture}>
           <Animated.View
             style={[
               {
-                height: SCREEN_HEIGHT,
+                height: usableHeight + tabBarHeight,
                 top: SCREEN_HEIGHT,
                 backgroundColor: colors.primary,
                 shadowColor: colors.text,
+                paddingBottom: insets.bottom,
               },
               rBottomSheetStyle,
             ]}
-            className="absolute w-full z-50 shadow-xl"
+            className="absolute z-50 w-full shadow-xl"
           >
-            {/* Handle Bar */}
             <View className="items-center py-4">
               <View
-                style={{ backgroundColor: colors.text }}
-                className="w-12 h-1.5 rounded-full opacity-40"
+                style={{
+                  backgroundColor: colors.text,
+                }}
+                className="h-1.5 w-12 rounded-full opacity-40"
               />
             </View>
 

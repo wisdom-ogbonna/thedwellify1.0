@@ -1,4 +1,4 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";

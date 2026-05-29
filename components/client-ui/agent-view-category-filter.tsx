@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, FlatList, Pressable } from "react-native";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 
 interface CategoryFilterProps {
   categories: string[];

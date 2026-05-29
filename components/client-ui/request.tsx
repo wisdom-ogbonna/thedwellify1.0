@@ -1,4 +1,4 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import React from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 

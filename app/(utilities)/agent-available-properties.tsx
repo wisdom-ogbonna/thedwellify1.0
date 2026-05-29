@@ -1,21 +1,22 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   StatusBar,
   Text,
   View,
-  ActivityIndicator,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { API } from "../../services/api";
+import CategoryFilter from "../../components/client-ui/agent-view-category-filter";
 import AgentHeader from "../../components/client-ui/agent-view-header";
 import PropertyCard from "../../components/client-ui/agent-view-property-card";
-import CategoryFilter from "../../components/client-ui/agent-view-category-filter";
+import { API } from "../../services/api";
+import { CaretLeftIcon } from "phosphor-react-native";
 
 const CATEGORIES = ["All", "Apartment", "Hotel", "Shortlet"];
 
@@ -48,9 +49,7 @@ const AvailableProperties: React.FC = () => {
       setError("");
 
       const query =
-        activeCategory !== "All"
-          ? `?propertyType=${activeCategory}`
-          : "";
+        activeCategory !== "All" ? `?propertyType=${activeCategory}` : "";
 
       const res = await API.get(`/agentid/${agentId}${query}`);
 
@@ -62,7 +61,6 @@ const AvailableProperties: React.FC = () => {
       setLoading(false);
     }
   }, []);
-
 
   useEffect(() => {
     fetchProperties();
@@ -202,21 +200,46 @@ const AvailableProperties: React.FC = () => {
       {/* Bottom Button */}
       <View
         style={{
+          flexDirection: "row",
           backgroundColor: colors.background,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          padding: 16,
-          elevation: 10, // Android shadow
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: 24,
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
         }}
       >
+        {/* Back Button - 30% */}
+        <Pressable
+          onPress={() => router.back()}
+          style={{
+            flex: 0.3,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+          }}
+          className="mr-3 items-center justify-center rounded-2xl border-2 py-5"
+        >
+          <CaretLeftIcon size={22} color={colors.text} />
+        </Pressable>
+
+        {/* Book Button - 70% */}
         <Pressable
           onPress={() => setBookingModalOpen(true)}
           style={{
+            flex: 0.7,
             backgroundColor: colors.primary,
           }}
-          className="py-5 rounded-2xl items-center"
+          className="items-center justify-center rounded-2xl py-5"
         >
-          <Text className="text-white text-lg font-bold">Book Agent Now</Text>
+          <Text className="text-lg font-bold text-white">Book Agent Now</Text>
         </Pressable>
       </View>
 
@@ -270,7 +293,9 @@ function ConfirmBookingModal({
             Are you sure you want to book this agent for an inspection?
           </Text>
 
-          <Text className="mb-4 text-lg font-semibold">Price: ₦{price.toLocaleString()}</Text>
+          <Text className="mb-4 text-lg font-semibold">
+            Price: ₦{price.toLocaleString()}
+          </Text>
 
           <View className="flex-row justify-between">
             <Pressable

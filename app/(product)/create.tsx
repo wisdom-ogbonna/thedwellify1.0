@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {

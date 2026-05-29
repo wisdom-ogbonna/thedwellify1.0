@@ -10,7 +10,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";

@@ -8,6 +8,7 @@ export default function ProductLayout() {
     >
       <Stack.Screen name="create" />
       <Stack.Screen name="[id]" />
+      <Stack.Screen name="agent-profile" />
     </Stack>
   );
 }

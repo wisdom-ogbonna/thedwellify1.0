@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TextInput } from "react-native";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 
 export const InputField = ({ label, ...props }: any) => {
   const { colors } = useTheme();

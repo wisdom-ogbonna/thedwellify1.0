@@ -11,12 +11,13 @@ import {
   useColorScheme,
   Appearance,
 } from "react-native";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
 import { useRouter } from "expo-router";
-import { ArrowRight, ClipboardText } from "phosphor-react-native";
+// Imported CaretLeft to match your design vocabulary
+import { ArrowRight, ClipboardText, CaretLeft } from "phosphor-react-native";
 
 export default function ProfileScreen() {
   const { logout, isOnline, goOnline, goOffline } = useAuth();
@@ -84,7 +85,7 @@ export default function ProfileScreen() {
       className="flex-1"
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 32,
+        paddingTop: insets.top + 20, // Slightly reduced to balance out the back button height
         paddingBottom: insets.bottom + 32,
         paddingHorizontal: 32,
       }}
@@ -96,6 +97,16 @@ export default function ProfileScreen() {
         />
       }
     >
+      {/* Dynamic Back Navigation Anchor */}
+      {router.canGoBack() && (
+        <Pressable
+          onPress={() => router.back()}
+          className="mb-6 self-start p-2 -ml-2 rounded-full active:opacity-60"
+        >
+          <CaretLeft size={26} color={colors.text} weight="bold" />
+        </Pressable>
+      )}
+
       {/* Header */}
       <View className="mb-10 flex-row justify-between items-start">
         <View>

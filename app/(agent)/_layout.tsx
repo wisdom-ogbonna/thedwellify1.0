@@ -1,6 +1,6 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { Tabs } from "expo-router";
-import { House, Package, User } from "phosphor-react-native";
+import { House, MapPinIcon, Package, User } from "phosphor-react-native";
 import React from "react";
 
 export default function AgentLayout() {
@@ -11,9 +11,9 @@ export default function AgentLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: "#777777",
+        tabBarInactiveTintColor: colors.placeholder,
         tabBarStyle: {
-          backgroundColor: colors.border,
+          backgroundColor: colors.background,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           height: 75,
@@ -23,7 +23,6 @@ export default function AgentLayout() {
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "700",
-          textTransform: "uppercase",
           letterSpacing: 1,
         },
       }}
@@ -45,9 +44,9 @@ export default function AgentLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: "map",
+          title: "Map",
           tabBarIcon: ({ color, focused }) => (
-            <Package
+            <MapPinIcon
               size={24}
               color={color}
               weight={focused ? "fill" : "regular"}
@@ -61,20 +60,6 @@ export default function AgentLayout() {
           title: "Products",
           tabBarIcon: ({ color, focused }) => (
             <Package
-              size={24}
-              color={color}
-              weight={focused ? "fill" : "regular"}
-            />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, focused }) => (
-            <User
               size={24}
               color={color}
               weight={focused ? "fill" : "regular"}

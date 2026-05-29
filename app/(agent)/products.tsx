@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
 import { Plus, PencilSimple, Trash } from "phosphor-react-native";
 import { API } from "../../services/api";
@@ -58,7 +58,7 @@ const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
       }
       className="mb-6 rounded-3xl overflow-hidden border"
       style={{
-        backgroundColor: colors.card,
+        backgroundColor: colors.border,
         borderColor: colors.border,
         shadowColor: "#000",
         shadowOpacity: 0.04,
