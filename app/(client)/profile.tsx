@@ -219,7 +219,7 @@ export default function ClientDashboard() {
       <View
         className="border rounded-3xl p-6 mb-8 flex-row items-center justify-between"
         style={{
-          borderColor: colors.border,
+          borderColor: colors.placeholder,
         }}
       >
         <View>
@@ -325,7 +325,7 @@ const DetailItem = ({ label, value }: { label: string; value: string }) => {
     <View
       className="border-b pb-5 mb-5"
       style={{
-        borderColor: colors.border,
+        borderColor: colors.placeholder,
       }}
     >
       <Text

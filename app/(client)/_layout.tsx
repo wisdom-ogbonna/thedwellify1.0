@@ -13,7 +13,7 @@ export default function ClientLayout() {
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.placeholder,
         tabBarStyle: {
-          backgroundColor: colors.border,
+          backgroundColor: colors.background,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           height: 75,
