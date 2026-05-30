@@ -1,4 +1,4 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { API } from "../../services/api";
 import { useLocalSearchParams } from "expo-router";
 import { signInWithCustomToken } from "firebase/auth";
@@ -108,16 +108,20 @@ const res = await API.post("/otp/verify", {
             </Text>
           </View>
 
-          {/* Luxury OTP Input */}
           <OtpInput
             numberOfDigits={6}
             onTextChange={setOtp}
             theme={{
+              containerStyle: {
+                width: "100%",
+                justifyContent: "space-between",
+              },
+              // 1. BASE DEFAULT STATE
               pinCodeContainerStyle: {
                 backgroundColor: "transparent",
                 borderWidth: 0,
                 borderBottomWidth: 2,
-                borderColor: colors.border,
+                borderColor: colors.border, // Muted default border color
                 borderRadius: 0,
                 width: 45,
                 height: 50,
@@ -127,9 +131,21 @@ const res = await API.post("/otp/verify", {
                 fontWeight: "800",
                 color: colors.text,
               },
-              containerStyle: {
-                width: "100%",
-                justifyContent: "space-between",
+
+              focusedPinCodeContainerStyle: {
+                borderColor: colors.primary,
+                borderBottomWidth: 2.5,
+              },
+
+              filledPinCodeContainerStyle: {
+                borderColor: colors.primary,
+                borderBottomWidth: 2.5,
+              },
+
+              focusStickStyle: {
+                backgroundColor: colors.primary,
+                width: 2,
+                height: 28,
               },
             }}
           />

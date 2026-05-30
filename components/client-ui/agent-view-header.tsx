@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Image } from "react-native";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { SealCheck, MapPin, Bell } from "phosphor-react-native";
 
 interface AgentHeaderProps {

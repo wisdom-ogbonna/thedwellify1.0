@@ -1,17 +1,22 @@
-import React, { useEffect, useState, useCallback, memo } from "react";
+import { useTheme } from "@/hooks/use-theme";
+import { useRouter } from "expo-router";
 import {
-  View,
-  Text,
+  CaretLeftIcon,
+  PencilSimple,
+  Plus,
+  Trash,
+} from "phosphor-react-native";
+import React, { memo, useCallback, useEffect, useState } from "react";
+import {
+  Alert,
   FlatList,
   Image,
   Pressable,
   RefreshControl,
-  Alert,
+  Text,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import { Plus, PencilSimple, Trash } from "phosphor-react-native";
 import { API } from "../../services/api";
 
 // Skeleton Loader
@@ -58,8 +63,8 @@ const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
       }
       className="mb-6 rounded-3xl overflow-hidden border"
       style={{
-        backgroundColor: colors.card,
-        borderColor: colors.border,
+        backgroundColor: colors.background,
+        borderColor: colors.placeholder,
         shadowColor: "#000",
         shadowOpacity: 0.04,
         shadowRadius: 12,
@@ -200,12 +205,17 @@ export default function RentalProductsScreen() {
           />
         }
         ListHeaderComponent={
-          <Text
-            className="text-2xl font-black tracking-tight mb-8 mt-2"
-            style={{ color: colors.text }}
-          >
-            Your Listings
-          </Text>
+          <View className="flex-row items-center mb-8 mt-2 gap-3">
+            <Pressable onPress={() => router.push("/(agent)/dashboard")} className="px-2 py-1">
+              <CaretLeftIcon size={22} weight="bold" color={colors.text} />
+            </Pressable>
+            <Text
+              className="text-2xl font-black tracking-tight px-2 py-1"
+              style={{ color: colors.text }}
+            >
+              Your Listings
+            </Text>
+          </View>
         }
         ListEmptyComponent={!loading ? <EmptyState colors={colors} /> : null}
         renderItem={({ item }) =>

@@ -1,4 +1,4 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import React from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
@@ -22,7 +22,7 @@ function Request({
 
       <View
         style={{
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderColor: colors.border,
         }}
         className="p-5 border rounded-3xl mb-5 shadow-sm"
@@ -50,19 +50,19 @@ function Request({
         )}
 
         <Pressable onPress={getLocation} className="mt-4 active:opacity-60">
-          <Text style={{ color: colors.border }} className="font-bold">
+          <Text style={{ color: colors.placeholder }} className="font-bold">
             Refresh Location
           </Text>
         </Pressable>
       </View>
 
       <View
-        style={{ backgroundColor: colors.card }}
+        style={{ backgroundColor: "transparent" }}
         className="p-5 rounded-3xl mb-8"
       >
         <Text
-          style={{ color: colors.text }}
-          className="opacity-50 text-xs font-bold uppercase tracking-widest mb-4"
+          style={{ color: "#ffffff" }}
+          className="opacity-50 text-sm font-bold uppercase tracking-widest mb-4"
         >
           Property Type
         </Text>
@@ -76,14 +76,14 @@ function Request({
                 key={type}
                 onPress={() => setSelectedType(type)}
                 style={{
-                  backgroundColor: active ? colors.primary : colors.background,
+                  backgroundColor: active ? colors.text : colors.background,
                   borderWidth: 1,
                   borderColor: active ? colors.primary : colors.border,
                 }}
                 className="flex-1 py-3 rounded-2xl items-center transition-all"
               >
                 <Text
-                  style={{ color: active ? "white" : colors.text }}
+                  style={{ color: active ? colors.background : colors.text }}
                   className="text-sm font-bold"
                 >
                   {type}

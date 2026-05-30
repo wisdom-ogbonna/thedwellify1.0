@@ -1,20 +1,21 @@
+import { useTheme } from "@/hooks/use-theme";
 import NetInfo from "@react-native-community/netinfo";
 import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider,
-  useTheme,
 } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
-import OfflineModal from "./(utilities)/offlineModal";
 import { setupNotifications } from "../services/notification";
+import OfflineModal from "./(utilities)/offlineModal";
 
 /* =========================
    NOTIFICATIONS CONFIG
@@ -32,7 +33,7 @@ Notifications.setNotificationHandler({
    APP CONTENT
 ========================= */
 function AppContent() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { user, role, isVerified, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
@@ -40,13 +41,10 @@ function AppContent() {
   /* =========================
      HANDLE NOTIFICATIONS
   ========================= */
-
-useEffect(() => {
-  const responseSub =
-    Notifications.addNotificationResponseReceivedListener(
+  useEffect(() => {
+    const responseSub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const data =
-          response.notification.request.content.data;
+        const data = response.notification.request.content.data;
 
         if (data?.requestId) {
           router.push({
@@ -60,13 +58,13 @@ useEffect(() => {
             },
           });
         }
-      }
+      },
     );
 
-  return () => {
-    responseSub.remove();
-  };
-}, [router]);
+    return () => {
+      responseSub.remove();
+    };
+  }, [router]);
 
   /* =========================
      AUTH + ROLE ROUTING
@@ -115,11 +113,9 @@ useEffect(() => {
     }
 
     /* ✅ FULLY READY */
-    const target =
-      role === "agent" ? "agent-dashboard" : "client-dashboard";
+    const target = role === "agent" ? "agent-dashboard" : "client-dashboard";
 
-    const isInsideApp =
-      inAgent || inClient || inUtilities || inProduct;
+    const isInsideApp = inAgent || inClient || inUtilities || inProduct;
 
     if (!isInsideApp && screen !== target) {
       router.replace(`/${target}`);
@@ -145,7 +141,12 @@ useEffect(() => {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} animated={true} />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
 }
 
 /* =========================
@@ -155,15 +156,15 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [isConnected, setIsConnected] = useState(true);
 
-useEffect(() => {
-  setupNotifications();
+  useEffect(() => {
+    setupNotifications();
 
-  const unsubscribe = NetInfo.addEventListener((state) => {
-    setIsConnected(state.isConnected ?? true);
-  });
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected ?? true);
+    });
 
-  return unsubscribe;
-}, []);
+    return unsubscribe;
+  }, []);
 
   const theme = {
     ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),

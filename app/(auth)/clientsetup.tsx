@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { API } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 
 export default function ClientSetupScreen() {
   const { checkProfile } = useAuth();

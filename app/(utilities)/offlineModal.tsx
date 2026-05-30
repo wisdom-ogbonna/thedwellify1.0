@@ -1,4 +1,4 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import React from "react";
 import {
   ActivityIndicator,
@@ -24,8 +24,8 @@ export default function OfflineModal({
     <Modal visible={visible} transparent animationType="fade">
       <View className="flex-1 justify-center items-center bg-black/60 p-8">
         <View
-          className="w-full p-8 rounded-3xl"
-          style={{ backgroundColor: colors.background }}
+          className="w-full p-8 rounded-3xl border"
+          style={{ backgroundColor: colors.background, borderColor: colors.placeholder }}
         >
           <Text
             className="text-2xl font-black mb-2"

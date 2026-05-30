@@ -14,7 +14,7 @@ import {
 import { InputField } from "../../components/ui/input-field";
 import { API } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 
 export default function AgentSetupScreen() {
   const { user, checkProfile } = useAuth();

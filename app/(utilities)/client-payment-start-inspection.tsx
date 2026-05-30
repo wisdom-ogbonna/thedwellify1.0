@@ -1,11 +1,10 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { useLocalSearchParams, router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   Pressable,
-  StatusBar,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -82,10 +81,6 @@ const ClientPaymentStartInspection: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar
-        barStyle={colors.text === "#FFFFFF" ? "light-content" : "dark-content"}
-      />
-
       <View className="flex-1 justify-center items-center px-6">
 
         {/* 🔄 LOADING */}
