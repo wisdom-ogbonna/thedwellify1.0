@@ -24,7 +24,7 @@ const getRealAddress = async (lat: number, lng: number) => {
     const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
 
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`
     );
 
     const data = await res.json();
@@ -68,6 +68,15 @@ export default function RequestMatchScreen() {
 
   const SNAP_80 = -SCREEN_HEIGHT * 0.8;
 
+  const [liveData, setLiveData] = useState<any>(null);
+
+  const [agentLocation, setAgentLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const [requestStatus, setRequestStatus] = useState<string | null>(null);
+
   useEffect(() => {
     getLocation();
 
@@ -75,6 +84,14 @@ export default function RequestMatchScreen() {
       ref.current?.scrollTo(SNAP_50);
     }, 100);
   }, [SNAP_50]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      getLiveData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getLocation = async () => {
     try {
@@ -109,7 +126,7 @@ export default function RequestMatchScreen() {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         },
-        800,
+        800
       );
 
       const realAddress = await getRealAddress(latitude, longitude);
@@ -168,13 +185,64 @@ export default function RequestMatchScreen() {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "There's currently no agents available with this property. Please try again later.",
+          "There's currently no agents available with this property. Please try again later."
       );
     } finally {
       setLoading(false);
     }
   };
 
+  const getLiveData = async () => {
+    try {
+      const res = await API.get("/client/live");
+
+      const data = res.data;
+
+      setLiveData(data);
+
+      setRequestStatus(data.requestStatus);
+
+      if (data.agent) {
+        setAgentLocation({
+          lat: data.agent.lat,
+          lng: data.agent.lng,
+        });
+
+        fitMapToMarkers(data.lat, data.lng, data.agent.lat, data.agent.lng);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const fitMapToMarkers = (
+    clientLat: number,
+    clientLng: number,
+    agentLat: number,
+    agentLng: number
+  ) => {
+    mapRef.current?.fitToCoordinates(
+      [
+        {
+          latitude: clientLat,
+          longitude: clientLng,
+        },
+        {
+          latitude: agentLat,
+          longitude: agentLng,
+        },
+      ],
+      {
+        edgePadding: {
+          top: 100,
+          right: 100,
+          bottom: 300,
+          left: 100,
+        },
+        animated: true,
+      }
+    );
+  };
   return (
     <View className="flex-1 relative bg-[#0B0F1A]">
       <MapView
@@ -206,9 +274,24 @@ export default function RequestMatchScreen() {
       >
         {lat && lng && (
           <Marker
-            coordinate={{ latitude: lat, longitude: lng }}
-            title={"You"}
-            pinColor={"green"}
+            coordinate={{
+              latitude: lat,
+              longitude: lng,
+            }}
+            title="Client"
+            description="Your Location"
+          />
+        )}
+
+        {agentLocation && liveData?.agent && (
+          <Marker
+            coordinate={{
+              latitude: agentLocation.lat,
+              longitude: agentLocation.lng,
+            }}
+            title={liveData.agent.name}
+            description={liveData.agent.phone}
+            pinColor="green"
           />
         )}
       </MapView>
@@ -235,6 +318,7 @@ export default function RequestMatchScreen() {
             loading={loading}
             setMatchData={setMatchData}
             matchData={matchData}
+            requestStatus={requestStatus}
           />
         </ScrollView>
       </BottomSheet>

@@ -21,11 +21,9 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "config": {
-        "googleMaps": {
+      "googleMaps": {
           "apiKey": "AIzaSyCtVR76BLZhF4qjFRCP3yv8FkrTnzEhR20"
-        }
-      },
+        },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -48,7 +46,9 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/sounds/ringtone.wav"]
+          "sounds": [
+            "./assets/sounds/ringtone.wav"
+          ]
         }
       ],
       "expo-router",

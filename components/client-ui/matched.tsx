@@ -3,19 +3,67 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 
-function Matched({ agent, request, setMatchData }: any) {
+function Matched({
+  agent,
+  request,
+  requestStatus,
+  setMatchData,
+}: any) {
   const { colors } = useTheme();
   const router = useRouter();
-  const { name, phone, agencyName, rating, distanceKm } = agent;
+
+  const name = agent?.name || "Agent";
+  const phone = agent?.phone || "Not Available";
+  const agencyName = agent?.agencyName || "Dwellify Partner";
+  const rating = agent?.rating || "5.0";
+  const distanceKm = agent?.distanceKm || "Nearby";
+
+  const getStatus = () => {
+    switch (requestStatus) {
+      case "inspection_started":
+        return {
+          label: "INSPECTION IN PROGRESS",
+          bg: "bg-blue-100",
+          text: "text-blue-700",
+        };
+
+      case "matched":
+        return {
+          label: "MATCHED",
+          bg: "bg-green-100",
+          text: "text-green-700",
+        };
+
+      case "completed":
+        return {
+          label: "COMPLETED",
+          bg: "bg-purple-100",
+          text: "text-purple-700",
+        };
+
+      default:
+        return {
+          label: "MATCHED",
+          bg: "bg-green-100",
+          text: "text-green-700",
+        };
+    }
+  };
+
+  const status = getStatus();
 
   return (
     <View className="p-4">
+      {/* STATUS */}
       <View className="flex-row items-center mb-4">
-        <View className="bg-green-100 px-3 py-1 rounded-full">
-          <Text className="text-green-700 font-bold text-xs">MATCHED</Text>
+        <View className={`${status.bg} px-3 py-1 rounded-full`}>
+          <Text className={`${status.text} font-bold text-xs`}>
+            {status.label}
+          </Text>
         </View>
       </View>
 
+      {/* AGENT CARD */}
       <View
         style={{ backgroundColor: colors.text }}
         className="p-6 rounded-3xl shadow-xl"
@@ -28,13 +76,22 @@ function Matched({ agent, request, setMatchData }: any) {
             >
               {name}
             </Text>
-            <Text style={{ color: colors.background }} className="text-sm">
+
+            <Text
+              style={{ color: colors.background }}
+              className="text-sm opacity-80"
+            >
               {agencyName}
             </Text>
           </View>
+
           <View className="bg-white/10 px-2 py-1 rounded-lg flex-row items-center">
             <Text className="text-yellow-400 mr-1">⭐</Text>
-            <Text style={{ color: colors.background }} className="font-bold">
+
+            <Text
+              style={{ color: colors.background }}
+              className="font-bold"
+            >
               {rating}
             </Text>
           </View>
@@ -42,17 +99,18 @@ function Matched({ agent, request, setMatchData }: any) {
 
         <View
           style={{ backgroundColor: colors.background }}
-          className="h-px w-full mb-4"
+          className="h-px w-full mb-4 opacity-20"
         />
 
         <View className="flex-row justify-between">
           <View>
             <Text
               style={{ color: colors.background }}
-              className="text-xs uppercase tracking-widest"
+              className="text-xs uppercase tracking-widest opacity-70"
             >
               Distance
             </Text>
+
             <Text
               style={{ color: colors.background }}
               className="font-semibold"
@@ -60,13 +118,15 @@ function Matched({ agent, request, setMatchData }: any) {
               {distanceKm} km away
             </Text>
           </View>
+
           <View className="items-end">
             <Text
               style={{ color: colors.background }}
-              className="text-xs uppercase tracking-widest"
+              className="text-xs uppercase tracking-widest opacity-70"
             >
               Contact
             </Text>
+
             <Text
               style={{ color: colors.background }}
               className="font-semibold"
@@ -77,25 +137,33 @@ function Matched({ agent, request, setMatchData }: any) {
         </View>
       </View>
 
-      <View className="mt-6 space-y-3">
+      {/* STATUS MESSAGE */}
+      <View className="mt-4">
+        <Text className="text-white text-center text-sm">
+          {requestStatus === "inspection_started"
+            ? "Your agent is on the way and inspection has started."
+            : "An agent has been assigned to your request."}
+        </Text>
+      </View>
+
+      {/* ACTIONS */}
+      <View className="mt-6">
         <Pressable
           style={{ backgroundColor: colors.text }}
           className="w-full py-4 mb-4 rounded-2xl items-center"
-          // Move onPress here and pass the agent data as params
           onPress={() =>
             router.push({
               pathname: "/(utilities)/agent-available-properties",
               params: {
-                agentId: agent.agentId,
-                name: agent.name,
-                agency: agent.agencyName,
+                agentId: agent?.agentId,
+                name: agent?.name,
+                agency: agent?.agencyName,
 
-                // request data
-                requestId: request.requestId,
-                clientId: request.clientId,
-                propertyType: request.propertyType,
-                lat: String(request.lat),
-                lng: String(request.lng),
+                requestId: request?.requestId,
+                clientId: request?.clientId,
+                propertyType: request?.propertyType,
+                lat: String(request?.lat || ""),
+                lng: String(request?.lng || ""),
               },
             })
           }
@@ -110,7 +178,7 @@ function Matched({ agent, request, setMatchData }: any) {
 
         <Pressable
           onPress={() => setMatchData(null)}
-          className="w-full py-4 rounded-2xl items-center border border-gray-200"
+          className="w-full py-4 rounded-2xl items-center border border-gray-600"
         >
           <Text className="font-semibold text-base text-white">
             Request Rematch
