@@ -16,7 +16,7 @@ function Request({
 
   return (
     <View className="px-1">
-      <Text className="text-3xl font-extrabold mb-6 text-white">
+      <Text className="text-3xl font-extrabold mb-6 text-black">
         Find Property
       </Text>
 
@@ -61,7 +61,7 @@ function Request({
         className="p-5 rounded-3xl mb-8"
       >
         <Text
-          style={{ color: "#ffffff" }}
+          style={{ color: "#000000" }}
           className="opacity-50 text-sm font-bold uppercase tracking-widest mb-4"
         >
           Property Type

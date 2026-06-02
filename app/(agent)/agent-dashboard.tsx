@@ -1,3 +1,4 @@
+import BottomSheet, { BottomSheetRefProps } from "@/components/short-bottom-sheet";
 import Sidebar from "@/components/sidebar/sidebar";
 import { useTheme } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -18,7 +19,7 @@ import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notification";
 
-const { width } = Dimensions.get("screen");
+const { width, height } = Dimensions.get("screen");
 
 export default function AgentDashboard() {
   const { colors } = useTheme();
@@ -33,7 +34,14 @@ export default function AgentDashboard() {
   const [message, setMessage] = useState("");
   const [requestId, setRequestId] = useState(null);
 
+  const ref = useRef<BottomSheetRefProps>(null);
   const sidebarX = useRef(new Animated.Value(-width)).current;
+
+  const SNAP_25 = -height * 0.1;
+
+  const SNAP_50 = -height * 0.59;
+
+  const SNAP_80 = -height * 0.8;
 
   const toggleSidebar = () => {
     const open = !isSidebarVisible;
@@ -230,19 +238,31 @@ export default function AgentDashboard() {
   };
 
   useEffect(() => {
+    ref.current?.scrollTo(SNAP_25);
     syncPushToken();
     fetchAgentStatus();
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 5 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
+    >
       <View
         style={{
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           paddingHorizontal: 20,
-          paddingTop: 60,
+          paddingTop: 20,
           paddingBottom: 10,
         }}
       >
@@ -280,18 +300,7 @@ export default function AgentDashboard() {
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-      >
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
         <View style={{ alignItems: "center", marginTop: 20 }}>
           {loading ? (
             <ActivityIndicator size="large" color={colors.primary} />
@@ -407,6 +416,26 @@ export default function AgentDashboard() {
         </View>
       </ScrollView>
 
+      <BottomSheet ref={ref}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bounces={false}
+          overScrollMode="never"
+          contentContainerStyle={{
+            paddingBottom: 120,
+          }}
+        >
+          <Text style={{ padding: 20, color: "#000000" }}>
+            Client Name: John Doe
+          </Text>
+          <Text style={{ padding: 20, color: "#000000" }}>
+            Client Phone Number: 08000000000
+          </Text>
+        </ScrollView>
+      </BottomSheet>
+
       <Sidebar
         visible={isSidebarVisible}
         translateX={sidebarX}
@@ -425,6 +454,6 @@ export default function AgentDashboard() {
         ]}
         rating={5}
       />
-    </View>
+    </ScrollView>
   );
 }
