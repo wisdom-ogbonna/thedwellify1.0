@@ -11,19 +11,25 @@ function ClientEvent({
   setSelectedType,
   handleRequest,
   loading,
-matchData,
-setMatchData,
+  matchData,
+  setMatchData,
+  requestStatus,
 }: any): React.JSX.Element {
-  const hasMatchedAgent = !!matchData?.agent?.agentId;
+
+  const hasMatchedAgent =
+    !!matchData?.agent?.agentId ||
+    requestStatus === "matched" ||
+    requestStatus === "inspection_started";
 
   return (
     <>
       {hasMatchedAgent ? (
         <Matched
-  agent={matchData?.agent}
-  request={matchData?.request}
-  setMatchData={setMatchData}
-/>
+          agent={matchData?.agent}
+          request={matchData?.request}
+          requestStatus={requestStatus}
+          setMatchData={setMatchData}
+        />
       ) : (
         <Request
           locationLoading={locationLoading}
