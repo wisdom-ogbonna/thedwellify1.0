@@ -60,7 +60,7 @@ function Matched({ agent, request, requestStatus, setMatchData }: any) {
       </View>
 
       {/* STATUS MESSAGE */}
-      <View className="mt-4">
+      <View className="my-4">
         <Text className="text-black text-center text-sm">
           {requestStatus === "inspection_started"
             ? "Your agent is on the way and inspection has started."
