@@ -1,4 +1,4 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, Pressable, Text, View } from "react-native";
@@ -8,10 +8,12 @@ const PropertyCard = ({ item }: { item: any }) => {
   const router = useRouter();
 
   const handleNavigation = () => {
-    router.push({
-      pathname: "/(utilities)/[id]",
-      params: { id: item.id },
-    });
+  router.push({
+    pathname: "/(utilities)/property-view",
+    params: {
+      propertyId: item.id,
+    },
+  });
   };
 
   return (

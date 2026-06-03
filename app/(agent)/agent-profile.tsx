@@ -11,11 +11,12 @@ import {
   useColorScheme,
   Appearance,
 } from "react-native";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
 import { useRouter } from "expo-router";
+// Imported CaretLeft to match your design vocabulary
 import { ArrowRight, ClipboardText } from "phosphor-react-native";
 
 export default function ProfileScreen() {
@@ -84,7 +85,7 @@ export default function ProfileScreen() {
       className="flex-1"
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + 32,
+        paddingTop: insets.top + 20,
         paddingBottom: insets.bottom + 32,
         paddingHorizontal: 32,
       }}
@@ -96,6 +97,7 @@ export default function ProfileScreen() {
         />
       }
     >
+
       {/* Header */}
       <View className="mb-10 flex-row justify-between items-start">
         <View>

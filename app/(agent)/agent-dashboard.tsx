@@ -1,35 +1,64 @@
-import React, { useEffect, useState } from "react";
-import {
-  ScrollView,
-  View,
-  Text,
-  ActivityIndicator,
-  Pressable,
-} from "react-native";
+import BottomSheet, { BottomSheetRefProps } from "@/components/short-bottom-sheet";
+import Sidebar from "@/components/sidebar/sidebar";
 import { useTheme } from "@react-navigation/native";
+import { useFocusEffect, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Easing,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notification";
-import { auth } from "../../config/firebase";
-import * as WebBrowser from "expo-web-browser";
+
+const { width, height } = Dimensions.get("screen");
 
 export default function AgentDashboard() {
   const { colors } = useTheme();
+  const router = useRouter();
 
+  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [paying, setPaying] = useState(false);
-  const [agentStatus, setAgentStatus] = useState(null);
+  const [agentName, setAgentName] = useState<string>("Agent");
+  const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [requestId, setRequestId] = useState(null);
 
-  /**
-   * ✅ Sync push token
-   */
+  const ref = useRef<BottomSheetRefProps>(null);
+  const sidebarX = useRef(new Animated.Value(-width)).current;
+
+  const SNAP_25 = -height * 0.1;
+
+  const SNAP_50 = -height * 0.59;
+
+  const SNAP_80 = -height * 0.8;
+
+  const toggleSidebar = () => {
+    const open = !isSidebarVisible;
+    Animated.timing(sidebarX, {
+      toValue: open ? 0 : -width,
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setIsSidebarVisible(open));
+  };
+
   const syncPushToken = async () => {
     try {
       const pushData = await registerForPushNotificationsAsync();
       if (!pushData) return;
 
-      const payload = { platform: pushData.platform };
+      const payload: any = { platform: pushData.platform };
 
       if (pushData.platform === "ios") {
         payload.expoPushToken = pushData.token;
@@ -43,9 +72,6 @@ export default function AgentDashboard() {
     }
   };
 
-  /**
-   * ✅ Fetch agent status (ID from Firebase 🔥)
-   */
   const fetchAgentStatus = async () => {
     try {
       const user = auth.currentUser;
@@ -55,14 +81,20 @@ export default function AgentDashboard() {
         return;
       }
 
-      const agentId = user.uid;
+      const token = await user.getIdToken();
 
-      const res = await API.get(`/agent/live/${agentId}`);
-      const agent = res.data;
+      const authHeader = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+
+      // ✅ same endpoint as working version
+      const liveRes = await API.get("/agent/live", authHeader);
+
+      const agent = liveRes.data;
 
       setAgentStatus(agent.status);
-
-      // 🔥 STORE requestId
       setRequestId(agent.requestId || null);
 
       if (agent.status === "suspended") {
@@ -74,12 +106,41 @@ export default function AgentDashboard() {
       } else {
         setMessage("Agent is active");
       }
-    } catch (err) {
-      console.log("Fetch agent error:", err);
+
+      // ✅ Keep profile fetch for welcome name
+      try {
+        const profileRes = await API.get("/agent/profile", authHeader);
+
+        const profileData = profileRes.data;
+
+        if (profileData?.name) {
+          setAgentName(profileData.name.split(" ")[0] || "Agent");
+        } else {
+          setAgentName("Agent");
+        }
+      } catch (profileErr) {
+        console.log("Profile fetch failed:", profileErr);
+      }
+    } catch (err: any) {
+      console.log("Fetch agent error:", err.response?.data || err.message);
+
       setMessage("Failed to fetch agent status");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsSidebarVisible(false);
+      fetchAgentStatus();
+    }, []),
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchAgentStatus();
   };
 
   const startInspection = async () => {
@@ -99,11 +160,13 @@ export default function AgentDashboard() {
       });
 
       setMessage("Inspection started successfully");
-
-      // refresh status
       fetchAgentStatus();
     } catch (err) {
-      console.log("Start inspection error:", err.response?.data || err.message);
+      const error = err as any;
+      console.log(
+        "Start inspection error:",
+        error.response?.data || error.message,
+      );
       setMessage("Failed to start inspection");
     }
   };
@@ -125,17 +188,17 @@ export default function AgentDashboard() {
       });
 
       setMessage("Inspection completed successfully");
-
-      // 🔄 refresh state
       fetchAgentStatus();
     } catch (err) {
-      console.log("End inspection error:", err.response?.data || err.message);
+      const error = err as any;
+      console.log(
+        "End inspection error:",
+        error.response?.data || error.message,
+      );
       setMessage("Failed to end inspection");
     }
   };
-  /**
-   * ✅ Trigger payment (ONLY on button click 🔥)
-   */
+
   const triggerPayment = async () => {
     try {
       const user = auth.currentUser;
@@ -159,18 +222,15 @@ export default function AgentDashboard() {
         return;
       }
 
-      // 🔥 OPEN PAYSTACK
       await WebBrowser.openBrowserAsync(paymentUrl);
-
-      // 🔥 AFTER USER RETURNS
       setMessage("Checking payment status...");
 
-      // give webhook time to update
       setTimeout(() => {
         fetchAgentStatus();
       }, 3000);
     } catch (err) {
-      console.log("Payment error:", err.response?.data || err.message);
+      const error = err as any;
+      console.log("Payment error:", error.response?.data || error.message);
       setMessage("Payment failed. Try again.");
     } finally {
       setPaying(false);
@@ -178,67 +238,145 @@ export default function AgentDashboard() {
   };
 
   useEffect(() => {
+    ref.current?.scrollTo(SNAP_25);
     syncPushToken();
     fetchAgentStatus();
   }, []);
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: 20 }}
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 5 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
     >
-      <View style={{ alignItems: "center", marginTop: 50 }}>
-        {loading ? (
-          <ActivityIndicator size="large" color={colors.primary} />
-        ) : (
-          <>
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "600",
-                color: colors.text,
-                marginBottom: 10,
-              }}
-            >
-              Agent Status
-            </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 20,
+          paddingTop: 40,
+          paddingBottom: 10,
+        }}
+      >
+        <Pressable
+          onPress={toggleSidebar}
+          style={{
+            padding: 10,
+            borderRadius: 8,
+            backgroundColor: colors.card,
+          }}
+        >
+          <View
+            style={{
+              width: 24,
+              height: 2,
+              backgroundColor: colors.text,
+              marginBottom: 5,
+            }}
+          />
+          <View
+            style={{
+              width: 18,
+              height: 2,
+              backgroundColor: colors.text,
+              marginBottom: 5,
+            }}
+          />
+          <View
+            style={{ width: 24, height: 2, backgroundColor: colors.text }}
+          />
+        </Pressable>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text }}>
+          Welcome, {agentName}
+        </Text>
+        <View style={{ width: 44 }} />
+      </View>
 
-            <Text
-              style={{
-                fontSize: 16,
-                color: agentStatus === "suspended" ? "red" : "green",
-                marginBottom: 20,
-              }}
-            >
-              {agentStatus?.toUpperCase()}
-            </Text>
-
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.text,
-                textAlign: "center",
-                marginBottom: 20,
-              }}
-            >
-              {message}
-            </Text>
-
-            {/* ✅ SHOW BUTTON ONLY IF SUSPENDED */}
-            {agentStatus === "suspended" && (
-              <Pressable
-                onPress={triggerPayment}
-                disabled={paying}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+        <View style={{ alignItems: "center", marginTop: 20 }}>
+          {loading ? (
+            <ActivityIndicator size="large" color={colors.primary} />
+          ) : (
+            <>
+              <Text
                 style={{
-                  backgroundColor: paying ? "#999" : "#000",
-                  padding: 15,
-                  borderRadius: 10,
-                  width: "100%",
+                  fontSize: 18,
+                  fontWeight: "600",
+                  color: colors.text,
+                  marginBottom: 10,
                 }}
               >
-                {paying ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
+                Agent Status
+              </Text>
+
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "700",
+                  color: agentStatus === "suspended" ? "red" : "green",
+                  marginBottom: 20,
+                }}
+              >
+                {agentStatus?.toUpperCase() || "UNKNOWN"}
+              </Text>
+
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: colors.text,
+                  textAlign: "center",
+                  marginBottom: 20,
+                }}
+              >
+                {message}
+              </Text>
+
+              {agentStatus === "suspended" && (
+                <Pressable
+                  onPress={triggerPayment}
+                  disabled={paying}
+                  style={{
+                    backgroundColor: paying ? "#999" : "#000",
+                    padding: 15,
+                    borderRadius: 10,
+                    width: "100%",
+                  }}
+                >
+                  {paying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text
+                      style={{
+                        color: "#fff",
+                        textAlign: "center",
+                        fontWeight: "600",
+                      }}
+                    >
+                      Pay Now
+                    </Text>
+                  )}
+                </Pressable>
+              )}
+
+              {agentStatus === "matched" && requestId && (
+                <Pressable
+                  onPress={startInspection}
+                  style={{
+                    backgroundColor: "green",
+                    padding: 15,
+                    borderRadius: 10,
+                    width: "100%",
+                    marginTop: 10,
+                  }}
+                >
                   <Text
                     style={{
                       color: "#fff",
@@ -246,62 +384,76 @@ export default function AgentDashboard() {
                       fontWeight: "600",
                     }}
                   >
-                    Pay Now
+                    Start Inspection
                   </Text>
-                )}
-              </Pressable>
-            )}
+                </Pressable>
+              )}
 
-            {/* ✅ SHOW BUTTON IF MATCHED */}
-            {agentStatus === "matched" && requestId && (
-              <Pressable
-                onPress={startInspection}
-                style={{
-                  backgroundColor: "green",
-                  padding: 15,
-                  borderRadius: 10,
-                  width: "100%",
-                  marginTop: 10,
-                }}
-              >
-                <Text
+              {agentStatus === "inspection_started" && requestId && (
+                <Pressable
+                  onPress={endInspection}
                   style={{
-                    color: "#fff",
-                    textAlign: "center",
-                    fontWeight: "600",
+                    backgroundColor: "#2563eb",
+                    padding: 15,
+                    borderRadius: 10,
+                    width: "100%",
+                    marginTop: 10,
                   }}
                 >
-                  Start Inspection
-                </Text>
-              </Pressable>
-            )}
+                  <Text
+                    style={{
+                      color: "#fff",
+                      textAlign: "center",
+                      fontWeight: "600",
+                    }}
+                  >
+                    End Inspection
+                  </Text>
+                </Pressable>
+              )}
+            </>
+          )}
+        </View>
+      </ScrollView>
 
-            {/* ✅ SHOW BUTTON IF INSPECTION STARTED */}
-            {agentStatus === "inspection_started" && requestId && (
-              <Pressable
-                onPress={endInspection}
-                style={{
-                  backgroundColor: "#2563eb",
-                  padding: 15,
-                  borderRadius: 10,
-                  width: "100%",
-                  marginTop: 10,
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#fff",
-                    textAlign: "center",
-                    fontWeight: "600",
-                  }}
-                >
-                  End Inspection
-                </Text>
-              </Pressable>
-            )}
-          </>
-        )}
-      </View>
+      <BottomSheet ref={ref}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bounces={false}
+          overScrollMode="never"
+          contentContainerStyle={{
+            paddingBottom: 120,
+          }}
+        >
+          <Text style={{ padding: 20, color: "#000000" }}>
+            Client Name: John Doe
+          </Text>
+          <Text style={{ padding: 20, color: "#000000" }}>
+            Client Phone Number: 08000000000
+          </Text>
+        </ScrollView>
+      </BottomSheet>
+
+      <Sidebar
+        visible={isSidebarVisible}
+        translateX={sidebarX}
+        onOverlayPress={toggleSidebar}
+        name={agentName}
+        items={[
+          { label: "Dashboard", icon: "House" },
+          {
+            label: "My Listings",
+            icon: "Buildings",
+            onPress: () => router.push("/(product)/products"),
+          },
+          { label: "Earnings", icon: "CurrencyNgn" },
+          { label: "Settings", icon: "Gear" },
+          { label: "Logout", icon: "SignOut" },
+        ]}
+        rating={5}
+      />
     </ScrollView>
   );
 }

@@ -1,25 +1,25 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ScrollView,
-  Alert,
-  Image,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { useTheme } from "@/hooks/use-theme";
+import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import {
-  X,
+  CloudArrowUp,
   Image as ImageIcon,
   VideoCamera,
-  CloudArrowUp,
+  X,
 } from "phosphor-react-native";
-import { Video, ResizeMode } from "expo-av";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { API } from "../../services/api";
 
 const TYPES = ["Apartment", "Hotel", "Shortlet"];
@@ -96,7 +96,7 @@ export default function CreateProduct() {
     if (fileSize > MAX_VIDEO_SIZE) {
       Alert.alert(
         "Video too large",
-        "Video must be 15MB or less. Please compress or choose another video."
+        "Video must be 15MB or less. Please compress or choose another video.",
       );
       return;
     }
@@ -120,7 +120,15 @@ export default function CreateProduct() {
    * 🚀 SUBMIT
    */
   const handleSubmit = async () => {
-    if (!title || !price || !location || !propertyType || !description || images.length === 0 || !video) {
+    if (
+      !title ||
+      !price ||
+      !location ||
+      !propertyType ||
+      !description ||
+      images.length === 0 ||
+      !video
+    ) {
       Alert.alert("Error", "All fields are required");
       return;
     }
@@ -165,15 +173,13 @@ export default function CreateProduct() {
           "Content-Type": "multipart/form-data",
         },
         onUploadProgress: (event) => {
-          const percent = Math.round(
-            (event.loaded * 100) / (event.total || 1)
-          );
+          const percent = Math.round((event.loaded * 100) / (event.total || 1));
           setProgress(percent);
         },
       });
 
       Alert.alert("Success", "Listing created successfully");
-      router.push("/(agent)/products");
+      router.push("/(product)/products");
     } catch (err: any) {
       console.log(err?.response?.data || err.message);
       Alert.alert("Error", "Failed to create listing");
@@ -186,7 +192,6 @@ export default function CreateProduct() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView className="px-6 py-4">
-
         {/* HEADER */}
         <View className="flex-row justify-between items-center mb-6">
           <Text className="text-3xl font-black" style={{ color: colors.text }}>
@@ -199,17 +204,26 @@ export default function CreateProduct() {
         </View>
 
         {/* INPUTS */}
-        <TextInput placeholder="Title" value={title} onChangeText={setTitle}
+        <TextInput
+          placeholder="Title"
+          value={title}
+          onChangeText={setTitle}
           className="border p-4 rounded-xl mb-3"
           style={{ borderColor: colors.border, color: colors.text }}
         />
 
-        <TextInput placeholder="Location" value={location} onChangeText={setLocation}
+        <TextInput
+          placeholder="Location"
+          value={location}
+          onChangeText={setLocation}
           className="border p-4 rounded-xl mb-3"
           style={{ borderColor: colors.border, color: colors.text }}
         />
 
-        <TextInput placeholder="Price" value={price} onChangeText={setPrice}
+        <TextInput
+          placeholder="Price"
+          value={price}
+          onChangeText={setPrice}
           keyboardType="numeric"
           className="border p-4 rounded-xl mb-3"
           style={{ borderColor: colors.border, color: colors.text }}
@@ -237,7 +251,12 @@ export default function CreateProduct() {
                 borderColor: colors.border,
               }}
             >
-              <Text style={{ color: propertyType === type ? colors.background : colors.text }}>
+              <Text
+                style={{
+                  color:
+                    propertyType === type ? colors.background : colors.text,
+                }}
+              >
                 {type}
               </Text>
             </Pressable>
@@ -245,25 +264,35 @@ export default function CreateProduct() {
         </View>
 
         {/* IMAGE PICKER */}
-        <Pressable onPress={pickImages} className="p-6 border-dashed border rounded-xl items-center mb-4">
+        <Pressable
+          onPress={pickImages}
+          className="p-6 border-dashed border rounded-xl items-center mb-4"
+        >
           <ImageIcon size={30} color={colors.text} />
           <Text style={{ color: colors.text }}>Add Images</Text>
         </Pressable>
 
         {/* VIDEO PICKER (FIXED) */}
-        <Pressable onPress={pickVideo} className="p-6 border-dashed border rounded-xl items-center mb-4">
+        <Pressable
+          onPress={pickVideo}
+          className="p-6 border-dashed border rounded-xl items-center mb-4"
+        >
           <VideoCamera size={30} color={colors.text} />
-          <Text style={{ color: colors.text }}>
-            Add Video (MP4, max 15MB)
-          </Text>
+          <Text style={{ color: colors.text }}>Add Video (MP4, max 15MB)</Text>
         </Pressable>
 
         {/* IMAGE PREVIEW */}
         <ScrollView horizontal className="mb-4">
           {images.map((img, i) => (
             <View key={i} className="mr-2 relative">
-              <Image source={{ uri: img.uri }} className="w-24 h-24 rounded-xl" />
-              <Pressable onPress={() => removeImage(i)} className="absolute top-1 right-1 bg-black/70 p-1 rounded-full">
+              <Image
+                source={{ uri: img.uri }}
+                className="w-24 h-24 rounded-xl"
+              />
+              <Pressable
+                onPress={() => removeImage(i)}
+                className="absolute top-1 right-1 bg-black/70 p-1 rounded-full"
+              >
                 <X size={12} color="#fff" />
               </Pressable>
             </View>
@@ -279,7 +308,10 @@ export default function CreateProduct() {
               useNativeControls
               resizeMode={ResizeMode.COVER}
             />
-            <Pressable onPress={removeVideo} className="absolute top-2 right-2 bg-black/70 p-2 rounded-full">
+            <Pressable
+              onPress={removeVideo}
+              className="absolute top-2 right-2 bg-black/70 p-2 rounded-full"
+            >
               <X size={14} color="#fff" />
             </Pressable>
           </View>

@@ -1,4 +1,4 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "@/hooks/use-theme";
 import { Tabs } from "expo-router";
 import { Clock, House, User } from "phosphor-react-native";
 import React from "react";
@@ -11,9 +11,9 @@ export default function ClientLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: "#777777",
+        tabBarInactiveTintColor: colors.placeholder,
         tabBarStyle: {
-          backgroundColor: colors.border,
+          backgroundColor: colors.background,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           height: 75,
@@ -23,7 +23,6 @@ export default function ClientLayout() {
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "700",
-          textTransform: "uppercase",
           letterSpacing: 1,
         },
       }}
