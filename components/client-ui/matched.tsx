@@ -1,8 +1,9 @@
 import { useTheme } from "@/hooks/use-theme";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { CaretLeftIcon } from "phosphor-react-native";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 
 function Matched({ agent, request, requestStatus, setMatchData }: any) {
   const { colors } = useTheme();
@@ -47,6 +48,22 @@ function Matched({ agent, request, requestStatus, setMatchData }: any) {
   };
 
   const status = getStatus();
+
+  const handleCancel = () => {
+    Alert.alert(
+      "Cancel Match",
+      "Are you sure you want to cancel this match? This action cannot be undone.",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () => {
+            alert("Match cancelled. Returning to home screen.");
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View className="p-4">
@@ -100,11 +117,18 @@ function Matched({ agent, request, requestStatus, setMatchData }: any) {
               style={{ color: colors.text }}
               className="text-xs uppercase tracking-widest opacity-70"
             >
-              Distance
+              Phone Number
             </Text>
 
-            <Text style={{ color: colors.text }} className="font-semibold">
-              {distanceKm} km away
+            <Text
+              onPress={async () => {
+                await Clipboard.setStringAsync(String(phone));
+                alert("Phone number copied!");
+              }}
+              style={{ color: colors.text }}
+              className="font-semibold underline"
+            >
+              {phone}
             </Text>
           </View>
         </View>
@@ -113,7 +137,7 @@ function Matched({ agent, request, requestStatus, setMatchData }: any) {
       {/* ACTIONS */}
       <View className="mt-6 flex-row gap-4">
         <Pressable
-          onPress={() => setMatchData(null)}
+          onPress={handleCancel}
           className="w-[20%] h-15 py-2 rounded-2xl items-center justify-center border border-gray-600"
         >
           <CaretLeftIcon color="#000000" size={30} />
@@ -138,7 +162,7 @@ function Matched({ agent, request, requestStatus, setMatchData }: any) {
             })
           }
         >
-          <Text style={{ color: colors.text }} className="font-bold text-lg">
+          <Text style={{ color: "#ffffff" }} className="font-bold text-lg">
             View Agent Profile
           </Text>
         </Pressable>
