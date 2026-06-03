@@ -1,7 +1,7 @@
 {
   "name": "dwellify-app",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "scripts": {
     "start": "expo start",
     "restart": "expo start --clear",
@@ -21,6 +21,7 @@
     "axios": "^1.15.0",
     "expo": "~54.0.34",
     "expo-av": "~16.0.8",
+    "expo-clipboard": "^56.0.3",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",

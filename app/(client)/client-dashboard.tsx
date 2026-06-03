@@ -24,7 +24,7 @@ const getRealAddress = async (lat: number, lng: number) => {
     const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
 
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
     );
 
     const data = await res.json();
@@ -126,7 +126,7 @@ export default function RequestMatchScreen() {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         },
-        800
+        800,
       );
 
       const realAddress = await getRealAddress(latitude, longitude);
@@ -185,7 +185,7 @@ export default function RequestMatchScreen() {
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "There's currently no agents available with this property. Please try again later."
+          "There's currently no agents available with this property. Please try again later.",
       );
     } finally {
       setLoading(false);
@@ -199,6 +199,9 @@ export default function RequestMatchScreen() {
       const data = res.data;
 
       setLiveData(data);
+      setMatchData(
+        data.agent ? { agent: data.agent, request: data.request } : null,
+      );
 
       setRequestStatus(data.requestStatus);
 
@@ -219,7 +222,7 @@ export default function RequestMatchScreen() {
     clientLat: number,
     clientLng: number,
     agentLat: number,
-    agentLng: number
+    agentLng: number,
   ) => {
     mapRef.current?.fitToCoordinates(
       [
@@ -240,7 +243,7 @@ export default function RequestMatchScreen() {
           left: 100,
         },
         animated: true,
-      }
+      },
     );
   };
   return (
@@ -278,7 +281,7 @@ export default function RequestMatchScreen() {
               latitude: lat,
               longitude: lng,
             }}
-            title="Client"
+            title="You"
             description="Your Location"
           />
         )}

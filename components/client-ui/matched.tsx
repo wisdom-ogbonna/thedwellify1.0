@@ -1,14 +1,11 @@
 import { useTheme } from "@/hooks/use-theme";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
+import { CaretLeftIcon } from "phosphor-react-native";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 
-function Matched({
-  agent,
-  request,
-  requestStatus,
-  setMatchData,
-}: any) {
+function Matched({ agent, request, requestStatus, setMatchData }: any) {
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -52,6 +49,22 @@ function Matched({
 
   const status = getStatus();
 
+  const handleCancel = () => {
+    Alert.alert(
+      "Cancel Match",
+      "Are you sure you want to cancel this match? This action cannot be undone.",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () => {
+            alert("Match cancelled. Returning to home screen.");
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View className="p-4">
       {/* STATUS */}
@@ -63,73 +76,57 @@ function Matched({
         </View>
       </View>
 
+      {/* STATUS MESSAGE */}
+      <View className="my-4">
+        <Text className="text-black text-center text-sm">
+          {requestStatus === "inspection_started"
+            ? "Your agent is on the way and inspection has started."
+            : "An agent has been assigned to your request."}
+        </Text>
+      </View>
+
       {/* AGENT CARD */}
       <View
-        style={{ backgroundColor: colors.text }}
+        style={{ backgroundColor: colors.background }}
         className="p-6 rounded-3xl shadow-xl"
       >
         <View className="flex-row justify-between items-start mb-4">
           <View>
-            <Text
-              style={{ color: colors.background }}
-              className="text-2xl font-bold"
-            >
+            <Text style={{ color: colors.text }} className="text-2xl font-bold">
               {name}
-            </Text>
-
-            <Text
-              style={{ color: colors.background }}
-              className="text-sm opacity-80"
-            >
-              {agencyName}
             </Text>
           </View>
 
           <View className="bg-white/10 px-2 py-1 rounded-lg flex-row items-center">
             <Text className="text-yellow-400 mr-1">⭐</Text>
 
-            <Text
-              style={{ color: colors.background }}
-              className="font-bold"
-            >
+            <Text style={{ color: colors.text }} className="font-bold">
               {rating}
             </Text>
           </View>
         </View>
 
         <View
-          style={{ backgroundColor: colors.background }}
+          style={{ backgroundColor: colors.text }}
           className="h-px w-full mb-4 opacity-20"
         />
 
         <View className="flex-row justify-between">
-          <View>
+          <View className="flex-row flex-1 items-center justify-between">
             <Text
-              style={{ color: colors.background }}
+              style={{ color: colors.text }}
               className="text-xs uppercase tracking-widest opacity-70"
             >
-              Distance
+              Phone Number
             </Text>
 
             <Text
-              style={{ color: colors.background }}
-              className="font-semibold"
-            >
-              {distanceKm} km away
-            </Text>
-          </View>
-
-          <View className="items-end">
-            <Text
-              style={{ color: colors.background }}
-              className="text-xs uppercase tracking-widest opacity-70"
-            >
-              Contact
-            </Text>
-
-            <Text
-              style={{ color: colors.background }}
-              className="font-semibold"
+              onPress={async () => {
+                await Clipboard.setStringAsync(String(phone));
+                alert("Phone number copied!");
+              }}
+              style={{ color: colors.text }}
+              className="font-semibold underline"
             >
               {phone}
             </Text>
@@ -137,20 +134,17 @@ function Matched({
         </View>
       </View>
 
-      {/* STATUS MESSAGE */}
-      <View className="mt-4">
-        <Text className="text-white text-center text-sm">
-          {requestStatus === "inspection_started"
-            ? "Your agent is on the way and inspection has started."
-            : "An agent has been assigned to your request."}
-        </Text>
-      </View>
-
       {/* ACTIONS */}
-      <View className="mt-6">
+      <View className="mt-6 flex-row gap-4">
         <Pressable
-          style={{ backgroundColor: colors.text }}
-          className="w-full py-4 mb-4 rounded-2xl items-center"
+          onPress={handleCancel}
+          className="w-[20%] h-15 py-2 rounded-2xl items-center justify-center border border-gray-600"
+        >
+          <CaretLeftIcon color="#000000" size={30} />
+        </Pressable>
+        <Pressable
+          style={{ backgroundColor: colors.primary }}
+          className="flex-1 h-15 py-5 mb-4 rounded-2xl items-center"
           onPress={() =>
             router.push({
               pathname: "/(utilities)/agent-available-properties",
@@ -168,20 +162,8 @@ function Matched({
             })
           }
         >
-          <Text
-            style={{ color: colors.background }}
-            className="font-bold text-base"
-          >
+          <Text style={{ color: "#ffffff" }} className="font-bold text-lg">
             View Agent Profile
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => setMatchData(null)}
-          className="w-full py-4 rounded-2xl items-center border border-gray-600"
-        >
-          <Text className="font-semibold text-base text-white">
-            Request Rematch
           </Text>
         </Pressable>
       </View>

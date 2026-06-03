@@ -38,8 +38,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
     const SNAP_POINTS = {
       CLOSED: -usableHeight * 0.11,
       LOW: -usableHeight * 0.11,
-      MID: -usableHeight * 0.59,
-      HIGH: -usableHeight * 0.8,
+      MID: -usableHeight * 0.3,
     };
 
     const translateY = useSharedValue(0);
@@ -57,7 +56,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
         "worklet";
 
         const clampedDestination = Math.max(
-          SNAP_POINTS.HIGH,
+          SNAP_POINTS.MID,
           Math.min(SNAP_POINTS.CLOSED, destination),
         );
 
@@ -99,9 +98,9 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
       .onUpdate((event) => {
         let nextPosition = event.translationY + context.value.y;
 
-        // hard clamp between HIGH and CLOSED
+        // hard clamp between MID and CLOSED
         nextPosition = Math.max(
-          SNAP_POINTS.HIGH,
+          SNAP_POINTS.MID,
           Math.min(SNAP_POINTS.CLOSED, nextPosition),
         );
 
@@ -114,7 +113,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
           SNAP_POINTS.CLOSED,
           SNAP_POINTS.LOW,
           SNAP_POINTS.MID,
-          SNAP_POINTS.HIGH,
+          SNAP_POINTS.MID,
         ];
 
         let destination = snapPoints.reduce((prev, curr) =>
@@ -123,7 +122,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
 
         // HARD LIMITS
         destination = Math.max(
-          SNAP_POINTS.HIGH,
+          SNAP_POINTS.MID,
           Math.min(SNAP_POINTS.CLOSED, destination),
         );
 
@@ -133,7 +132,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
     const rBottomSheetStyle = useAnimatedStyle(() => {
       const borderRadius = interpolate(
         translateY.value,
-        [SNAP_POINTS.HIGH, SNAP_POINTS.LOW],
+        [SNAP_POINTS.MID, SNAP_POINTS.LOW],
         [34, 18],
         Extrapolate.CLAMP,
       );
@@ -152,7 +151,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
       return {
         opacity: interpolate(
           translateY.value,
-          [SNAP_POINTS.CLOSED, SNAP_POINTS.HIGH],
+          [SNAP_POINTS.CLOSED, SNAP_POINTS.MID],
           [0, 0],
           Extrapolate.CLAMP,
         ),
@@ -188,7 +187,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
               },
               rBottomSheetStyle,
             ]}
-            className="absolute z-50 w-full shadow-xl"
+            className="absolute z-2 w-screen shadow-xl"
           >
             <View className="items-center py-4">
               <View

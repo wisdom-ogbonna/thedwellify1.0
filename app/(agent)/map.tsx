@@ -180,61 +180,29 @@ export default function MapScreen() {
         showsCompass={false}
         showsMyLocationButton={false}
         initialRegion={{
-          latitude:
-            location?.latitude ||
-            4.8156,
+          latitude: location?.latitude || 4.8156,
 
-          longitude:
-            location?.longitude ||
-            7.0498,
+          longitude: location?.longitude || 7.0498,
 
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
       >
         {/* ✅ AGENT MARKER */}
-        {agent?.isOnline &&
-          agent?.lat &&
-          agent?.lng && (
-            <Marker
-              coordinate={{
-                latitude: agent.lat,
-                longitude: agent.lng,
-              }}
-            >
-              <View style={styles.agentMarker}>
-                
-                {/* Agent bubble */}
-                <View style={styles.agentBubble}>
-                  <Ionicons
-                    name="car"
-                    size={12}
-                    color="#fff"
-                  />
-
-                  <Text style={styles.bubbleText}>
-                    You
-                  </Text>
-                </View>
-
-                {/* Pulse */}
-                <View style={styles.pulse} />
-
-                {/* Avatar */}
-                <Image
-                  source={{
-                    uri: "https://i.pravatar.cc/150?img=12",
-                  }}
-                  style={styles.avatar}
-                />
-              </View>
-            </Marker>
+        {agent?.isOnline && agent?.lat && agent?.lng && (
+          <Marker
+            coordinate={{
+              latitude: agent.lat,
+              longitude: agent.lng,
+            }}
+            title="You"
+            description="Your Location"
+          />
         )}
 
         {/* ✅ CLIENT MARKER */}
         {(agent?.status === "matched" ||
-          agent?.status ===
-            "inspection_started") &&
+          agent?.status === "inspection_started") &&
           agent?.clientLat &&
           agent?.clientLng && (
             <Marker
@@ -242,46 +210,15 @@ export default function MapScreen() {
                 latitude: agent.clientLat,
                 longitude: agent.clientLng,
               }}
-            >
-              <View style={styles.clientMarker}>
-                
-                {/* Client name */}
-                <View style={styles.clientBubble}>
-                  <Ionicons
-                    name="person"
-                    size={12}
-                    color="#fff"
-                  />
-
-                  <Text style={styles.bubbleText}>
-                    {agent.clientName ||
-                      "Client"}
-                  </Text>
-                </View>
-
-                {/* Client icon */}
-                <View style={styles.clientPin}>
-                  <Ionicons
-                    name="person"
-                    size={20}
-                    color="#fff"
-                  />
-                </View>
-              </View>
-            </Marker>
-        )}
+              title="Client"
+              description="Client's Location"
+            />
+          )}
       </MapView>
 
       {/* ✅ Locate button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={focusUser}
-      >
-        <Ionicons
-          name="locate"
-          size={22}
-          color="#111"
-        />
+      <TouchableOpacity style={styles.fab} onPress={focusUser}>
+        <Ionicons name="locate" size={22} color="#111" />
       </TouchableOpacity>
     </SafeAreaView>
   );
