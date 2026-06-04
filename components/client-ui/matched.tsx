@@ -29,7 +29,7 @@ interface MatchedProps {
   setMatchData?: (data: any) => void;
 }
 
-function Matched({ agent, request, requestStatus }: MatchedProps) {
+function Matched({ agent, request, requestStatus, setMatchData }: MatchedProps) {
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -81,6 +81,7 @@ function Matched({ agent, request, requestStatus }: MatchedProps) {
               "Success",
               "Match cancelled. Returning to home screen.",
             );
+            setMatchData && setMatchData(null);
           },
         },
       ],
@@ -93,7 +94,7 @@ function Matched({ agent, request, requestStatus }: MatchedProps) {
       return;
     }
     await Clipboard.setStringAsync(String(phone));
-    Alert.alert("Copied", "Phone number copied to clipboard!");
+    return;
   };
 
   return (
@@ -110,7 +111,7 @@ function Matched({ agent, request, requestStatus }: MatchedProps) {
       {/* STATUS MESSAGE */}
       <View className="my-4">
         <Text
-          style={{ color: colors.text }}
+          style={{ color: "#000000" }}
           className="text-center text-sm opacity-80"
         >
           {requestStatus === "inspection_started"
@@ -121,33 +122,33 @@ function Matched({ agent, request, requestStatus }: MatchedProps) {
 
       {/* AGENT CARD */}
       <View
-        style={{ backgroundColor: colors.background }}
+        style={{ backgroundColor: "#FFFFFF" }}
         className="p-6 rounded-3xl shadow-xl"
       >
         <View className="flex-row justify-between items-start mb-4">
           <View>
-            <Text style={{ color: colors.text }} className="text-2xl font-bold">
+            <Text style={{ color: "#000000" }} className="text-2xl font-bold">
               {name}
             </Text>
           </View>
 
-          <View className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded-lg flex-row items-center">
+          <View className="bg-white px-2 py-1 rounded-lg flex-row items-center">
             <Text className="text-yellow-400 mr-1">⭐</Text>
-            <Text style={{ color: colors.text }} className="font-bold">
+            <Text style={{ color: "#000000" }} className="font-bold">
               {rating}
             </Text>
           </View>
         </View>
 
         <View
-          style={{ backgroundColor: colors.text }}
+          style={{ backgroundColor: "#000000" }}
           className="h-px w-full mb-4 opacity-20"
         />
 
         <View className="flex-row justify-between">
           <View className="flex-row flex-1 items-center justify-between">
             <Text
-              style={{ color: colors.text }}
+              style={{ color: "#000000" }}
               className="text-xs uppercase tracking-widest opacity-70"
             >
               Phone Number
@@ -155,7 +156,7 @@ function Matched({ agent, request, requestStatus }: MatchedProps) {
 
             <Text
               onPress={handleCopyPhone}
-              style={{ color: colors.text }}
+              style={{ color: "#000000" }}
               className="font-semibold underline"
             >
               {phone}
@@ -168,10 +169,10 @@ function Matched({ agent, request, requestStatus }: MatchedProps) {
       <View className="mt-6 flex-row gap-4 items-center">
         <Pressable
           onPress={handleCancel}
-          style={{ borderColor: colors.text }}
+          style={{ borderColor: "#000000" }}
           className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
         >
-          <CaretLeftIcon color={colors.text} size={24} />
+          <CaretLeftIcon color={"#000000"} size={24} />
         </Pressable>
 
         <Pressable
