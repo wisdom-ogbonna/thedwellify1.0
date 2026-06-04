@@ -199,9 +199,6 @@ export default function RequestMatchScreen() {
       const data = res.data;
 
       setLiveData(data);
-      setMatchData(
-        data.agent ? { agent: data.agent, request: data.request } : null,
-      );
 
       setRequestStatus(data.requestStatus);
 
