@@ -11,11 +11,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CaretLeftIcon } from "phosphor-react-native";
 import CategoryFilter from "../../components/client-ui/agent-view-category-filter";
 import AgentHeader from "../../components/client-ui/agent-view-header";
 import PropertyCard from "../../components/client-ui/agent-view-property-card";
 import { API } from "../../services/api";
+import { CaretLeftIcon } from "phosphor-react-native";
 
 const CATEGORIES = ["All", "Apartment", "Hotel", "Shortlet"];
 
@@ -32,7 +32,6 @@ const AvailableProperties: React.FC = () => {
     lat,
     lng,
     requestId,
-    status,
   } = useLocalSearchParams<any>();
 
   const [activeCategory, setActiveCategory] = useState("All");
@@ -82,7 +81,7 @@ const AvailableProperties: React.FC = () => {
       { id: "filter", type: "filter" },
       ...filteredProperties.map((p) => ({
         ...p,
-        type: propertyType,
+        type: "property",
       })),
     ];
   }, [filteredProperties]);
@@ -227,26 +226,23 @@ const AvailableProperties: React.FC = () => {
         </Pressable>
 
         {/* Book Button - 70% */}
-        {status === "inspection_started" || status === "matched" ? null : (
-          <Pressable
-            onPress={() => setBookingModalOpen(true)}
-            style={{
-              flex: 0.7,
-              backgroundColor: colors.primary,
-            }}
-            className="items-center justify-center rounded-2xl py-5"
-          >
-            <Text className="text-lg font-bold text-white">Book Agent Now</Text>
-          </Pressable>
-        )}
+        <Pressable
+          onPress={() => setBookingModalOpen(true)}
+          style={{
+            flex: 0.7,
+            backgroundColor: colors.primary,
+          }}
+          className="items-center justify-center rounded-2xl py-5"
+        >
+          <Text className="text-lg font-bold text-white">Book Agent Now</Text>
+        </Pressable>
       </View>
 
       {/* Modal */}
       <ConfirmBookingModal
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
-        propertyType={propertyType}
-        price={propertyType === "Apartment" ? 5000 : propertyType === "Hotel" ? 3000 : propertyType === "Shortlet" ? 7000 : 5000}
+        price={7000}
         onConfirm={() => {
           handleBooking();
           setBookingModalOpen(false);
@@ -260,14 +256,12 @@ type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
   price: number;
-  propertyType: string;
   onConfirm: () => void;
 };
 
 function ConfirmBookingModal({
   isOpen,
   onClose,
-  propertyType,
   price,
   onConfirm,
 }: ModalProps) {
@@ -292,10 +286,6 @@ function ConfirmBookingModal({
 
           <Text className="mb-2 text-lg">
             Are you sure you want to book this agent for an inspection?
-          </Text>
-
-          <Text className="mb-4 text-lg font-semibold">
-            Property Type: {propertyType}
           </Text>
 
           <Text className="mb-4 text-lg font-semibold">
