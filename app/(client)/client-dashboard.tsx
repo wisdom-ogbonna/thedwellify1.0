@@ -316,8 +316,8 @@ export default function RequestMatchScreen() {
             setSelectedType={setSelectedType}
             handleRequest={handleRequest}
             loading={loading}
-            setMatchData={setMatchData}
-            matchData={matchData}
+            setMatchData={setMatchData ?? setLiveData}
+            matchData={matchData ?? liveData}
             requestStatus={requestStatus}
           />
         </ScrollView>

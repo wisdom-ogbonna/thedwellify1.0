@@ -349,10 +349,10 @@ const PropertyView = () => {
           <Text
             className="text-sm font-black uppercase tracking-widest"
             style={{
-              color: colors.text,
+              color: "#ffffff",
             }}
           >
-            {userRole === "agent" ? "Edit Listing" : "Book Agent"}
+            {userRole === "agent" ? "Edit Listing" : "View Listings"}
           </Text>
         </TouchableOpacity>
       </View>
