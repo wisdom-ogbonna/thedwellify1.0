@@ -20,6 +20,7 @@ interface RequestProps {
   propertyType?: string;
   lat?: string | number;
   lng?: string | number;
+  clientName: string;
 }
 
 interface MatchedProps {
@@ -29,13 +30,19 @@ interface MatchedProps {
   setMatchData?: (data: any) => void;
 }
 
-function Matched({ agent, request, requestStatus, setMatchData }: MatchedProps) {
+function Matched({
+  agent,
+  request,
+  requestStatus,
+  setMatchData,
+}: MatchedProps) {
   const { colors } = useTheme();
   const router = useRouter();
 
   const name = agent?.name || "Agent";
   const phone = agent?.phone || "Not Available";
   const rating = agent?.rating || "5.0";
+  const agency = agent?.agencyName || "Agency";
 
   const getStatus = () => {
     switch (requestStatus) {
@@ -86,6 +93,24 @@ function Matched({ agent, request, requestStatus, setMatchData }: MatchedProps) 
         },
       ],
     );
+  };
+
+  const handlePropertyView = () => {
+    router.push({
+      pathname: "/(utilities)/agent-available-properties",
+      params: {
+        agentId: agent?.agentId,
+        name: agent?.name,
+        agency: agent?.agencyName,
+        requestId: request?.requestId,
+        clientId: request?.clientId,
+        clientName: request?.clientName,
+        propertyType: request?.propertyType,
+        lat: String(request?.lat || ""),
+        lng: String(request?.lng || ""),
+        status: requestStatus,
+      },
+    });
   };
 
   const handleCopyPhone = async () => {
@@ -146,59 +171,82 @@ function Matched({ agent, request, requestStatus, setMatchData }: MatchedProps) 
         />
 
         <View className="flex-row justify-between">
-          <View className="flex-row flex-1 items-center justify-between">
-            <Text
-              style={{ color: "#000000" }}
-              className="text-xs uppercase tracking-widest opacity-70"
-            >
-              Phone Number
-            </Text>
+          {requestStatus === "matched" ||
+          requestStatus === "inspection_started" ? (
+            <View className="flex-row flex-1 items-center justify-between">
+              <Text
+                style={{ color: "#000000" }}
+                className="text-xs uppercase tracking-widest opacity-70"
+              >
+                Phone Number
+              </Text>
 
-            <Text
-              onPress={handleCopyPhone}
-              style={{ color: "#000000" }}
-              className="font-semibold underline"
-            >
-              {phone}
-            </Text>
-          </View>
+              <Text
+                onPress={handleCopyPhone}
+                style={{ color: "#000000" }}
+                className="font-semibold underline"
+              >
+                {phone}
+              </Text>
+            </View>
+          ) : (
+            <View className="flex-row flex-1 items-center justify-between">
+              <Text
+                style={{ color: "#000000" }}
+                className="text-xs uppercase tracking-widest opacity-70"
+              >
+                Agency
+              </Text>
+
+              <Text style={{ color: "#000000" }} className="font-semibold">
+                {agency}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
       {/* ACTIONS */}
-      <View className="mt-6 flex-row gap-4 items-center">
-        <Pressable
-          onPress={handleCancel}
-          style={{ borderColor: "#000000" }}
-          className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
-        >
-          <CaretLeftIcon color={"#000000"} size={24} />
-        </Pressable>
-
-        <Pressable
-          style={{ backgroundColor: colors.primary }}
-          className="flex-1 h-14 rounded-2xl items-center justify-center"
-          onPress={() =>
-            router.push({
-              pathname: "/(utilities)/agent-available-properties",
-              params: {
-                agentId: agent?.agentId,
-                name: agent?.name,
-                agency: agent?.agencyName,
-                requestId: request?.requestId,
-                clientId: request?.clientId,
-                propertyType: request?.propertyType,
-                lat: String(request?.lat || ""),
-                lng: String(request?.lng || ""),
-              },
-            })
-          }
-        >
-          <Text className="text-white font-bold text-base">
-            View Agent Profile
-          </Text>
-        </Pressable>
-      </View>
+      {requestStatus === "inspection_started" ? (
+        <View className="mt-6 gap-4 items-center flex-col">
+          <Pressable
+            style={{ backgroundColor: "#ffffff" }}
+            className="w-full h-14 rounded-2xl items-center justify-center border border-black"
+            onPress={handlePropertyView}
+          >
+            <Text className="text-black font-bold text-base">
+              View Agent Listings
+            </Text>
+          </Pressable>
+          <Pressable
+            className="w-full h-14 rounded-2xl items-center justify-center bg-red-500 mt-1"
+            onPress={() => Alert.alert("Forfeit Inspection", "Coming soon...")}
+          >
+            <Text className="text-white font-bold text-base">
+              Forfeit Inspection
+            </Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View className="mt-6 flex-row gap-4 items-center">
+          <Pressable
+            onPress={handleCancel}
+            style={{ borderColor: "#000000" }}
+            className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
+          >
+            <CaretLeftIcon color={"#000000"} size={24} />
+          </Pressable>
+          <Pressable
+            style={{ backgroundColor: colors.primary }}
+            className="flex-1 h-14 rounded-2xl items-center justify-center"
+            onPress={handlePropertyView}
+          >
+            <Text className="text-white font-bold text-base">
+              View Agent Listings
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
