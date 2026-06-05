@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "phosphor-react-native";
 import { API } from "../../services/api";
+import * as Location from "expo-location";
 // import { stopRingtone } from "../../services/ringtone";
 
 export default function RequestDetailsScreen() {
@@ -21,6 +22,7 @@ export default function RequestDetailsScreen() {
   const { requestId, propertyType, lat, lng, clientName } =
     useLocalSearchParams();
   const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState("");
 
   const handleAction = async (
     endpoint: string,
@@ -42,12 +44,40 @@ export default function RequestDetailsScreen() {
     }
   };
 
+  useEffect(() => {
+    const getAddress = async () => {
+      try {
+        if (!lat || !lng) return;
 
-//   useEffect(() => {
-//   return () => {
-//     stopRingtone();
-//   };
-// }, []);`
+        const result = await Location.reverseGeocodeAsync({
+          latitude: Number(lat),
+          longitude: Number(lng),
+        });
+
+        if (result.length > 0) {
+          const place = result[0];
+
+          const formattedAddress = [
+            place.name,
+            place.street,
+            place.district,
+            place.city,
+            place.region,
+            place.country,
+          ]
+            .filter(Boolean)
+            .join(", ");
+
+          setAddress(formattedAddress);
+        }
+      } catch (error) {
+        console.log("Reverse geocode error:", error);
+        setAddress("Address unavailable");
+      }
+    };
+
+    getAddress();
+  }, [lat, lng]);
 
   return (
     <View
@@ -85,8 +115,10 @@ export default function RequestDetailsScreen() {
         >
           <DetailRow label="Client" value={clientName as string} />
           <DetailRow label="Property Type" value={propertyType as string} />
-          <DetailRow label="Coordinates" value={`${lat}, ${lng}`} />
-          <DetailRow label="Request ID" value={requestId as string} isLast />
+          <DetailRow
+            label="Property Address"
+            value={address || "Loading address..."}
+          />
         </View>
 
         {/* Action Buttons */}
