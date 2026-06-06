@@ -52,6 +52,7 @@ function AppContent() {
             params: {
               requestId: String(data.requestId),
               agentId: String(data.agentId),
+               clientName: String(data.clientName),
               propertyType: String(data.propertyType),
               lat: String(data.lat),
               lng: String(data.lng),
