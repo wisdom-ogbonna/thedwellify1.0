@@ -246,7 +246,15 @@ const AvailableProperties: React.FC = () => {
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
         propertyType={propertyType}
-        price={propertyType === "Apartment" ? 5000 : propertyType === "Hotel" ? 3000 : propertyType === "Shortlet" ? 7000 : 5000}
+        price={
+          propertyType === "Apartment"
+            ? 5000
+            : propertyType === "Hotel"
+              ? 3000
+              : propertyType === "Shortlet"
+                ? 7000
+                : 5000
+        }
         onConfirm={() => {
           handleBooking();
           setBookingModalOpen(false);
