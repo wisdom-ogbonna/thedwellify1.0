@@ -7,7 +7,6 @@ export const API = axios.create({
   timeout: 15000,
 });
 
-
 // ✅ Attach Firebase token automatically (AUTO REFRESH 🔥)
 API.interceptors.request.use(
   async (config) => {
@@ -15,7 +14,6 @@ API.interceptors.request.use(
       const user = auth.currentUser;
 
       if (user) {
-
         const token = await user.getIdToken(); // 🔥 AUTO REFRESH HERE
         config.headers.Authorization = `Bearer ${token}`;
       }
