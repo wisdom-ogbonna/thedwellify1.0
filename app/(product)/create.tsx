@@ -55,7 +55,7 @@ export default function CreateProduct() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 0.7,
+      quality: 0.4,
     });
 
     if (!result.canceled) {
