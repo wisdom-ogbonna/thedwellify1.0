@@ -1,15 +1,21 @@
-// app/(client)/history.tsx
-
 import React, { useCallback, useEffect, useState } from "react";
 import * as Location from "expo-location";
+import { useTheme } from "@react-navigation/native";
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  StyleSheet,
   Text,
   View,
+  Pressable,
 } from "react-native";
+import {
+  ArrowClockwiseIcon,
+  ClockIcon,
+  FileTextIcon,
+  CalendarBlankIcon,
+  MapPinIcon,
+} from "phosphor-react-native";
 import { API } from "../../services/api";
 
 interface HistoryItem {
@@ -26,6 +32,7 @@ interface HistoryItem {
 }
 
 export default function HistoryScreen() {
+  const { colors } = useTheme();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [addresses, setAddresses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -34,7 +41,7 @@ export default function HistoryScreen() {
   const getAddress = async (
     id: string,
     latitude: number,
-    longitude: number
+    longitude: number,
   ) => {
     try {
       const result = await Location.reverseGeocodeAsync({
@@ -74,24 +81,14 @@ export default function HistoryScreen() {
     try {
       const response = await API.get("/client/history");
 
-      console.log(
-        "History Response:",
-        JSON.stringify(response.data, null, 2)
-      );
-
-const data = Array.isArray(response.data?.history)
-  ? response.data.history.filter(
-      (item: any) => item.status === "matched"
-    )
-  : [];
+      const data = Array.isArray(response.data?.history)
+        ? response.data.history.filter((item: any) => item.status === "matched")
+        : [];
 
       setHistory(data);
 
       data.forEach((item: HistoryItem) => {
-        if (
-          typeof item.lat === "number" &&
-          typeof item.lng === "number"
-        ) {
+        if (typeof item.lat === "number" && typeof item.lng === "number") {
           getAddress(item.id, item.lat, item.lng);
         }
       });
@@ -112,185 +109,200 @@ const data = Array.isArray(response.data?.history)
     loadHistory();
   }, []);
 
-  const formatDate = (
-    createdAt?: {
-      _seconds?: number;
-    }
-  ) => {
+  const formatDate = (createdAt?: { _seconds?: number }) => {
     try {
       if (!createdAt?._seconds) {
         return "Unknown Date";
       }
 
-      return new Date(
-        createdAt._seconds * 1000
-      ).toLocaleString();
+      return new Date(createdAt._seconds * 1000).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     } catch {
       return "Unknown Date";
     }
   };
 
-  const getStatusColor = (status?: string) => {
+  const getStatusStyle = (status?: string) => {
     switch (status?.toLowerCase()) {
       case "matched":
-        return "#22c55e";
-
+        return { bg: colors.border, text: colors.primary };
       case "inspection_started":
-        return "#f59e0b";
-
+        return { bg: "#FEF3C7", text: "#D97706" };
       case "inspection_completed":
-        return "#3b82f6";
-
+        return { bg: "#DBEAFE", text: "#2563EB" };
       default:
-        return "#6b7280";
+        return { bg: colors.border, text: colors.text };
     }
   };
 
   const renderItem = ({ item }: { item: HistoryItem }) => {
     const hasCoordinates =
-      typeof item.lat === "number" &&
-      typeof item.lng === "number";
+      typeof item.lat === "number" && typeof item.lng === "number";
+
+    const statusStyle = getStatusStyle(item.status);
 
     return (
-      <View style={styles.card}>
-        <Text style={styles.propertyType}>
-          {item.propertyType || "Property"}
-        </Text>
-
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: getStatusColor(item.status),
-            },
-          ]}
-        >
-          <Text style={styles.statusText}>
-            {(item.status || "unknown")
-              .replace(/_/g, " ")
-              .toUpperCase()}
+      <View
+        className="p-5 mb-4 border rounded-3xl shadow-sm"
+        style={{ backgroundColor: colors.card, borderColor: colors.border }}
+      >
+        <View className="flex-row justify-between items-center">
+          <Text
+            className="text-base font-bold flex-1 mr-2"
+            style={{ color: colors.text }}
+          >
+            {item.propertyType || "Property Inspection"}
           </Text>
+          <View
+            className="px-2.5 py-1 rounded-xl"
+            style={{ backgroundColor: statusStyle.bg }}
+          >
+            <Text
+              className="text-[10px] font-bold tracking-wider"
+              style={{ color: statusStyle.text }}
+            >
+              {(item.status || "unknown").replace(/_/g, " ").toUpperCase()}
+            </Text>
+          </View>
         </View>
 
-        <Text style={styles.label}>Request ID</Text>
-        <Text style={styles.value}>
-          {item.requestId || "N/A"}
-        </Text>
+        {/* Separator Line */}
+        <View
+          className="h-[1px] my-4 opacity-40"
+          style={{ backgroundColor: colors.border }}
+        />
 
-        <Text style={styles.label}>Location</Text>
-        <Text style={styles.value}>
-          {addresses[item.id] ||
-            (hasCoordinates
-              ? "Loading address..."
-              : "Address unavailable")}
-        </Text>
-        <Text style={styles.label}>Created</Text>
-        <Text style={styles.value}>
-          {formatDate(item.createdAt)}
-        </Text>
+        <View className="flex-row justify-between">
+          {/* Request ID Field */}
+          <View className="flex-1 mr-2">
+            <View className="flex-row items-center gap-1">
+              <FileTextIcon size={12} color="#71717a" weight="medium" />
+              <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+                Request ID
+              </Text>
+            </View>
+            <Text
+              className="text-sm font-semibold mt-1 pl-4"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+            >
+              {item.requestId || "N/A"}
+            </Text>
+          </View>
+
+          {/* Date Field */}
+          <View className="flex-1 items-end">
+            <View className="flex-row items-center gap-1">
+              <CalendarBlankIcon size={12} color="#71717a" weight="medium" />
+              <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+                Created On
+              </Text>
+            </View>
+            <Text
+              className="text-sm font-semibold mt-1"
+              style={{ color: colors.text }}
+            >
+              {formatDate(item.createdAt)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Location Field */}
+        <View className="mt-4">
+          <View className="flex-row items-center gap-1">
+            <MapPinIcon size={12} color="#71717a" weight="medium" />
+            <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+              Inspection Location
+            </Text>
+          </View>
+          <Text
+            className="text-sm font-semibold mt-1 pl-4"
+            style={{ color: colors.text }}
+          >
+            {addresses[item.id] ||
+              (hasCoordinates ? "Loading address..." : "Address unavailable")}
+          </Text>
+        </View>
       </View>
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View
+        className="flex-1 justify-center items-center"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (!history.length) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.emptyTitle}>
-          No Match History Found
+      <View
+        className="flex-1 justify-center items-center px-10"
+        style={{ backgroundColor: colors.background }}
+      >
+        <View
+          className="w-20 h-20 rounded-full border items-center justify-center mb-5"
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+        >
+          <ClockIcon size={36} color={colors.primary} weight="light" />
+        </View>
+        <Text
+          className="text-xl font-bold text-center"
+          style={{ color: colors.text }}
+        >
+          No History Found
         </Text>
-
-        <Text style={styles.emptyText}>
-          Your completed inspections will appear here.
+        <Text className="mt-2 text-zinc-500 text-sm text-center line-clamp-2 mb-6">
+          Your matched and completed inspection history listings will be
+          displayed safely here.
         </Text>
+        <Pressable
+          onPress={onRefresh}
+          className="flex-row items-center px-5 py-3 rounded-xl"
+          style={{ backgroundColor: colors.primary }}
+        >
+          <ArrowClockwiseIcon
+            size={14}
+            color={colors.background}
+            weight="bold"
+          />
+          <Text
+            className="text-sm font-semibold ml-2"
+            style={{ color: colors.background }}
+          >
+            Check Again
+          </Text>
+        </Pressable>
       </View>
     );
   }
 
   return (
-    <FlatList
-      data={history}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-        />
-      }
-      contentContainerStyle={styles.listContent}
-      showsVerticalScrollIndicator={false}
-    />
+    <View className="flex-1 pt-15" style={{ backgroundColor: colors.background }}>
+      <FlatList
+        data={history}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        contentContainerStyle={{ padding: 20, paddingTop: 15 }}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  listContent: {
-    padding: 16,
-  },
-
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    elevation: 3,
-  },
-
-  propertyType: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-
-  statusBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-    marginBottom: 15,
-  },
-
-  statusText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 12,
-  },
-
-  label: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 10,
-  },
-
-  value: {
-    fontSize: 14,
-    color: "#111827",
-    marginTop: 2,
-  },
-
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-
-  emptyText: {
-    marginTop: 10,
-    textAlign: "center",
-    color: "#6b7280",
-  },
-});

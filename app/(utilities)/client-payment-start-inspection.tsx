@@ -1,10 +1,11 @@
 import { useTheme } from "@/hooks/use-theme";
-import { useLocalSearchParams, router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { CheckIcon } from "phosphor-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { API } from "../../services/api";
 import Svg, { Circle } from "react-native-svg";
+import { API } from "../../services/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,7 +18,12 @@ const POLL_INTERVAL_MS = 3000;
 const RING_RADIUS = 34;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-const ACCEPTED_STATUSES = new Set(["matched", "inspection_started", "accepted", "active"]);
+const ACCEPTED_STATUSES = new Set([
+  "matched",
+  "inspection_started",
+  "accepted",
+  "active",
+]);
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -41,7 +47,6 @@ const ClientPaymentStartInspection: React.FC = () => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
-
 
   const cleanUpTimers = useCallback(() => {
     if (timerRef.current) {
@@ -309,7 +314,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                   }}
                 >
                   {screenState === "matched" ? (
-                    <Text style={{ fontSize: 22 }}>✓</Text>
+                    <CheckIcon size={28} color="#22c55e" weight="bold" />
                   ) : (
                     <Text
                       style={{

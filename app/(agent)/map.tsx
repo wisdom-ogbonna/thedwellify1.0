@@ -1,22 +1,20 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
-  Image,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
   Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-import MapView, {
-  Marker,
-  PROVIDER_GOOGLE,
-} from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+
+import BottomSheet, {
+  BottomSheetRefProps,
+} from "@/components/short-bottom-sheet";
 
 import * as Location from "expo-location";
 
@@ -25,6 +23,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { API } from "../../services/api";
+
+const { width, height } = Dimensions.get("screen");
 
 export default function MapScreen() {
   const mapRef = useRef(null);
@@ -35,27 +35,33 @@ export default function MapScreen() {
 
   const [loading, setLoading] = useState(true);
 
+  const ref = useRef<BottomSheetRefProps>(null);
+
+  const SNAP_25 = -height * 0.2;
+
+  const SNAP_50 = -height * 0.59;
+
+  const SNAP_80 = -height * 0.8;
+
   /**
    * ✅ Get user location
    */
   useEffect(() => {
+    ref.current?.scrollTo(SNAP_25);
     (async () => {
       try {
-        const { status } =
-          await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== "granted") {
           setLoading(false);
           return;
         }
 
-        const loc =
-          await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
-          });
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
 
         setLocation(loc.coords);
-
       } catch (err) {
         console.log("Location error:", err);
       } finally {
@@ -72,12 +78,8 @@ export default function MapScreen() {
       const res = await API.get("/agent/live");
 
       setAgent(res.data);
-
     } catch (err) {
-      console.log(
-        "Agent fetch error:",
-        err.response?.data || err.message
-      );
+      console.log("Agent fetch error:", err.response?.data || err.message);
     }
   };
 
@@ -92,7 +94,6 @@ export default function MapScreen() {
     }, 5000);
 
     return () => clearInterval(interval);
-
   }, []);
 
   /**
@@ -109,7 +110,7 @@ export default function MapScreen() {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       },
-      600
+      600,
     );
   };
 
@@ -117,12 +118,7 @@ export default function MapScreen() {
    * ✅ Auto fit markers
    */
   useEffect(() => {
-    if (
-      !mapRef.current ||
-      !agent?.isOnline ||
-      !agent?.lat ||
-      !agent?.lng
-    ) {
+    if (!mapRef.current || !agent?.isOnline || !agent?.lat || !agent?.lng) {
       return;
     }
 
@@ -135,8 +131,7 @@ export default function MapScreen() {
 
     // Add client location if matched
     if (
-      (agent?.status === "matched" ||
-        agent?.status === "inspection_started") &&
+      (agent?.status === "matched" || agent?.status === "inspection_started") &&
       agent?.clientLat &&
       agent?.clientLng
     ) {
@@ -156,16 +151,12 @@ export default function MapScreen() {
 
       animated: true,
     });
-
   }, [agent]);
 
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator
-          size="large"
-          color="#111"
-        />
+        <ActivityIndicator size="large" color="#111" />
       </View>
     );
   }
@@ -220,6 +211,25 @@ export default function MapScreen() {
       <TouchableOpacity style={styles.fab} onPress={focusUser}>
         <Ionicons name="locate" size={22} color="#111" />
       </TouchableOpacity>
+      <BottomSheet ref={ref}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bounces={false}
+          overScrollMode="never"
+          contentContainerStyle={{
+            paddingBottom: 120,
+          }}
+        >
+          <Text style={{ padding: 20, color: "#000000" }}>
+            Client Name: John Doe
+          </Text>
+          <Text style={{ padding: 20, color: "#000000" }}>
+            Client Phone Number: 08000000000
+          </Text>
+        </ScrollView>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -278,8 +288,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 26,
 
-    backgroundColor:
-      "rgba(37,99,235,0.25)",
+    backgroundColor: "rgba(37,99,235,0.25)",
   },
 
   avatar: {
