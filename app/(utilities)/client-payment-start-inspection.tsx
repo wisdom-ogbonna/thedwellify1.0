@@ -1,4 +1,5 @@
 import { useTheme } from "@/hooks/use-theme";
+import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { CheckIcon } from "phosphor-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -6,7 +7,6 @@ import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { API } from "../../services/api";
-import * as Clipboard from "expo-clipboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -364,20 +364,19 @@ const ClientPaymentStartInspection: React.FC = () => {
               </Text>
 
               {/* Agent info card — shown when name is available OR matched */}
-              {(agentName || screenState === "matched") && (
+              {screenState === "matched" && (
                 <View
                   style={{
                     marginTop: 24,
                     width: "100%",
                     backgroundColor: colors.background,
-                    borderRadius: 16, // Rounded corners for a more modern card feel
+                    borderRadius: 16,
                     borderWidth: 1,
                     borderColor: colors.border || "#e5e5e5",
-                    padding: 16, // Increased padding for breathing room
+                    padding: 16,
                     flexDirection: "row",
-                    alignItems: "flex-start", // Better alignment for multi-line details
+                    alignItems: "flex-start",
                     gap: 14,
-                    // Soft shadow integration
                     shadowColor: colors.text,
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.04,
@@ -391,7 +390,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                       width: 46,
                       height: 46,
                       borderRadius: 23,
-                      backgroundColor: colors.primary + "15", // Softer tint transparency (15%)
+                      backgroundColor: colors.primary + "15",
                       alignItems: "center",
                       justifyContent: "center",
                       borderWidth: 1,
