@@ -108,6 +108,8 @@ function Matched({
         propertyType: request?.propertyType,
         lat: String(request?.lat || ""),
         lng: String(request?.lng || ""),
+        phone: agent?.phone,
+        rating: agent?.rating,
         status: requestStatus,
       },
     });

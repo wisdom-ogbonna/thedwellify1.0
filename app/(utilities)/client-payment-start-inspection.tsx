@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { API } from "../../services/api";
+import * as Clipboard from "expo-clipboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,9 @@ const ClientPaymentStartInspection: React.FC = () => {
   const lng = params.lng as string;
   const agentName = (params.name as string) || "";
   const agentAgency = (params.agency as string) || "Dwellify Realty";
+  const rating = (params.rating as string) || "";
+  // const agentDistance = (params.distance as string) || "";
+  const agentPhoneNumber = (params.phone as string) || "";
 
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [error, setError] = useState<string | null>(null);
@@ -366,55 +370,177 @@ const ClientPaymentStartInspection: React.FC = () => {
                     marginTop: 24,
                     width: "100%",
                     backgroundColor: colors.background,
-                    borderRadius: 14,
+                    borderRadius: 16, // Rounded corners for a more modern card feel
                     borderWidth: 1,
                     borderColor: colors.border || "#e5e5e5",
-                    padding: 14,
+                    padding: 16, // Increased padding for breathing room
                     flexDirection: "row",
-                    alignItems: "center",
-                    gap: 12,
+                    alignItems: "flex-start", // Better alignment for multi-line details
+                    gap: 14,
+                    // Soft shadow integration
+                    shadowColor: colors.text,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 3,
+                    elevation: 2,
                   }}
                 >
+                  {/* Avatar Container */}
                   <View
                     style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 21,
-                      backgroundColor: colors.primary + "22",
+                      width: 46,
+                      height: 46,
+                      borderRadius: 23,
+                      backgroundColor: colors.primary + "15", // Softer tint transparency (15%)
                       alignItems: "center",
                       justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: colors.primary + "25",
                     }}
                   >
                     <Text
                       style={{
                         color: colors.primary,
-                        fontWeight: "600",
+                        fontWeight: "700",
                         fontSize: 14,
+                        letterSpacing: 0.5,
                       }}
                     >
-                      {agentInitials}
+                      {agentInitials?.toUpperCase() || "A"}
                     </Text>
                   </View>
-                  <View>
-                    <Text
+
+                  {/* Info Content Column */}
+                  <View style={{ flex: 1, justifyContent: "center" }}>
+                    {/* Header Row: Name & Rating */}
+                    <View
                       style={{
-                        color: colors.text,
-                        fontWeight: "600",
-                        fontSize: 14,
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 3,
                       }}
                     >
-                      {agentName || "Your Matched Agent"}
-                    </Text>
-                    <Text
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          color: colors.text,
+                          fontWeight: "700",
+                          fontSize: 15,
+                          flex: 1,
+                          marginRight: 8,
+                        }}
+                      >
+                        {agentName || "Your Matched Agent"}
+                      </Text>
+
+                      {rating && (
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12 }}>⭐</Text>
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              fontWeight: "600",
+                              color: colors.text,
+                            }}
+                          >
+                            {rating}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Agency Details */}
+                    {agentAgency && (
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          color: colors.text,
+                          opacity: 0.6,
+                          fontSize: 13,
+                          fontWeight: "500",
+                          marginBottom: 6,
+                        }}
+                      >
+                        {agentAgency}
+                      </Text>
+                    )}
+
+                    {/* Subtle Inner Divider */}
+                    <View
                       style={{
-                        color: colors.text,
-                        opacity: 0.55,
-                        fontSize: 12,
-                        marginTop: 2,
+                        height: 1,
+                        backgroundColor: colors.border || "#e5e5e5",
+                        marginVertical: 4,
+                        opacity: 0.6,
                       }}
-                    >
-                      {agentAgency}
-                    </Text>
+                    />
+
+                    {agentPhoneNumber ? (
+                      <Pressable
+                        onPress={async () => {
+                          await Clipboard.setStringAsync(agentPhoneNumber);
+                          Alert.alert(
+                            "Copied",
+                            "Phone number copied to clipboard!",
+                          );
+                        }}
+                        style={({ pressed }) => ({
+                          flexDirection: "row",
+                          alignItems: "center",
+                          alignSelf: "flex-start", // Prevents the block from expanding full-width
+                          backgroundColor: colors.primary + "12", // Clean, subtle theme-tinted pill
+                          paddingHorizontal: 10,
+                          paddingVertical: 6,
+                          borderRadius: 8,
+                          marginTop: 8,
+                          gap: 6,
+                          opacity: pressed ? 0.6 : 1, // Native-feeling feedback on tap
+                        })}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color: colors.primary,
+                            fontSize: 12,
+                            fontWeight: "700",
+                            letterSpacing: 0.2,
+                          }}
+                        >
+                          {agentPhoneNumber}
+                        </Text>
+
+                        <Text
+                          style={{
+                            color: colors.primary,
+                            opacity: 0.6,
+                            fontSize: 11,
+                            fontWeight: "500",
+                          }}
+                        >
+                          • Copy
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Text
+                        style={{
+                          color: colors.text,
+                          opacity: 0.4,
+                          fontSize: 12,
+                          fontWeight: "500",
+                          marginTop: 8,
+                          fontStyle: "italic",
+                        }}
+                      >
+                        Phone number unavailable
+                      </Text>
+                    )}
                   </View>
                 </View>
               )}
