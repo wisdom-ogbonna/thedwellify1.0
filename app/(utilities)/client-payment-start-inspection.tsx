@@ -493,14 +493,14 @@ const ClientPaymentStartInspection: React.FC = () => {
                         style={({ pressed }) => ({
                           flexDirection: "row",
                           alignItems: "center",
-                          alignSelf: "flex-start", // Prevents the block from expanding full-width
-                          backgroundColor: colors.primary + "12", // Clean, subtle theme-tinted pill
+                          alignSelf: "flex-start",
+                          backgroundColor: colors.primary + "12",
                           paddingHorizontal: 10,
                           paddingVertical: 6,
                           borderRadius: 8,
                           marginTop: 8,
                           gap: 6,
-                          opacity: pressed ? 0.6 : 1, // Native-feeling feedback on tap
+                          opacity: pressed ? 0.6 : 1,
                         })}
                       >
                         <Text
@@ -628,14 +628,10 @@ const ClientPaymentStartInspection: React.FC = () => {
             <Pressable
               onPress={handleCancelRequest}
               disabled={cancelling}
+              className="w-full py-4 rounded-lg items-center bg-red-500"
               style={({ pressed }) => ({
-                width: "100%",
-                paddingVertical: 16,
-                borderRadius: 14,
-                alignItems: "center",
                 borderWidth: 1,
                 borderColor: colors.border || "#e5e5e5",
-                backgroundColor: colors.background,
                 opacity: pressed || cancelling ? 0.6 : 1,
               })}
             >
