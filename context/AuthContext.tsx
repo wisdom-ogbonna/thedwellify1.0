@@ -1,18 +1,23 @@
 import { createContext, useContext, useEffect, useState } from "react";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
+
 import { API } from "../services/api";
 
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
+
 import { auth } from "../config/firebase";
+
 import * as Location from "expo-location";
+
+import NetInfo from "@react-native-community/netinfo";
+
 import {
   startLocationTracking,
   stopLocationTracking,
 } from "../services/locationTracker";
 
-/* =========================
-   TYPES
-========================= */
 type UserType = {
   uid: string;
   phone?: string;
@@ -23,119 +28,181 @@ type RoleType = "agent" | "client";
 type AuthContextType = {
   user: UserType | null;
   role: RoleType | null;
+
   isVerified: boolean;
+
   loading: boolean;
+
   isOnline: boolean;
 
+  isConnected: boolean;
+
   login: (data: { uid: string; phone?: string }) => Promise<void>;
+
   setUserRole: (role: RoleType) => Promise<void>;
-  checkProfile: (roleParam?: RoleType) => Promise<void>;
+
+  checkProfile: (role?: RoleType) => Promise<void>;
+
   logout: () => Promise<void>;
 
   goOnline: () => Promise<void>;
+
   goOffline: () => Promise<void>;
 };
 
-/* =========================
-   CONTEXT
-========================= */
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-/* =========================
-   PROVIDER
-========================= */
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
+
   const [role, setRole] = useState<RoleType | null>(null);
+
   const [isVerified, setIsVerified] = useState(false);
+
   const [loading, setLoading] = useState(true);
+
   const [isOnline, setIsOnline] = useState(false);
 
-  /* =========================
-     AUTH STATE LISTENER
-  ========================= */
+  const [isConnected, setIsConnected] = useState(true);
+
+  /*
+=========================
+RESTORE ONLINE STATE
+=========================
+*/
+
+  const restoreAgentOnline = async () => {
+    try {
+      const saved = await AsyncStorage.getItem("isOnline");
+
+      if (saved !== "true") return;
+
+      await API.post("/location/online");
+
+      await startLocationTracking();
+
+      setIsOnline(true);
+
+      console.log("Agent restored online");
+    } catch (error) {
+      console.log("Restore failed", error);
+
+      setIsOnline(false);
+    }
+  };
+
+  /*
+=========================
+AUTH LISTENER
+=========================
+*/
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (firebaseUser: User | null) => {
-        try {
-          setLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      try {
+        setLoading(true);
 
-          if (firebaseUser) {
-            // 🔐 Firebase user (source of truth)
-            const userData: UserType = {
-              uid: firebaseUser.uid,
-              phone: firebaseUser.phoneNumber || "",
-            };
+        if (firebaseUser) {
+          const data = {
+            uid: firebaseUser.uid,
 
-            setUser(userData);
+            phone: firebaseUser.phoneNumber || "",
+          };
 
-            const storedStatus = await AsyncStorage.getItem("isOnline");
+          setUser(data);
 
-            if (storedStatus === "true") {
-              setIsOnline(true);
-            } else {
-              setIsOnline(false);
-            }
+          const storedRole = await AsyncStorage.getItem("role");
 
-            // 📦 Load stored role
-            const storedRole = await AsyncStorage.getItem("role");
+          if (storedRole) {
+            setRole(storedRole as RoleType);
 
-            if (storedRole) {
-              const roleValue = storedRole as RoleType;
-              setRole(roleValue);
-
-              // ✅ IMPORTANT: pass role directly (avoid race condition)
-              await checkProfile(roleValue);
-            } else {
-              setRole(null);
-              setIsVerified(false);
-            }
-          } else {
-            // 🚪 No user
-            setUser(null);
-            setRole(null);
-            setIsVerified(false);
+            await checkProfile(storedRole as RoleType);
           }
-        } catch (error) {
-          console.log("Auth state error:", error);
-        } finally {
-          setLoading(false);
+
+          await restoreAgentOnline();
+        } else {
+          setUser(null);
+
+          setRole(null);
+
+          setIsVerified(false);
         }
+      } catch (error) {
+        console.log("Auth error", error);
+      } finally {
+        setLoading(false);
       }
-    );
+    });
 
     return unsubscribe;
   }, []);
 
-  /* =========================
-     LOGIN (AFTER FIREBASE AUTH)
-  ========================= */
+  /*
+=========================
+NETWORK LISTENER
+=========================
+*/
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const online = state.isConnected ?? false;
+
+      setIsConnected(online);
+
+      if (!online) {
+        console.log("Internet lost");
+
+        stopLocationTracking();
+
+        setIsOnline(false);
+      } else {
+        console.log("Internet restored");
+
+        restoreAgentOnline();
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  /*
+=========================
+LOGIN
+=========================
+*/
+
   const login = async ({ uid, phone }: { uid: string; phone?: string }) => {
-    // ⚠️ No need to store user in AsyncStorage anymore
-    setUser({ uid, phone });
-    setRole(null);
-    setIsVerified(false);
+    setUser({
+      uid,
+      phone,
+    });
   };
 
-  /* =========================
-     SET ROLE
-  ========================= */
+  /*
+=========================
+ROLE
+=========================
+*/
+
   const setUserRole = async (role: RoleType) => {
     await AsyncStorage.setItem("role", role);
+
     setRole(role);
   };
 
-  /* =========================
-     CHECK PROFILE (SECURE)
-  ========================= */
+  /*
+=========================
+PROFILE CHECK
+=========================
+*/
+
   const checkProfile = async (roleParam?: RoleType) => {
     try {
-      const roleToUse = roleParam || role;
+      const current = roleParam || role;
 
-      if (!roleToUse) return;
+      if (!current) return;
 
-      if (roleToUse === "agent") {
+      if (current === "agent") {
         await API.get("/agent/profile");
       } else {
         await API.get("/client/profile");
@@ -145,135 +212,146 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error: any) {
       const status = error?.response?.status;
 
-      // 🔐 Token invalid / expired
       if (status === 401) {
         await logout();
+
         return;
       }
 
-      // 👤 Profile not created yet
-      if (status === 404) {
-        setIsVerified(false);
-        return;
-      }
-
-      console.log("Profile check error:", error?.response || error);
       setIsVerified(false);
     }
   };
 
-  /* =========================
-   ONLINE / OFFLINE
-========================= */
-const goOnline = async () => {
-  try {
-    // ✅ STEP 0: CHECK / REQUEST PERMISSION FIRST
-    let { status } = await Location.getForegroundPermissionsAsync();
+  /*
+=========================
+GO ONLINE
+=========================
+*/
 
-    if (status !== "granted") {
-      const res = await Location.requestForegroundPermissionsAsync();
-      status = res.status;
+  const goOnline = async () => {
+    try {
+      let { status } = await Location.getForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        const result = await Location.requestForegroundPermissionsAsync();
+
+        status = result.status;
+      }
+
+      if (status !== "granted") {
+        Alert.alert("Permission required", "Enable location access");
+
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const lat = location.coords.latitude;
+
+      const lng = location.coords.longitude;
+
+      await API.post("/location/online");
+
+      await API.post("/location/update", {
+        lat,
+        lng,
+
+        load: 0,
+
+        rating: 5,
+      });
+
+      await AsyncStorage.setItem("isOnline", "true");
+
+      setIsOnline(true);
+
+      await startLocationTracking();
+
+      console.log("ONLINE");
+    } catch (error) {
+      console.log("Online error", error);
     }
+  };
 
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission required",
-        "Enable location access to go online"
-      );
-      return; // ⛔ STOP execution here
+  /*
+=========================
+GO OFFLINE
+=========================
+*/
+
+  const goOffline = async () => {
+    try {
+      stopLocationTracking();
+
+      setIsOnline(false);
+
+      await AsyncStorage.setItem("isOnline", "false");
+
+      await API.post("/location/offline");
+    } catch (error) {
+      console.log("Offline error", error);
     }
+  };
 
-    // ✅ STEP 1: GET LOCATION (now safe)
-    const loc = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
+  /*
+=========================
+LOGOUT
+=========================
+*/
 
-    const lat = loc.coords.latitude;
-    const lng = loc.coords.longitude;
+  const logout = async () => {
+    try {
+      stopLocationTracking();
 
-    console.log("📍 Initial location:", lat, lng);
+      await API.post("/location/offline");
 
-    // ✅ STEP 2: GO ONLINE FIRST
-    await API.post("/location/online");
+      await signOut(auth);
 
-    // ✅ STEP 3: SEND FIRST LOCATION
-    await API.post("/location/update", {
-      lat,
-      lng,
-      load: 0,
-      rating: 5,
-    });
+      await AsyncStorage.multiRemove(["role", "isOnline"]);
+    } finally {
+      setUser(null);
 
-    // ✅ STEP 4: START TRACKING
-    await startLocationTracking();
+      setRole(null);
 
-    setIsOnline(true);
-    await AsyncStorage.setItem("isOnline", "true");
+      setIsVerified(false);
 
-    console.log("✅ Agent is now online");
-  } catch (error: any) {
-    console.log("❌ Go online error:", error?.response?.data || error);
-  }
-};
+      setIsOnline(false);
+    }
+  };
 
-const goOffline = async () => {
-  try {
-    // ✅ stop tracking FIRST
-    stopLocationTracking();
-
-    await API.post("/location/offline");
-
-    setIsOnline(false);
-    await AsyncStorage.setItem("isOnline", "false");
-
-  } catch (error) {
-    console.log("Go offline error:", error);
-  }
-};
-  /* =========================
-     LOGOUT
-  ========================= */
-const logout = async () => {
-  try {
-    await API.post("/location/offline"); // 🔴 force offline
-    await signOut(auth);
-    await AsyncStorage.removeItem("role");
-    await AsyncStorage.removeItem("isOnline");
-  } catch (error) {
-    console.log("Logout error:", error);
-  } finally {
-    setUser(null);
-    setRole(null);
-    setIsVerified(false);
-    setIsOnline(false);
-  }
-};
-
-  /* =========================
-     PROVIDER VALUE
-  ========================= */
   return (
-<AuthContext.Provider
-  value={{
-    user,
-    role,
-    isVerified,
-    loading,
-    isOnline,
-    login,
-    setUserRole,
-    checkProfile,
-    logout,
-    goOnline,
-    goOffline,
-  }}
->
+    <AuthContext.Provider
+      value={{
+        user,
+
+        role,
+
+        isVerified,
+
+        loading,
+
+        isOnline,
+
+        isConnected,
+
+        login,
+
+        setUserRole,
+
+        checkProfile,
+
+        logout,
+
+        goOnline,
+
+        goOffline,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-/* =========================
-   HOOK
-========================= */
 export const useAuth = () => useContext(AuthContext);
