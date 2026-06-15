@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API } from "../services/api";
@@ -9,12 +9,12 @@ import * as Location from "expo-location";
 import {
   startLocationTracking,
   stopLocationTracking,
-  bootstrapLocationTracker,
+  bootstrapLocationTracker, // Ensure this recovery hook is imported from your tracking file
 } from "../services/locationTracker";
 
-/* =========================================================================
-   TYPES & INTERFACES
-   ========================================================================= */
+/* =========================
+   TYPES
+========================= */
 type UserType = {
   uid: string;
   phone?: string;
@@ -38,22 +38,14 @@ type AuthContextType = {
   goOffline: () => Promise<void>;
 };
 
-// Internal keys mirroring the locationTracker definitions
-const KEYS = {
-  TRACKING_STATUS: "@tracker_is_online",
-  LAST_LOCATION: "@tracker_last_location",
-  SECURE_TOKEN: "@secure_auth_token",
-  ROLE: "role",
-};
-
-/* =========================================================================
-   CONTEXT CREATION
-   ========================================================================= */
+/* =========================
+   CONTEXT
+========================= */
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-/* =========================================================================
-   PROVIDER COMPONENT
-   ========================================================================= */
+/* =========================
+   PROVIDER
+========================= */
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [role, setRole] = useState<RoleType | null>(null);
@@ -61,9 +53,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
 
-  /* =========================================================================
-     AUTH STATE LISTENER & RECOVERY ENGINE
-     ========================================================================= */
+  /* =========================
+     AUTH STATE LISTENER
+  ========================= */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -72,28 +64,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setLoading(true);
 
           if (firebaseUser) {
-            // 🚀 CRITICAL FIX: Fetch fresh idToken & write to disk for the headless background thread
-            const token = await firebaseUser.getIdToken(true);
-            await AsyncStorage.setItem(KEYS.SECURE_TOKEN, token);
-
+            // 🔐 Firebase user (source of truth)
             const userData: UserType = {
               uid: firebaseUser.uid,
               phone: firebaseUser.phoneNumber || "",
             };
+
             setUser(userData);
 
-            // Fetch structural storage tracking rules
-            const storedStatus = await AsyncStorage.getItem(KEYS.TRACKING_STATUS);
+            // 📦 Load stored tracking status
+            const storedStatus = await AsyncStorage.getItem("@tracker_is_online");
             const userWantsOnline = storedStatus === "true";
 
-            const storedRole = await AsyncStorage.getItem(KEYS.ROLE);
+            // 📦 Load stored role
+            const storedRole = await AsyncStorage.getItem("role");
             const roleValue = storedRole as RoleType;
 
             if (roleValue) {
               setRole(roleValue);
               await checkProfile(roleValue);
 
-              // AUTOMATED BACKGROUND AGENT RESTART RECOVERY STATE HANDSHAKE
+              // 🔄 STEP 4: APP RESTART RECOVERY AUTOMATION
               if (roleValue === "agent" && userWantsOnline) {
                 try {
                   console.log("🔄 Recovery engine starting tracker module setup...");
@@ -102,7 +93,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 } catch (bootstrapErr) {
                   console.error("❌ Recovery bootstrap trace error:", bootstrapErr);
                   setIsOnline(false);
-                  await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
+                  await AsyncStorage.setItem("@tracker_is_online", "false");
                 }
               }
             } else {
@@ -110,12 +101,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               setIsVerified(false);
             }
           } else {
-            // No authenticated session found -> Flush all volatile states immediately
+            // 🚪 No user authenticated
             setUser(null);
             setRole(null);
             setIsVerified(false);
             setIsOnline(false);
-            await AsyncStorage.removeItem(KEYS.SECURE_TOKEN);
           }
         } catch (error) {
           console.error("Auth global layout state listener error:", error);
@@ -128,26 +118,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return unsubscribe;
   }, []);
 
-  /* =========================================================================
-     LOGIN PROXY HANDLER
-     ========================================================================= */
+  /* =========================
+     LOGIN (AFTER FIREBASE AUTH)
+  ========================= */
   const login = async ({ uid, phone }: { uid: string; phone?: string }) => {
     setUser({ uid, phone });
     setRole(null);
     setIsVerified(false);
   };
 
-  /* =========================================================================
-     ROLE CONFIGURATION MUTATION
-     ========================================================================= */
-  const setUserRole = async (selectedRole: RoleType) => {
-    await AsyncStorage.setItem(KEYS.ROLE, selectedRole);
-    setRole(selectedRole);
+  /* =========================
+     SET ROLE
+  ========================= */
+  const setUserRole = async (role: RoleType) => {
+    await AsyncStorage.setItem("role", role);
+    setRole(role);
   };
 
-  /* =========================================================================
-     REMOTE PROFILE SANITY SYNC
-     ========================================================================= */
+  /* =========================
+     CHECK PROFILE
+  ========================= */
   const checkProfile = async (roleParam?: RoleType) => {
     try {
       const roleToUse = roleParam || role;
@@ -175,19 +165,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  /* =========================================================================
-     ONLINE DISPATCH PIPELINE (GEOLOCATION PRIMING ENTRYWAY)
-     ========================================================================= */
+  /* =========================
+     ONLINE / OFFLINE (STEP 5 RELIABILITY)
+  ========================= */
   const goOnline = async () => {
     try {
-      // 1. Hardware Availability Pipeline Validations
+      // Hardware and Permissions Sanity Check Pipeline
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
         Alert.alert("GPS Disabled", "Please activate device hardware location features before connecting.");
         throw new Error("Hardware tracking capabilities disabled.");
       }
 
-      // 2. Foreground Permissions Guard
       let { status } = await Location.getForegroundPermissionsAsync();
       if (status !== "granted") {
         const res = await Location.requestForegroundPermissionsAsync();
@@ -199,7 +188,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      // 3. Background Isolation Verification Guard (Ensures compliance for app tracking in pocket)
+      // 🔐 Check background updates access authorization block
       const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
       if (bgStatus !== "granted") {
         const bgRes = await Location.requestBackgroundPermissionsAsync();
@@ -212,39 +201,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      // 4. Fetch seed positioning data to map baseline coordinate states cleanly
+      // Fetch seed positioning to prime local coordinates cache cleanly
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
 
       const lat = loc.coords.latitude;
       const lng = loc.coords.longitude;
-      await AsyncStorage.setItem(KEYS.LAST_LOCATION, JSON.stringify({ lat, lng }));
+      await AsyncStorage.setItem("@tracker_last_location", JSON.stringify({ lat, lng }));
 
-      // 5. Connect Status Signals with Remote Datastore Endpoint API Routes
+      // Synchronize state flag with backend server
       await API.post("/location/online");
+
+      // Dispatch seed position coordinate data
       await API.post("/location/update", { lat, lng, load: 0, rating: 5 });
 
-      // 6. Spin Up Native Core Tracking Loop Machinery 
+      // Start the core tracking loop
       await startLocationTracking();
 
       setIsOnline(true);
-      await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "true");
+      await AsyncStorage.setItem("@tracker_is_online", "true");
       console.log("✅ Agent registration online pipeline validated cleanly.");
     } catch (error: any) {
       console.error("❌ Error setting state online:", error?.response?.data || error);
       setIsOnline(false);
-      await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
-      throw error;
+      await AsyncStorage.setItem("@tracker_is_online", "false");
+      throw error; // Propagate down to UI handlers to reset component spinners cleanly
     }
   };
 
-  /* =========================================================================
-     OFFLINE TEARDOWN DISPATCH PIPELINE
-     ========================================================================= */
   const goOffline = async () => {
     try {
-      // Unsubscribe listeners and stop background engines cleanly to avoid leaks
+      // Shut down intervals and background processes first to avoid layout memory leaks
       await stopLocationTracking();
 
       try {
@@ -254,26 +242,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       setIsOnline(false);
-      await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
+      await AsyncStorage.setItem("@tracker_is_online", "false");
       console.log("🔴 Agent successfully turned offline.");
     } catch (error) {
       console.error("Critical issue shifting system profile offline:", error);
     }
   };
 
-  /* =========================================================================
-     LOGOUT LIFECYCLE ROUTINE
-     ========================================================================= */
+  /* =========================
+     LOGOUT
+  ========================= */
   const logout = async () => {
     try {
       await goOffline();
       await signOut(auth);
-      
-      // Wipe structural disk profiles to ensure clean states on subsequent logins
-      await AsyncStorage.removeItem(KEYS.ROLE);
-      await AsyncStorage.removeItem(KEYS.TRACKING_STATUS);
-      await AsyncStorage.removeItem(KEYS.LAST_LOCATION);
-      await AsyncStorage.removeItem(KEYS.SECURE_TOKEN);
+      await AsyncStorage.removeItem("role");
+      await AsyncStorage.removeItem("@tracker_is_online");
+      await AsyncStorage.removeItem("@tracker_last_location");
     } catch (error) {
       console.error("Logout execution layer crash trace:", error);
     } finally {
@@ -305,7 +290,4 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-/* =========================================================================
-   CONSUMER HOOK
-   ========================================================================= */
 export const useAuth = () => useContext(AuthContext);

@@ -119,13 +119,7 @@ const dispatchLocationUpdate = async (
  * Flushes backlogged offline items sequentially when connectivity recovers
  */
 const drainLocalQueue = async () => {
-  if (processingQueue) return;
-  
-  // Fetch fresh connectivity state if evaluated inside an isolated background task execution thread
-  const netState = await NetInfo.fetch();
-  const networkAvailable = netState.isConnected ?? false;
-  if (!networkAvailable) return;
-  
+  if (processingQueue || !isConnected) return;
   processingQueue = true;
 
   try {
@@ -143,13 +137,7 @@ const drainLocalQueue = async () => {
 
     console.log(`♻️ Processing ${queue.length} cached offline updates...`);
 
-    const savedToken = await AsyncStorage.getItem("@secure_auth_token");
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (savedToken) {
-      headers["Authorization"] = `Bearer ${savedToken}`;
-    }
-
-    while (queue.length > 0) {
+    while (queue.length > 0 && isConnected) {
       const currentItem = queue[0];
       try {
         await API.post("/location/update", {
@@ -157,11 +145,10 @@ const drainLocalQueue = async () => {
           lng: currentItem.lng,
           load: currentItem.load,
           rating: currentItem.rating,
-        }, { headers, timeout: 8000 });
-        
+        });
         queue.shift(); // Remove successfully sent item
       } catch (err) {
-        console.warn("⚠️ Queue clearing interrupted, network down again or request timed out.");
+        console.warn("⚠️ Queue clearing interrupted, network down again.");
         break;
       }
     }
@@ -344,6 +331,9 @@ export const bootstrapLocationTracker = async () => {
 /* =========================================================================
    NATIVE HEADLESS SHARED GLOBAL TASK RUNNER EXECUTOR
    ========================================================================= */
+/* =========================================================================
+   NATIVE HEADLESS SHARED GLOBAL TASK RUNNER EXECUTOR
+   ========================================================================= */
 const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.TaskManagerTaskBody<any>) => {
   if (error) {
     console.error("TaskManager task error caught:", error.message);
@@ -354,18 +344,20 @@ const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.T
     const { locations } = data;
     if (!locations || locations.length === 0) return;
 
+    // Grab the latest precise native coordinate entry point safely
     const primaryFix = locations[locations.length - 1]; 
     if (!primaryFix || !primaryFix.coords) return;
 
     const lat = primaryFix.coords.latitude;
     const lng = primaryFix.coords.longitude;
 
+    // Safety check: If the OS returns bad/empty coordinates, reject the background cycle
     if (lat === undefined || lng === undefined || lat === null || lng === null) {
+      console.warn("⚠️ Headless task woke up but coordinates were unreadable.");
       return;
     }
 
     const coords: Coordinates = { lat, lng };
-    const payload: QueuedPayload = { ...coords, load: 0, rating: 5, timestamp: Date.now() };
 
     try {
       const rawQueue = await AsyncStorage.getItem(KEYS.FAILED_QUEUE);
@@ -374,26 +366,45 @@ const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.T
       const netState = await NetInfo.fetch();
       const networkAvailable = netState.isConnected ?? false;
 
+      // 1. Handle Offline State instantly
       if (!networkAvailable) {
+        const payload: QueuedPayload = { ...coords, load: 0, rating: 5, timestamp: Date.now() };
         currentQueue.push(payload);
         await AsyncStorage.setItem(KEYS.FAILED_QUEUE, JSON.stringify(currentQueue));
         return;
       }
 
-      // ♻️ Clear out older backlogged mutations first before executing the current API request
-      await drainLocalQueue();
+      // 2. Resolve Firebase Authentication inside the isolated background thread
+      let currentUser = auth.currentUser;
+      let authHeader = "";
 
-      const savedToken = await AsyncStorage.getItem("@secure_auth_token");
-      
-      if (!savedToken) {
-        console.warn("⚠️ No saved token found in storage. Stashing update.");
+      if (!currentUser) {
+        // Give the native bridge up to 3 seconds to recover the user session from keychain memory
+        currentUser = await new Promise((resolve) => {
+          const unsubscribe = auth.onAuthStateChanged((user) => {
+            unsubscribe();
+            resolve(user);
+          });
+          setTimeout(() => {
+            unsubscribe();
+            resolve(null);
+          }, 3000);
+        });
+      }
+
+      if (currentUser) {
+        const token = await currentUser.getIdToken(true); 
+        authHeader = `Bearer ${token}`;
+      } else {
+        console.warn("⚠️ Background auth handshake timed out. Caching location entry.");
+        const payload: QueuedPayload = { ...coords, load: 0, rating: 5, timestamp: Date.now() };
         currentQueue.push(payload);
         await AsyncStorage.setItem(KEYS.FAILED_QUEUE, JSON.stringify(currentQueue));
         return;
       }
 
-      const authHeader = `Bearer ${savedToken}`;
-
+      // 3. Dispatch payload with explicit header authentication parameters
+      // 💡 NOTE: double-check if your backend expects "lat" or "latitude" / "lng" or "longitude"
       await API.post("/location/update", {
         lat: coords.lat,
         lng: coords.lng,
@@ -403,16 +414,18 @@ const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.T
         headers: {
           Authorization: authHeader,
           "Content-Type": "application/json"
-        },
-        timeout: 10000 // Fast-fail threshold preventing background thread hangs
+        }
       });
 
+      // Update local storage so foreground loop stays caught up
       await AsyncStorage.setItem(KEYS.LAST_LOCATION, JSON.stringify(coords));
       console.log(`📍 Background sync success: ${coords.lat}, ${coords.lng}`);
 
     } catch (err: any) {
-      console.warn("Headless OS Engine choked. Stashing in outbox safely.");
+      console.error("Headless OS Engine Update Exception:", err?.response?.data || err?.message || err);
       
+      // If server rejects with error, hold data in outbox queue so updates aren't permanently lost
+      const payload: QueuedPayload = { ...coords, load: 0, rating: 5, timestamp: Date.now() };
       const rawQueue = await AsyncStorage.getItem(KEYS.FAILED_QUEUE);
       const currentQueue = rawQueue ? JSON.parse(rawQueue) : [];
       currentQueue.push(payload);
@@ -423,6 +436,9 @@ const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.T
 
 // =========================================================================
 // REGISTRATION
+// =========================================================================
+// =========================================================================
+// REGISTRATION (Make sure both lines are fully written like this)
 // =========================================================================
 TaskManager.defineTask(BACKGROUND_TRACKING_TASK_OLD, sharedHeadlessLocationEngineRunner);
 TaskManager.defineTask(BACKGROUND_TRACKING_TASK_NEW, sharedHeadlessLocationEngineRunner);

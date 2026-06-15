@@ -35,17 +35,16 @@ export default function AgentDashboard() {
   const { isOnline, goOnline, goOffline } = useAuth();
 
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [paying, setPaying] = useState(false);
-  const [toggling, setToggling] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [paying, setPaying] = useState<boolean>(false);
+  const [toggling, setToggling] = useState<boolean>(false);
   const [agentName, setAgentName] = useState<string>("Agent");
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
-  const [requestId, setRequestId] = useState(null);
+  const [message, setMessage] = useState<string>("");
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   const sidebarX = useRef(new Animated.Value(-width)).current;
-  // Dynamic animated value for the online status pulse
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const isWorkflowActive = [
@@ -72,7 +71,6 @@ export default function AgentDashboard() {
     }
   };
 
-  // Status header values
   const getHeaderStatusText = () => {
     if (toggling) return "UPDATING...";
     if (agentStatus === "suspended") return "SUSPENDED";
@@ -114,14 +112,24 @@ export default function AgentDashboard() {
     };
   }, [currentStatusText]);
 
+  // Optimized Sidebar Toggle to handle state immediately
   const toggleSidebar = () => {
-    const open = !isSidebarVisible;
+    const toOpen = !isSidebarVisible;
+    
+    if (toOpen) {
+      setIsSidebarVisible(true);
+    }
+
     Animated.timing(sidebarX, {
-      toValue: open ? 0 : -width,
+      toValue: toOpen ? 0 : -width,
       duration: 250,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start(() => setIsSidebarVisible(open));
+    }).start(() => {
+      if (!toOpen) {
+        setIsSidebarVisible(false);
+      }
+    });
   };
 
   const handleOnlineToggle = async (value: boolean) => {
@@ -145,13 +153,10 @@ export default function AgentDashboard() {
       const pushData = await registerForPushNotificationsAsync();
       if (!pushData) return;
 
-      const payload: any = { platform: pushData.platform };
-
-      if (pushData.platform === "ios") {
-        payload.expoPushToken = pushData.token;
-      } else {
-        payload.fcmToken = pushData.token;
-      }
+      const payload = { 
+        platform: pushData.platform,
+        ...(pushData.platform === "ios" ? { expoPushToken: pushData.token } : { fcmToken: pushData.token })
+      };
 
       await API.post("/notifications/agent", payload);
     } catch (err) {
@@ -169,9 +174,7 @@ export default function AgentDashboard() {
 
       const token = await user.getIdToken();
       const authHeader = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       };
 
       const liveRes = await API.get("/agent/live", authHeader);
@@ -193,12 +196,7 @@ export default function AgentDashboard() {
       try {
         const profileRes = await API.get("/agent/profile", authHeader);
         const profileData = profileRes.data;
-
-        if (profileData?.name) {
-          setAgentName(profileData.name.split(" ")[0] || "Agent");
-        } else {
-          setAgentName("Agent");
-        }
+        setAgentName(profileData?.name ? profileData.name.split(" ")[0] : "Agent");
       } catch (profileErr) {
         console.log("Profile fetch failed:", profileErr);
       }
@@ -227,7 +225,7 @@ export default function AgentDashboard() {
     try {
       const user = auth.currentUser;
       if (!user || !requestId) {
-        alert("Missing request");
+        Alert.alert("Error", "Missing active request ID");
         return;
       }
 
@@ -239,12 +237,8 @@ export default function AgentDashboard() {
 
       setMessage("Inspection started successfully");
       await fetchAgentStatus();
-    } catch (err) {
-      const error = err as any;
-      console.log(
-        "Start inspection error:",
-        error.response?.data || error.message,
-      );
+    } catch (err: any) {
+      console.log("Start inspection error:", err.response?.data || err.message);
       setMessage("Failed to start inspection");
     }
   };
@@ -253,7 +247,7 @@ export default function AgentDashboard() {
     try {
       const user = auth.currentUser;
       if (!user || !requestId) {
-        alert("Missing request");
+        Alert.alert("Error", "Missing active request ID");
         return;
       }
 
@@ -265,13 +259,31 @@ export default function AgentDashboard() {
 
       setMessage("Inspection completed successfully");
       await fetchAgentStatus();
-    } catch (err) {
-      const error = err as any;
-      console.log(
-        "End inspection error:",
-        error.response?.data || error.message,
-      );
+    } catch (err: any) {
+      console.log("End inspection error:", err.response?.data || err.message);
       setMessage("Failed to end inspection");
+    }
+  };
+
+  // ADDED: Handles declining a live client match
+  const declineRequest = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !requestId) return;
+
+      setLoading(true);
+      await API.post("/client/inspection/decline", {
+        requestId,
+        agentId: user.uid,
+      });
+      
+      Alert.alert("Declined", "Request has been successfully declined.");
+      await fetchAgentStatus();
+    } catch (err: any) {
+      console.log("Decline error:", err.response?.data || err.message);
+      Alert.alert("Error", "Failed to decline the request.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -279,18 +291,16 @@ export default function AgentDashboard() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        alert("User not authenticated");
+        Alert.alert("Error", "User not authenticated");
         return;
       }
 
       setPaying(true);
       setMessage("Redirecting to payment...");
 
-      const res = await API.post("/payment/pay", {
-        agentId: user.uid,
-      });
-
+      const res = await API.post("/payment/pay", { agentId: user.uid });
       const { paymentUrl } = res.data;
+      
       if (!paymentUrl) {
         setMessage("No payment link received");
         return;
@@ -302,9 +312,8 @@ export default function AgentDashboard() {
       setTimeout(() => {
         fetchAgentStatus();
       }, 3000);
-    } catch (err) {
-      const error = err as any;
-      console.log("Payment error:", error.response?.data || error.message);
+    } catch (err: any) {
+      console.log("Payment error:", err.response?.data || err.message);
       setMessage("Payment failed. Try again.");
     } finally {
       setPaying(false);
@@ -341,49 +350,17 @@ export default function AgentDashboard() {
             paddingBottom: 20,
           }}
         >
-          <Pressable
-            onPress={toggleSidebar}
-            style={{
-              padding: 10,
-              borderRadius: 8,
-            }}
-          >
-            <View
-              style={{
-                width: 22,
-                height: 2.5,
-                backgroundColor: colors.text,
-                marginBottom: 4,
-                borderRadius: 2,
-              }}
-            />
-            <View
-              style={{
-                width: 16,
-                height: 2.5,
-                backgroundColor: colors.text,
-                marginBottom: 4,
-                borderRadius: 2,
-              }}
-            />
-            <View
-              style={{
-                width: 22,
-                height: 2.5,
-                backgroundColor: colors.text,
-                borderRadius: 2,
-              }}
-            />
+          <Pressable onPress={toggleSidebar} style={{ padding: 10, borderRadius: 8 }}>
+            <View style={{ width: 22, height: 2.5, backgroundColor: colors.text, marginBottom: 4, borderRadius: 2 }} />
+            <View style={{ width: 16, height: 2.5, backgroundColor: colors.text, marginBottom: 4, borderRadius: 2 }} />
+            <View style={{ width: 22, height: 2.5, backgroundColor: colors.text, borderRadius: 2 }} />
           </Pressable>
 
           <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>
             Welcome, {agentName}
           </Text>
 
-          <Pressable
-            onPress={toggleSidebar}
-            style={{ padding: 10, borderRadius: 8 }}
-          >
+          <Pressable onPress={() => router.push("/notifications")} style={{ padding: 10, borderRadius: 8 }}>
             <BellIcon size={20} color={colors.text} weight="bold" />
           </Pressable>
         </View>
@@ -410,7 +387,6 @@ export default function AgentDashboard() {
             <ActivityIndicator size="large" color={colors.primary} />
           ) : (
             <>
-              {/* Indicator Badge Icon with Pulse Effect applied */}
               <Animated.View
                 style={{
                   backgroundColor: colors.border,
@@ -423,74 +399,23 @@ export default function AgentDashboard() {
                 <BroadcastIcon size={25} color={colors.primary} weight="bold" />
               </Animated.View>
 
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: colors.text,
-                  textTransform: "uppercase",
-                  opacity: 0.7,
-                  letterSpacing: 0.5,
-                }}
-              >
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, textTransform: "uppercase", opacity: 0.7, letterSpacing: 0.5 }}>
                 Agent Status
               </Text>
 
-              <Text
-                style={{
-                  fontSize: 32,
-                  fontWeight: "800",
-                  color: colors.primary,
-                  marginVertical: 8,
-                }}
-              >
+              <Text style={{ fontSize: 32, fontWeight: "800", color: colors.primary, marginVertical: 8 }}>
                 {currentStatusText}
               </Text>
 
-              {/* Clean Status Pill Badge */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: colors.border,
-                  paddingHorizontal: 14,
-                  paddingVertical: 5,
-                  borderRadius: 15,
-                  marginBottom: 30,
-                }}
-              >
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor:
-                      agentStatus === "suspended" ? "#ef4444" : colors.primary,
-                    marginRight: 6,
-                  }}
-                />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: colors.text,
-                  }}
-                >
+              {/* Status Pill Badge */}
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.border, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 15, marginBottom: 30 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: agentStatus === "suspended" ? "#ef4444" : colors.primary, marginRight: 6 }} />
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.text }}>
                   {getFormattedStatusLabel()}
                 </Text>
               </View>
 
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.text,
-                  textAlign: "center",
-                  marginBottom: 30,
-                  lineHeight: 18,
-                  paddingHorizontal: 10,
-                  opacity: 0.8,
-                }}
-              >
+              <Text style={{ fontSize: 13, color: colors.text, textAlign: "center", marginBottom: 30, lineHeight: 18, paddingHorizontal: 10, opacity: 0.8 }}>
                 {agentStatus === "suspended"
                   ? "Your matches are blocked until outstanding requests are paid."
                   : isWorkflowActive
@@ -501,9 +426,15 @@ export default function AgentDashboard() {
               </Text>
 
               {toggling ? (
-                <View
+                <View style={{ backgroundColor: colors.border, paddingVertical: 14, borderRadius: 12, width: "85%", alignItems: "center", justifyContent: "center" }}>
+                  <ActivityIndicator color={isOnline ? colors.text : colors.primary} size="small" />
+                </View>
+              ) : !isWorkflowActive ? (
+                <Pressable
+                  onPress={() => handleOnlineToggle(!isOnline)}
+                  disabled={toggling}
                   style={{
-                    backgroundColor: colors.border,
+                    backgroundColor: isOnline ? colors.text : colors.primary,
                     paddingVertical: 14,
                     borderRadius: 12,
                     width: "85%",
@@ -511,60 +442,10 @@ export default function AgentDashboard() {
                     justifyContent: "center",
                   }}
                 >
-                  <ActivityIndicator
-                    color={isOnline ? colors.text : colors.primary}
-                    size="small"
-                  />
-                </View>
-              ) : !isWorkflowActive ? (
-                !isOnline ? (
-                  <Pressable
-                    onPress={() => handleOnlineToggle(true)}
-                    disabled={toggling}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: colors.primary,
-                      paddingVertical: 14,
-                      borderRadius: 12,
-                      width: "85%",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "#ffffff",
-                        fontWeight: "600",
-                        fontSize: 15,
-                      }}
-                    >
-                      Go Online
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => handleOnlineToggle(false)}
-                    disabled={toggling}
-                    style={{
-                      backgroundColor: colors.text,
-                      paddingVertical: 14,
-                      borderRadius: 12,
-                      width: "85%",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: colors.background,
-                        fontWeight: "600",
-                        fontSize: 15,
-                      }}
-                    >
-                      Go Offline
-                    </Text>
-                  </Pressable>
-                )
+                  <Text style={{ color: isOnline ? colors.background : "#ffffff", fontWeight: "600", fontSize: 15 }}>
+                    {isOnline ? "Go Offline" : "Go Online"}
+                  </Text>
+                </Pressable>
               ) : null}
 
               {/* Core Workflow Actions */}
@@ -572,88 +453,36 @@ export default function AgentDashboard() {
                 <Pressable
                   onPress={triggerPayment}
                   disabled={paying}
-                  style={{
-                    backgroundColor: paying ? colors.border : colors.text,
-                    padding: 14,
-                    borderRadius: 12,
-                    width: "85%",
-                    marginTop: 0,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
+                  style={{ backgroundColor: paying ? colors.border : colors.text, padding: 14, borderRadius: 12, width: "85%", justifyContent: "center", alignItems: "center" }}
                 >
-                  {paying ? (
-                    <ActivityIndicator color={colors.background} size="small" />
-                  ) : (
-                    <Text
-                      style={{
-                        color: colors.background,
-                        textAlign: "center",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Pay Now
-                    </Text>
-                  )}
+                  {paying ? <ActivityIndicator color={colors.background} size="small" /> : <Text style={{ color: colors.background, fontWeight: "600" }}>Pay Now</Text>}
                 </Pressable>
               )}
 
-              {/* Matched State Action Section with New Side-by-Side Decline Button */}
+              {/* Matched State Action Section */}
               {agentStatus === "matched" && requestId && (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    width: "85%",
-                    marginTop: 0,
-                  }}
-                >
+                <View style={{ flexDirection: "row", justifyContent: "space-between", width: "85%" }}>
                   <Pressable
                     onPress={startInspection}
-                    style={{
-                      backgroundColor: colors.primary,
-                      padding: 14,
-                      borderRadius: 12,
-                      flex: 0.48,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
+                    style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 12, flex: 0.48, justifyContent: "center", alignItems: "center" }}
                   >
-                    <Text
-                      style={{
-                        color: "#ffffff",
-                        textAlign: "center",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Start Inspection
-                    </Text>
+                    <Text style={{ color: "#ffffff", fontWeight: "600", textAlign: "center" }}>Start Inspection</Text>
                   </Pressable>
 
                   <Pressable
                     onPress={() =>
-                      Alert.alert("Declined", "Request has been declined.")
+                      Alert.alert(
+                        "Decline Request",
+                        "Are you sure you want to decline this assignment?",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Decline", style: "destructive", onPress: declineRequest }
+                        ]
+                      )
                     }
-                    style={{
-                      backgroundColor: colors.background,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      padding: 14,
-                      borderRadius: 12,
-                      flex: 0.48,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
+                    style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 12, flex: 0.48, justifyContent: "center", alignItems: "center" }}
                   >
-                    <Text
-                      style={{
-                        color: colors.text,
-                        textAlign: "center",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Decline
-                    </Text>
+                    <Text style={{ color: colors.text, fontWeight: "600", textAlign: "center" }}>Decline</Text>
                   </Pressable>
                 </View>
               )}
@@ -661,23 +490,9 @@ export default function AgentDashboard() {
               {agentStatus === "inspection_started" && requestId && (
                 <Pressable
                   onPress={endInspection}
-                  style={{
-                    backgroundColor: "#2563eb",
-                    padding: 14,
-                    borderRadius: 12,
-                    width: "85%",
-                    marginTop: 0,
-                  }}
+                  style={{ backgroundColor: "#2563eb", padding: 14, borderRadius: 12, width: "85%" }}
                 >
-                  <Text
-                    style={{
-                      color: "#fff",
-                      textAlign: "center",
-                      fontWeight: "600",
-                    }}
-                  >
-                    End Inspection
-                  </Text>
+                  <Text style={{ color: "#fff", textAlign: "center", fontWeight: "600" }}>End Inspection</Text>
                 </Pressable>
               )}
             </>
@@ -686,97 +501,30 @@ export default function AgentDashboard() {
 
         {/* Quick Actions Panel */}
         <View style={{ marginHorizontal: 20, marginTop: 25 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "600",
-              color: colors.text,
-              marginBottom: 15,
-              marginLeft: 5,
-            }}
-          >
+          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 15, marginLeft: 5 }}>
             Quick Actions
           </Text>
 
-          <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
-          >
-            {/* Refresh */}
-            <Pressable
-              onPress={onRefresh}
-              style={{ flex: 1, alignItems: "center" }}
-            >
-              <View
-                style={{
-                  backgroundColor: colors.border,
-                  padding: 16,
-                  borderRadius: 16,
-                  width: 65,
-                  height: 65,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Pressable onPress={onRefresh} style={{ flex: 1, alignItems: "center" }}>
+              <View style={{ backgroundColor: colors.border, padding: 16, borderRadius: 16, width: 65, height: 65, alignItems: "center", justifyContent: "center", marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
                 <ArrowClockwiseIcon color={colors.primary} size={24} />
               </View>
-              <Text
-                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
-              >
-                Refresh Status
-              </Text>
+              <Text style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}>Refresh Status</Text>
             </Pressable>
 
-            {/* Support */}
             <Pressable style={{ flex: 1, alignItems: "center" }}>
-              <View
-                style={{
-                  backgroundColor: colors.border,
-                  padding: 16,
-                  borderRadius: 16,
-                  width: 65,
-                  height: 65,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
+              <View style={{ backgroundColor: colors.border, padding: 16, borderRadius: 16, width: 65, height: 65, alignItems: "center", justifyContent: "center", marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
                 <HeadphonesIcon color={colors.primary} size={24} />
               </View>
-              <Text
-                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
-              >
-                Support
-              </Text>
+              <Text style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}>Support</Text>
             </Pressable>
 
-            {/* Activity Log */}
             <Pressable style={{ flex: 1, alignItems: "center" }}>
-              <View
-                style={{
-                  backgroundColor: colors.border,
-                  padding: 16,
-                  borderRadius: 16,
-                  width: 65,
-                  height: 65,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
+              <View style={{ backgroundColor: colors.border, padding: 16, borderRadius: 16, width: 65, height: 65, alignItems: "center", justifyContent: "center", marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
                 <ClockIcon color={colors.primary} size={24} />
               </View>
-              <Text
-                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
-              >
-                Activity Log
-              </Text>
+              <Text style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}>Activity Log</Text>
             </Pressable>
           </View>
         </View>
@@ -790,11 +538,7 @@ export default function AgentDashboard() {
         name={agentName}
         items={[
           { label: "Dashboard", icon: "House" },
-          {
-            label: "My Listings",
-            icon: "Buildings",
-            onPress: () => router.push("/(product)/products"),
-          },
+          { label: "My Listings", icon: "Buildings", onPress: () => router.push("/(product)/products") },
           { label: "Earnings", icon: "CurrencyNgn" },
           { label: "Settings", icon: "Gear" },
           { label: "Logout", icon: "SignOut" },
