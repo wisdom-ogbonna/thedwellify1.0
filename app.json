@@ -16,7 +16,10 @@
       "bundleIdentifier": "com.doph574.dwellifyapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "Your location is used to show nearby properties and connect you with agents in your area. For example, we use your location to display homes close to you and improve map-based search results."
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -36,7 +39,10 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ],
       "package": "com.doph574.dwellifyapp"
     },
@@ -48,9 +54,7 @@
       [
         "expo-notifications",
         {
-          "sounds": [
-            "./assets/sounds/ringtone.wav"
-          ]
+          "sounds": ["./assets/sounds/ringtone.wav"]
         }
       ],
       "expo-router",
@@ -69,7 +73,9 @@
       [
         "expo-location",
         {
-          "NSLocationWhenInUseUsageDescription": "Your location is used to show nearby properties and connect you with agents in your area. For example, we use your location to display homes close to you and improve map-based search results."
+          "locationWhenInUsePermission": "Your location is used to show nearby properties and connect you with agents in your area. For example, we use your location to display homes close to you and improve map-based search results.",
+          "locationAlwaysPermission": "Dwellify tracks your location in the background while you are online as an agent to efficiently assign orders.",
+          "isAndroidBackgroundLocationEnabled": true
         }
       ],
       "expo-web-browser"
