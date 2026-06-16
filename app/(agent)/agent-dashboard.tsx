@@ -115,7 +115,7 @@ export default function AgentDashboard() {
   // Optimized Sidebar Toggle to handle state immediately
   const toggleSidebar = () => {
     const toOpen = !isSidebarVisible;
-    
+
     if (toOpen) {
       setIsSidebarVisible(true);
     }
@@ -153,9 +153,11 @@ export default function AgentDashboard() {
       const pushData = await registerForPushNotificationsAsync();
       if (!pushData) return;
 
-      const payload = { 
+      const payload = {
         platform: pushData.platform,
-        ...(pushData.platform === "ios" ? { expoPushToken: pushData.token } : { fcmToken: pushData.token })
+        ...(pushData.platform === "ios"
+          ? { expoPushToken: pushData.token }
+          : { fcmToken: pushData.token }),
       };
 
       await API.post("/notifications/agent", payload);
@@ -196,7 +198,9 @@ export default function AgentDashboard() {
       try {
         const profileRes = await API.get("/agent/profile", authHeader);
         const profileData = profileRes.data;
-        setAgentName(profileData?.name ? profileData.name.split(" ")[0] : "Agent");
+        setAgentName(
+          profileData?.name ? profileData.name.split(" ")[0] : "Agent",
+        );
       } catch (profileErr) {
         console.log("Profile fetch failed:", profileErr);
       }
@@ -272,11 +276,11 @@ export default function AgentDashboard() {
       if (!user || !requestId) return;
 
       setLoading(true);
-      await API.post("/client/inspection/decline", {
+      await API.post("/client/cancel-match", {
         requestId,
-        agentId: user.uid,
+        reason: "Agent is busy",
       });
-      
+
       Alert.alert("Declined", "Request has been successfully declined.");
       await fetchAgentStatus();
     } catch (err: any) {
@@ -300,7 +304,7 @@ export default function AgentDashboard() {
 
       const res = await API.post("/payment/pay", { agentId: user.uid });
       const { paymentUrl } = res.data;
-      
+
       if (!paymentUrl) {
         setMessage("No payment link received");
         return;
@@ -350,17 +354,46 @@ export default function AgentDashboard() {
             paddingBottom: 20,
           }}
         >
-          <Pressable onPress={toggleSidebar} style={{ padding: 10, borderRadius: 8 }}>
-            <View style={{ width: 22, height: 2.5, backgroundColor: colors.text, marginBottom: 4, borderRadius: 2 }} />
-            <View style={{ width: 16, height: 2.5, backgroundColor: colors.text, marginBottom: 4, borderRadius: 2 }} />
-            <View style={{ width: 22, height: 2.5, backgroundColor: colors.text, borderRadius: 2 }} />
+          <Pressable
+            onPress={toggleSidebar}
+            style={{ padding: 10, borderRadius: 8 }}
+          >
+            <View
+              style={{
+                width: 22,
+                height: 2.5,
+                backgroundColor: colors.text,
+                marginBottom: 4,
+                borderRadius: 2,
+              }}
+            />
+            <View
+              style={{
+                width: 16,
+                height: 2.5,
+                backgroundColor: colors.text,
+                marginBottom: 4,
+                borderRadius: 2,
+              }}
+            />
+            <View
+              style={{
+                width: 22,
+                height: 2.5,
+                backgroundColor: colors.text,
+                borderRadius: 2,
+              }}
+            />
           </Pressable>
 
           <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>
             Welcome, {agentName}
           </Text>
 
-          <Pressable onPress={() => router.push("/notifications")} style={{ padding: 10, borderRadius: 8 }}>
+          <Pressable
+            onPress={() => router.push("/notifications")}
+            style={{ padding: 10, borderRadius: 8 }}
+          >
             <BellIcon size={20} color={colors.text} weight="bold" />
           </Pressable>
         </View>
@@ -399,23 +432,74 @@ export default function AgentDashboard() {
                 <BroadcastIcon size={25} color={colors.primary} weight="bold" />
               </Animated.View>
 
-              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, textTransform: "uppercase", opacity: 0.7, letterSpacing: 0.5 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: colors.text,
+                  textTransform: "uppercase",
+                  opacity: 0.7,
+                  letterSpacing: 0.5,
+                }}
+              >
                 Agent Status
               </Text>
 
-              <Text style={{ fontSize: 32, fontWeight: "800", color: colors.primary, marginVertical: 8 }}>
+              <Text
+                style={{
+                  fontSize: 32,
+                  fontWeight: "800",
+                  color: colors.primary,
+                  marginVertical: 8,
+                }}
+              >
                 {currentStatusText}
               </Text>
 
               {/* Status Pill Badge */}
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.border, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 15, marginBottom: 30 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: agentStatus === "suspended" ? "#ef4444" : colors.primary, marginRight: 6 }} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.text }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: colors.border,
+                  paddingHorizontal: 14,
+                  paddingVertical: 5,
+                  borderRadius: 15,
+                  marginBottom: 30,
+                }}
+              >
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor:
+                      agentStatus === "suspended" ? "#ef4444" : colors.primary,
+                    marginRight: 6,
+                  }}
+                />
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: colors.text,
+                  }}
+                >
                   {getFormattedStatusLabel()}
                 </Text>
               </View>
 
-              <Text style={{ fontSize: 13, color: colors.text, textAlign: "center", marginBottom: 30, lineHeight: 18, paddingHorizontal: 10, opacity: 0.8 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: colors.text,
+                  textAlign: "center",
+                  marginBottom: 30,
+                  lineHeight: 18,
+                  paddingHorizontal: 10,
+                  opacity: 0.8,
+                }}
+              >
                 {agentStatus === "suspended"
                   ? "Your matches are blocked until outstanding requests are paid."
                   : isWorkflowActive
@@ -426,8 +510,20 @@ export default function AgentDashboard() {
               </Text>
 
               {toggling ? (
-                <View style={{ backgroundColor: colors.border, paddingVertical: 14, borderRadius: 12, width: "85%", alignItems: "center", justifyContent: "center" }}>
-                  <ActivityIndicator color={isOnline ? colors.text : colors.primary} size="small" />
+                <View
+                  style={{
+                    backgroundColor: colors.border,
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    width: "85%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ActivityIndicator
+                    color={isOnline ? colors.text : colors.primary}
+                    size="small"
+                  />
                 </View>
               ) : !isWorkflowActive ? (
                 <Pressable
@@ -442,7 +538,13 @@ export default function AgentDashboard() {
                     justifyContent: "center",
                   }}
                 >
-                  <Text style={{ color: isOnline ? colors.background : "#ffffff", fontWeight: "600", fontSize: 15 }}>
+                  <Text
+                    style={{
+                      color: isOnline ? colors.background : "#ffffff",
+                      fontWeight: "600",
+                      fontSize: 15,
+                    }}
+                  >
                     {isOnline ? "Go Offline" : "Go Online"}
                   </Text>
                 </Pressable>
@@ -453,20 +555,56 @@ export default function AgentDashboard() {
                 <Pressable
                   onPress={triggerPayment}
                   disabled={paying}
-                  style={{ backgroundColor: paying ? colors.border : colors.text, padding: 14, borderRadius: 12, width: "85%", justifyContent: "center", alignItems: "center" }}
+                  style={{
+                    backgroundColor: paying ? colors.border : colors.text,
+                    padding: 14,
+                    borderRadius: 12,
+                    width: "85%",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
                 >
-                  {paying ? <ActivityIndicator color={colors.background} size="small" /> : <Text style={{ color: colors.background, fontWeight: "600" }}>Pay Now</Text>}
+                  {paying ? (
+                    <ActivityIndicator color={colors.background} size="small" />
+                  ) : (
+                    <Text
+                      style={{ color: colors.background, fontWeight: "600" }}
+                    >
+                      Pay Now
+                    </Text>
+                  )}
                 </Pressable>
               )}
 
               {/* Matched State Action Section */}
               {agentStatus === "matched" && requestId && (
-                <View style={{ flexDirection: "row", justifyContent: "space-between", width: "85%" }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    width: "85%",
+                  }}
+                >
                   <Pressable
                     onPress={startInspection}
-                    style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 12, flex: 0.48, justifyContent: "center", alignItems: "center" }}
+                    style={{
+                      backgroundColor: colors.primary,
+                      padding: 14,
+                      borderRadius: 12,
+                      flex: 0.48,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
                   >
-                    <Text style={{ color: "#ffffff", fontWeight: "600", textAlign: "center" }}>Start Inspection</Text>
+                    <Text
+                      style={{
+                        color: "#ffffff",
+                        fontWeight: "600",
+                        textAlign: "center",
+                      }}
+                    >
+                      Start Inspection
+                    </Text>
                   </Pressable>
 
                   <Pressable
@@ -476,13 +614,34 @@ export default function AgentDashboard() {
                         "Are you sure you want to decline this assignment?",
                         [
                           { text: "Cancel", style: "cancel" },
-                          { text: "Decline", style: "destructive", onPress: declineRequest }
-                        ]
+                          {
+                            text: "Decline",
+                            style: "destructive",
+                            onPress: declineRequest,
+                          },
+                        ],
                       )
                     }
-                    style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 12, flex: 0.48, justifyContent: "center", alignItems: "center" }}
+                    style={{
+                      backgroundColor: colors.background,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      padding: 14,
+                      borderRadius: 12,
+                      flex: 0.48,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
                   >
-                    <Text style={{ color: colors.text, fontWeight: "600", textAlign: "center" }}>Decline</Text>
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontWeight: "600",
+                        textAlign: "center",
+                      }}
+                    >
+                      Decline
+                    </Text>
                   </Pressable>
                 </View>
               )}
@@ -490,9 +649,22 @@ export default function AgentDashboard() {
               {agentStatus === "inspection_started" && requestId && (
                 <Pressable
                   onPress={endInspection}
-                  style={{ backgroundColor: "#2563eb", padding: 14, borderRadius: 12, width: "85%" }}
+                  style={{
+                    backgroundColor: "#2563eb",
+                    padding: 14,
+                    borderRadius: 12,
+                    width: "85%",
+                  }}
                 >
-                  <Text style={{ color: "#fff", textAlign: "center", fontWeight: "600" }}>End Inspection</Text>
+                  <Text
+                    style={{
+                      color: "#fff",
+                      textAlign: "center",
+                      fontWeight: "600",
+                    }}
+                  >
+                    End Inspection
+                  </Text>
                 </Pressable>
               )}
             </>
@@ -501,30 +673,94 @@ export default function AgentDashboard() {
 
         {/* Quick Actions Panel */}
         <View style={{ marginHorizontal: 20, marginTop: 25 }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 15, marginLeft: 5 }}>
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "600",
+              color: colors.text,
+              marginBottom: 15,
+              marginLeft: 5,
+            }}
+          >
             Quick Actions
           </Text>
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Pressable onPress={onRefresh} style={{ flex: 1, alignItems: "center" }}>
-              <View style={{ backgroundColor: colors.border, padding: 16, borderRadius: 16, width: 65, height: 65, alignItems: "center", justifyContent: "center", marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-between" }}
+          >
+            <Pressable
+              onPress={onRefresh}
+              style={{ flex: 1, alignItems: "center" }}
+            >
+              <View
+                style={{
+                  backgroundColor: colors.border,
+                  padding: 16,
+                  borderRadius: 16,
+                  width: 65,
+                  height: 65,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
                 <ArrowClockwiseIcon color={colors.primary} size={24} />
               </View>
-              <Text style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}>Refresh Status</Text>
+              <Text
+                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
+              >
+                Refresh Status
+              </Text>
             </Pressable>
 
             <Pressable style={{ flex: 1, alignItems: "center" }}>
-              <View style={{ backgroundColor: colors.border, padding: 16, borderRadius: 16, width: 65, height: 65, alignItems: "center", justifyContent: "center", marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
+              <View
+                style={{
+                  backgroundColor: colors.border,
+                  padding: 16,
+                  borderRadius: 16,
+                  width: 65,
+                  height: 65,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
                 <HeadphonesIcon color={colors.primary} size={24} />
               </View>
-              <Text style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}>Support</Text>
+              <Text
+                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
+              >
+                Support
+              </Text>
             </Pressable>
 
             <Pressable style={{ flex: 1, alignItems: "center" }}>
-              <View style={{ backgroundColor: colors.border, padding: 16, borderRadius: 16, width: 65, height: 65, alignItems: "center", justifyContent: "center", marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
+              <View
+                style={{
+                  backgroundColor: colors.border,
+                  padding: 16,
+                  borderRadius: 16,
+                  width: 65,
+                  height: 65,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
                 <ClockIcon color={colors.primary} size={24} />
               </View>
-              <Text style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}>Activity Log</Text>
+              <Text
+                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
+              >
+                Activity Log
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -538,7 +774,11 @@ export default function AgentDashboard() {
         name={agentName}
         items={[
           { label: "Dashboard", icon: "House" },
-          { label: "My Listings", icon: "Buildings", onPress: () => router.push("/(product)/products") },
+          {
+            label: "My Listings",
+            icon: "Buildings",
+            onPress: () => router.push("/(product)/products"),
+          },
           { label: "Earnings", icon: "CurrencyNgn" },
           { label: "Settings", icon: "Gear" },
           { label: "Logout", icon: "SignOut" },

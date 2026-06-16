@@ -27,6 +27,7 @@ function ClientEvent({
         <Matched
           agent={matchData?.agent}
           request={matchData?.request}
+          matchData={matchData}
           requestStatus={requestStatus}
           setMatchData={setMatchData}
         />
