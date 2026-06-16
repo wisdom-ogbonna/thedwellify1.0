@@ -1,7 +1,8 @@
 import { useTheme } from "@/hooks/use-theme";
+import { API } from "@/services/api";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import { CaretLeftIcon } from "phosphor-react-native";
+import { BellIcon, CaretLeftIcon } from "phosphor-react-native";
 import React from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 
@@ -27,6 +28,7 @@ interface MatchedProps {
   agent: AgentProps;
   request: RequestProps;
   requestStatus: "inspection_started" | "matched" | "completed" | string;
+  matchData: any;
   setMatchData?: (data: any) => void;
 }
 
@@ -34,6 +36,7 @@ function Matched({
   agent,
   request,
   requestStatus,
+  matchData,
   setMatchData,
 }: MatchedProps) {
   const { colors } = useTheme();
@@ -76,23 +79,49 @@ function Matched({
   const status = getStatus();
 
   const handleCancel = () => {
-    Alert.alert(
-      "Cancel Match",
-      "Are you sure you want to cancel this match? This action cannot be undone.",
-      [
-        { text: "No", style: "cancel" },
-        {
-          text: "Yes",
-          onPress: () => {
-            Alert.alert(
-              "Success",
-              "Match cancelled. Returning to home screen.",
-            );
-            setMatchData && setMatchData(null);
-          },
+    Alert.alert("Cancel Match", "Are you sure you want to cancel this match?", [
+      { text: "No", style: "cancel" },
+      {
+        text: "Yes",
+        onPress: () => {
+          Alert.alert("Success", "Match cancelled.");
+          setMatchData && setMatchData(null);
         },
-      ],
-    );
+      },
+    ]);
+  };
+
+  const cancelRequest = (requestId: string) => {
+    try {
+      const handleCancelRequest = async () => {
+        console.log(requestId);
+        await API.post("/client/cancel-match", {
+          requestId,
+          reason: "Client cancelled request",
+        });
+
+        Alert.alert(
+          "Request Cancelled",
+          "Request has been successfully cancelled.",
+        );
+      };
+
+      Alert.alert(
+        "Cancel Request",
+        "Are you sure you want to cancel this request, you have been matched?",
+        [
+          { text: "No", style: "cancel" },
+          {
+            text: "Yes",
+            onPress: handleCancelRequest,
+          },
+        ],
+      );
+      if (requestId) return;
+    } catch (err: any) {
+      console.log("Cancel error:", err.response?.data || err.message);
+      Alert.alert("Error", "Failed to cancel the request.");
+    }
   };
 
   const handlePropertyView = () => {
@@ -220,24 +249,31 @@ function Matched({
               View Agent Listings
             </Text>
           </Pressable>
-          <Pressable
-            className="w-full h-14 rounded-2xl items-center justify-center bg-red-500 mt-1"
-            onPress={() => Alert.alert("Forfeit Inspection", "Coming soon...")}
-          >
-            <Text className="text-white font-bold text-base">
-              Forfeit Inspection
-            </Text>
-          </Pressable>
         </View>
       ) : (
         <View className="mt-6 flex-row gap-4 items-center">
-          <Pressable
-            onPress={handleCancel}
-            style={{ borderColor: "#000000" }}
-            className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
-          >
-            <CaretLeftIcon color={"#000000"} size={24} />
-          </Pressable>
+          {requestStatus === "matched" ? (
+            <Pressable
+              onPress={() =>
+                Alert.alert(
+                  "Notify Agent to start Inspection",
+                  "Coming soon...",
+                )
+              }
+              style={{ borderColor: "#000000" }}
+              className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
+            >
+              <BellIcon color={"#000000"} size={24} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={handleCancel}
+              style={{ borderColor: "#000000" }}
+              className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
+            >
+              <CaretLeftIcon color={"#000000"} size={24} />
+            </Pressable>
+          )}
           <Pressable
             style={{ backgroundColor: colors.primary }}
             className="flex-1 h-14 rounded-2xl items-center justify-center"
@@ -249,6 +285,16 @@ function Matched({
           </Pressable>
         </View>
       )}
+      {requestStatus === "matched" ? (
+        <Pressable
+          className="w-full h-14 rounded-2xl items-center justify-center border border-red-500 mt-4 opacity-70"
+          onPress={() => cancelRequest(matchData?.requestId || "")}
+        >
+          <Text className="text-lg font-semibold text-red-500">
+            Cancel Match
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

@@ -1,12 +1,20 @@
 import { useTheme } from "@/hooks/use-theme";
+import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { CheckIcon } from "phosphor-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  AppState,
+  AppStateStatus,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { API } from "../../services/api";
-import * as Clipboard from "expo-clipboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,16 +48,15 @@ const ClientPaymentStartInspection: React.FC = () => {
   const agentName = (params.name as string) || "";
   const agentAgency = (params.agency as string) || "Dwellify Realty";
   const rating = (params.rating as string) || "";
-  // const agentDistance = (params.distance as string) || "";
   const agentPhoneNumber = (params.phone as string) || "";
 
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
-  const [cancelling, setCancelling] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const endTimeRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
 
   const cleanUpTimers = useCallback(() => {
@@ -66,23 +73,48 @@ const ClientPaymentStartInspection: React.FC = () => {
   // ─── Timer ───────────────────────────────────────────────────────────────
 
   const startTimer = useCallback(() => {
-    // Always reset before starting to avoid double-intervals
     cleanUpTimers();
+
+    // Set absolute target end time using system date matrix
+    const targetEndTime = Date.now() + TIMER_DURATION * 1000;
+    endTimeRef.current = targetEndTime;
     setTimeLeft(TIMER_DURATION);
 
     timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // Don't call cleanUpTimers here — causes race with the ref write
-          // The effect below handles expiry via screenState change
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      const remaining = Math.max(
+        0,
+        Math.round((targetEndTime - Date.now()) / 1000),
+      );
+
+      if (mountedRef.current) {
+        setTimeLeft(remaining);
+      }
+    }, 500); // 500ms ticking interval provides seamless visual updates
   }, [cleanUpTimers]);
 
-  // When timeLeft hits 0, transition to timeout state and stop everything
+  // Sync remaining countdown safely if app comes back from background state
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (
+        nextAppState === "active" &&
+        screenState === "awaiting" &&
+        endTimeRef.current
+      ) {
+        const remaining = Math.max(
+          0,
+          Math.round((endTimeRef.current - Date.now()) / 1000),
+        );
+        setTimeLeft(remaining);
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
+    return () => subscription.remove();
+  }, [screenState]);
+  
   useEffect(() => {
     if (timeLeft === 0 && screenState === "awaiting") {
       cleanUpTimers();
@@ -150,27 +182,6 @@ const ClientPaymentStartInspection: React.FC = () => {
     }
   }, [requestId, agentId, propertyType, lat, lng, startTimer, startPolling]);
 
-  // ─── Cancel ───────────────────────────────────────────────────────────────
-
-  const handleCancelRequest = useCallback(async () => {
-    cleanUpTimers();
-    setCancelling(true);
-
-    try {
-      await API.post(`/match/cancel/${requestId}`);
-      router.replace("/(client)/dashboard");
-    } catch (e: any) {
-      console.log("[Cancel] endpoint error:", e?.message);
-      Alert.alert(
-        "Feature Coming Soon",
-        "Live cancellation is being finalized. Returning you to the dashboard.",
-        [{ text: "OK", onPress: () => router.replace("/(client)/dashboard") }],
-      );
-    } finally {
-      if (mountedRef.current) setCancelling(false);
-    }
-  }, [requestId, cleanUpTimers]);
-
   // ─── Mount / Unmount ──────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -193,7 +204,6 @@ const ClientPaymentStartInspection: React.FC = () => {
   };
 
   const ringOffset = RING_CIRCUMFERENCE * (1 - timeLeft / TIMER_DURATION);
-
   const ringColor = timeLeft <= 10 ? "#E24B4A" : colors.primary;
 
   const agentInitials =
@@ -363,21 +373,20 @@ const ClientPaymentStartInspection: React.FC = () => {
                   : "A notification has been sent to the agent. Waiting for their response."}
               </Text>
 
-              {/* Agent info card — shown when name is available OR matched */}
-              {(agentName || screenState === "matched") && (
+              {/* Agent info card — shown when matched */}
+              {screenState === "matched" && (
                 <View
                   style={{
                     marginTop: 24,
                     width: "100%",
                     backgroundColor: colors.background,
-                    borderRadius: 16, // Rounded corners for a more modern card feel
+                    borderRadius: 16,
                     borderWidth: 1,
                     borderColor: colors.border || "#e5e5e5",
-                    padding: 16, // Increased padding for breathing room
+                    padding: 16,
                     flexDirection: "row",
-                    alignItems: "flex-start", // Better alignment for multi-line details
+                    alignItems: "flex-start",
                     gap: 14,
-                    // Soft shadow integration
                     shadowColor: colors.text,
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.04,
@@ -391,7 +400,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                       width: 46,
                       height: 46,
                       borderRadius: 23,
-                      backgroundColor: colors.primary + "15", // Softer tint transparency (15%)
+                      backgroundColor: colors.primary + "15",
                       alignItems: "center",
                       justifyContent: "center",
                       borderWidth: 1,
@@ -494,14 +503,14 @@ const ClientPaymentStartInspection: React.FC = () => {
                         style={({ pressed }) => ({
                           flexDirection: "row",
                           alignItems: "center",
-                          alignSelf: "flex-start", // Prevents the block from expanding full-width
-                          backgroundColor: colors.primary + "12", // Clean, subtle theme-tinted pill
+                          alignSelf: "flex-start",
+                          backgroundColor: colors.primary + "12",
                           paddingHorizontal: 10,
                           paddingVertical: 6,
                           borderRadius: 8,
                           marginTop: 8,
                           gap: 6,
-                          opacity: pressed ? 0.6 : 1, // Native-feeling feedback on tap
+                          opacity: pressed ? 0.6 : 1,
                         })}
                       >
                         <Text
@@ -515,7 +524,6 @@ const ClientPaymentStartInspection: React.FC = () => {
                         >
                           {agentPhoneNumber}
                         </Text>
-
                         <Text
                           style={{
                             color: colors.primary,
@@ -624,38 +632,6 @@ const ClientPaymentStartInspection: React.FC = () => {
 
         {/* ── Footer Controls ── */}
         <View style={{ width: "100%", paddingHorizontal: 0, gap: 10 }}>
-          {/* Awaiting → Cancel */}
-          {screenState === "awaiting" && (
-            <Pressable
-              onPress={handleCancelRequest}
-              disabled={cancelling}
-              style={({ pressed }) => ({
-                width: "100%",
-                paddingVertical: 16,
-                borderRadius: 14,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: colors.border || "#e5e5e5",
-                backgroundColor: colors.background,
-                opacity: pressed || cancelling ? 0.6 : 1,
-              })}
-            >
-              {cancelling ? (
-                <ActivityIndicator size="small" color={colors.text} />
-              ) : (
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontWeight: "600",
-                    fontSize: 14,
-                  }}
-                >
-                  Cancel Request
-                </Text>
-              )}
-            </Pressable>
-          )}
-
           {/* Matched → Go to Dashboard */}
           {screenState === "matched" && (
             <Pressable

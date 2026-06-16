@@ -77,6 +77,17 @@ export default function RequestMatchScreen() {
 
   const [requestStatus, setRequestStatus] = useState<string | null>(null);
 
+  const [lastKnownLocation, setLastKnownLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (agentLocation?.lat && agentLocation?.lng) {
+      setLastKnownLocation(agentLocation);
+    }
+  }, [agentLocation]);
+
   useEffect(() => {
     getLocation();
 
@@ -283,15 +294,21 @@ export default function RequestMatchScreen() {
           />
         )}
 
-        {agentLocation && liveData?.agent && (
+        {liveData?.agent &&
+          (agentLocation?.lat ?? lastKnownLocation?.lat) != null &&
+          (agentLocation?.lng ?? lastKnownLocation?.lng) != null && (
           <Marker
             coordinate={{
-              latitude: agentLocation.lat,
-              longitude: agentLocation.lng,
+              latitude: agentLocation?.lat ?? lastKnownLocation!.lat,
+              longitude: agentLocation?.lng ?? lastKnownLocation!.lng,
             }}
             title={liveData.agent.name}
-            description={liveData.agent.phone}
-            pinColor="green"
+            description={
+              agentLocation?.lat
+                ? liveData.agent.phone
+                : `${liveData.agent.phone} (Offline - Last Known Location)`
+            }
+            pinColor={agentLocation?.lat ? "green" : "orange"}
           />
         )}
       </MapView>
