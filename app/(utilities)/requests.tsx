@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Pressable,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
   ScrollView,
@@ -86,12 +86,12 @@ export default function RequestDetailsScreen() {
     >
       {/* Close Header */}
       <View className="px-8 py-4 flex-row justify-end">
-        <Pressable
+        <TouchableOpacity
           onPress={() => router.replace("/(agent)/dashboard")}
           className="p-2 rounded-full"
         >
           <X size={30} color={colors.text} weight="bold" />
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 32 }}>
@@ -123,7 +123,7 @@ export default function RequestDetailsScreen() {
 
         {/* Action Buttons */}
         <View className="flex-row gap-4">
-          <Pressable
+          <TouchableOpacity
             onPress={() =>
               handleAction(
                 "/client/request/decline",
@@ -140,9 +140,9 @@ export default function RequestDetailsScreen() {
             >
               Decline
             </Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             onPress={() =>
               handleAction(
                 "/client/request/accept",
@@ -161,7 +161,7 @@ export default function RequestDetailsScreen() {
                 Accept
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

@@ -8,7 +8,7 @@ import {
   Alert,
   AppState,
   AppStateStatus,
-  Pressable,
+  TouchableOpacity,
   Text,
   View,
 } from "react-native";
@@ -492,7 +492,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                     />
 
                     {agentPhoneNumber ? (
-                      <Pressable
+                      <TouchableOpacity
                         onPress={async () => {
                           await Clipboard.setStringAsync(agentPhoneNumber);
                           Alert.alert(
@@ -534,7 +534,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                         >
                           • Copy
                         </Text>
-                      </Pressable>
+                      </TouchableOpacity>
                     ) : (
                       <Text
                         style={{
@@ -634,7 +634,7 @@ const ClientPaymentStartInspection: React.FC = () => {
         <View style={{ width: "100%", paddingHorizontal: 0, gap: 10 }}>
           {/* Matched → Go to Dashboard */}
           {screenState === "matched" && (
-            <Pressable
+            <TouchableOpacity
               onPress={() => router.replace("/(client)/dashboard")}
               style={({ pressed }) => ({
                 width: "100%",
@@ -648,12 +648,12 @@ const ClientPaymentStartInspection: React.FC = () => {
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
                 Continue to Dashboard
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           )}
 
           {/* Timeout → Rematch */}
           {screenState === "timeout" && (
-            <Pressable
+            <TouchableOpacity
               onPress={() => router.replace("/(client)/dashboard")}
               style={({ pressed }) => ({
                 width: "100%",
@@ -667,13 +667,13 @@ const ClientPaymentStartInspection: React.FC = () => {
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
                 Rematch & Rebook
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           )}
 
           {/* Error → Retry + Dashboard */}
           {screenState === "error" && (
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable
+              <TouchableOpacity
                 onPress={() => router.replace("/(client)/dashboard")}
                 style={({ pressed }) => ({
                   flex: 1,
@@ -695,9 +695,9 @@ const ClientPaymentStartInspection: React.FC = () => {
                 >
                   Dashboard
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
 
-              <Pressable
+              <TouchableOpacity
                 onPress={sendInspectionRequest}
                 style={({ pressed }) => ({
                   flex: 1,
@@ -713,7 +713,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                 >
                   Retry Request
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             </View>
           )}
         </View>

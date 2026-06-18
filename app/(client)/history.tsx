@@ -7,7 +7,7 @@ import {
   RefreshControl,
   Text,
   View,
-  Pressable,
+  TouchableOpacity,
 } from "react-native";
 import {
   ArrowClockwiseIcon,
@@ -265,7 +265,7 @@ export default function HistoryScreen() {
           Your matched and completed inspection history listings will be
           displayed safely here.
         </Text>
-        <Pressable
+        <TouchableOpacity
           onPress={onRefresh}
           className="flex-row items-center px-5 py-3 rounded-xl"
           style={{ backgroundColor: colors.primary }}
@@ -281,7 +281,7 @@ export default function HistoryScreen() {
           >
             Check Again
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     );
   }

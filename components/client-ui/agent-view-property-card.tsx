@@ -1,7 +1,7 @@
 import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, TouchableOpacity, Text, View } from "react-native";
 
 const PropertyCard = ({ item }: { item: any }) => {
   const { colors } = useTheme();
@@ -46,7 +46,7 @@ const PropertyCard = ({ item }: { item: any }) => {
             </Text>
           </View>
 
-          <Pressable
+          <TouchableOpacity
             onPress={handleNavigation}
             className="px-7 py-5 rounded-xl active:opacity-90"
             style={{ backgroundColor: colors.primary }}
@@ -54,7 +54,7 @@ const PropertyCard = ({ item }: { item: any }) => {
             <Text className="text-white font-bold text-lg tracking-wide">
               View Property
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
     </View>

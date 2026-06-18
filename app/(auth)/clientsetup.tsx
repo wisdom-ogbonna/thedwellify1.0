@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  Pressable,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -119,7 +119,7 @@ export default function ClientSetupScreen() {
           </View>
 
           {/* Action Button */}
-          <Pressable
+          <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading}
             className="mt-16 h-16 rounded-full items-center justify-center"
@@ -132,7 +132,7 @@ export default function ClientSetupScreen() {
                 Complete Setup
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

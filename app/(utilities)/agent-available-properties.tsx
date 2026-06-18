@@ -5,7 +5,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
-  Pressable,
+  TouchableOpacity,
   Text,
   View,
 } from "react-native";
@@ -131,7 +131,7 @@ const AvailableProperties: React.FC = () => {
             {error}
           </Text>
 
-          <Pressable
+          <TouchableOpacity
             onPress={fetchProperties}
             className="mt-4 px-4 py-3 rounded-xl"
             style={{
@@ -139,7 +139,7 @@ const AvailableProperties: React.FC = () => {
             }}
           >
             <Text style={{ color: "#fff" }}>Retry</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -220,7 +220,7 @@ const AvailableProperties: React.FC = () => {
         }}
       >
         {/* Back Button - 30% */}
-        <Pressable
+        <TouchableOpacity
           onPress={() => router.back()}
           style={{
             flex: 0.3,
@@ -230,11 +230,11 @@ const AvailableProperties: React.FC = () => {
           className="mr-3 items-center justify-center rounded-2xl border py-5"
         >
           <CaretLeftIcon size={22} color={colors.text} />
-        </Pressable>
+        </TouchableOpacity>
 
         {/* Book Button - 70% */}
         {status === "inspection_started" || status === "matched" ? null : (
-          <Pressable
+          <TouchableOpacity
             onPress={() => setBookingModalOpen(true)}
             style={{
               flex: 0.7,
@@ -243,7 +243,7 @@ const AvailableProperties: React.FC = () => {
             className="items-center justify-center rounded-2xl py-5"
           >
             <Text className="text-lg font-bold text-white">Book Agent Now</Text>
-          </Pressable>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -317,19 +317,19 @@ function ConfirmBookingModal({
           </Text>
 
           <View className="flex-row justify-between">
-            <Pressable
+            <TouchableOpacity
               onPress={onClose}
               className="px-7 py-3 rounded-xl border border-gray-300"
             >
               <Text className="text-lg font-semibold">Cancel</Text>
-            </Pressable>
+            </TouchableOpacity>
 
-            <Pressable
+            <TouchableOpacity
               onPress={onConfirm}
               className="px-7 py-3 rounded-xl bg-green-500"
             >
               <Text className="text-white text-lg font-semibold">Confirm</Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
