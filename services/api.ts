@@ -3,9 +3,10 @@ import { auth } from "../config/firebase";
 
 // ✅ Create Axios instance
 export const API = axios.create({
-  baseURL: "https://185a-102-90-101-55.ngrok-free.app/api",
+  baseURL: "https://af5d-102-90-103-239.ngrok-free.app/api",
   timeout: 120000,
 });
+
 
 // ✅ Attach Firebase token automatically (AUTO REFRESH 🔥)
 API.interceptors.request.use(
