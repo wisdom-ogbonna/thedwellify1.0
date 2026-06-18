@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Image,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -98,7 +97,7 @@ const PropertyView = () => {
           {error}
         </Text>
 
-        <Pressable
+        <TouchableOpacity
           onPress={fetchProperty}
           style={{
             marginTop: 15,
@@ -115,7 +114,7 @@ const PropertyView = () => {
           >
             Retry
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }

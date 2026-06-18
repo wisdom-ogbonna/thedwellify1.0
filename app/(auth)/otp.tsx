@@ -1,5 +1,4 @@
 import { useTheme } from "@/hooks/use-theme";
-import { API } from "../../services/api";
 import { useLocalSearchParams } from "expo-router";
 import { signInWithCustomToken } from "firebase/auth";
 import React, { useState } from "react";
@@ -9,14 +8,15 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   Text,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { OtpInput } from "react-native-otp-entry";
 import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
+import { API } from "../../services/api";
 
 export default function OtpScreen() {
   const params = useLocalSearchParams();
@@ -41,11 +41,11 @@ export default function OtpScreen() {
       setLoading(true);
 
       // 🔐 Step 1: Verify OTP with backend
-const res = await API.post("/otp/verify", {
-  phone_number: phone,
-  pin_id: pinId,
-  pin: otp,
-});
+      const res = await API.post("/otp/verify", {
+        phone_number: phone,
+        pin_id: pinId,
+        pin: otp,
+      });
 
       const { firebaseToken } = res.data;
       if (!firebaseToken) throw new Error("Invalid server response");
@@ -151,7 +151,7 @@ const res = await API.post("/otp/verify", {
           />
 
           {/* Action Button */}
-          <Pressable
+          <TouchableOpacity
             onPress={verifyOTP}
             disabled={!isValid || loading}
             className="mt-12 h-16 rounded-full items-center justify-center shadow-lg"
@@ -162,11 +162,14 @@ const res = await API.post("/otp/verify", {
             {loading ? (
               <ActivityIndicator color={colors.background} />
             ) : (
-              <Text className="text-white font-bold text-lg">
+              <Text
+                style={{ color: !isValid ? colors.text : "#ffffff" }}
+                className={`font-bold text-lg`}
+              >
                 Verify & Access
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
 
           <Text
             className="text-center text-[10px] mt-8 opacity-30 uppercase tracking-widest"

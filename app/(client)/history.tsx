@@ -5,7 +5,7 @@ import {
   RefreshControl,
   Text,
   View,
-  Pressable,
+  TouchableOpacity,
 } from "react-native";
 import * as Location from "expo-location";
 import { useTheme } from "@react-navigation/native";
@@ -311,7 +311,7 @@ export default function HistoryScreen() {
         <Text className="mt-2 text-zinc-500 text-sm text-center mb-6rows-2">
           Your full history listings and status updates will be safely displayed here.
         </Text>
-        <Pressable
+        <TouchableOpacity
           onPress={onRefresh}
           className="flex-row items-center px-5 py-3 rounded-xl"
           style={{ backgroundColor: colors.primary }}
@@ -320,7 +320,7 @@ export default function HistoryScreen() {
           <Text className="text-sm font-semibold ml-2" style={{ color: colors.background }}>
             Check Again
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     );
   }

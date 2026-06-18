@@ -62,7 +62,7 @@ import {
   View,
   Text,
   ActivityIndicator,
-  Pressable,
+  TouchableOpacity,
 } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { API } from "../../services/api";
@@ -284,7 +284,7 @@ export default function AgentDashboard() {
 
             {/* ✅ SHOW BUTTON ONLY IF SUSPENDED */}
             {agentStatus === "suspended" && (
-              <Pressable
+              <TouchableOpacity
                 onPress={triggerPayment}
                 disabled={paying}
                 style={{
@@ -307,12 +307,12 @@ export default function AgentDashboard() {
                     Pay Now
                   </Text>
                 )}
-              </Pressable>
+              </TouchableOpacity>
             )}
 
             {/* ✅ SHOW BUTTON IF MATCHED */}
             {agentStatus === "matched" && requestId && (
-              <Pressable
+              <TouchableOpacity
                 onPress={startInspection}
                 style={{
                   backgroundColor: "green",
@@ -331,12 +331,12 @@ export default function AgentDashboard() {
                 >
                   Start Inspection
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             )}
 
             {/* ✅ SHOW BUTTON IF INSPECTION STARTED */}
             {agentStatus === "inspection_started" && requestId && (
-              <Pressable
+              <TouchableOpacity
                 onPress={endInspection}
                 style={{
                   backgroundColor: "#2563eb",
@@ -355,7 +355,7 @@ export default function AgentDashboard() {
                 >
                   End Inspection
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             )}
           </>
         )}

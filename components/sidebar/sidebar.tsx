@@ -3,7 +3,6 @@ import React from "react";
 import {
   Animated,
   Dimensions,
-  Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -55,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <View className="absolute inset-0 z-50 h-screen">
-      <Pressable
+      <TouchableOpacity
         className="absolute inset-0 bg-black/60"
         onPress={onOverlayPress}
       />

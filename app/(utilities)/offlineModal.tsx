@@ -4,7 +4,7 @@ import {
   ActivityIndicator,
   BackHandler,
   Modal,
-  Pressable,
+  TouchableOpacity,
   Text,
   View,
 } from "react-native";
@@ -37,7 +37,7 @@ export default function OfflineModal({
             Please check your internet connection to continue using Dwellify.
           </Text>
 
-          <Pressable
+          <TouchableOpacity
             onPress={onRetry}
             className="py-4 rounded-full items-center mb-4"
             style={{ backgroundColor: colors.primary }}
@@ -50,9 +50,9 @@ export default function OfflineModal({
                 Retry
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             onPress={() => BackHandler.exitApp()}
             className="py-2 items-center"
           >
@@ -62,7 +62,7 @@ export default function OfflineModal({
             >
               Exit App
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>

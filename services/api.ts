@@ -3,7 +3,7 @@ import { auth } from "../config/firebase";
 
 // ✅ Create Axios instance
 export const API = axios.create({
-  baseURL: "https://af5d-102-90-103-239.ngrok-free.app/api",
+  baseURL: "https://dwellify-backend-bq39.onrender.com/api",
   timeout: 120000,
 });
 
@@ -26,7 +26,7 @@ API.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // ✅ Handle global response errors
@@ -43,6 +43,5 @@ API.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
-

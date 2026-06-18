@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
 
@@ -36,7 +36,7 @@ export default function NotFound() {
       </Text>
 
       {/* Navigation Action */}
-      <Pressable
+      <TouchableOpacity
         onPress={() => router.replace("/")}
         className="mt-12 py-4 px-8 rounded-full border-2 items-center justify-center"
         style={{ borderColor: colors.primary }}
@@ -44,7 +44,7 @@ export default function NotFound() {
         <Text className="font-bold text-lg" style={{ color: colors.primary }}>
           Return Home
         </Text>
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }

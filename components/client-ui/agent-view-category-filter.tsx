@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, FlatList, Pressable } from "react-native";
+import { View, Text, FlatList, TouchableOpacity } from "react-native";
 import { useTheme } from "@/hooks/use-theme";
 
 interface CategoryFilterProps {
@@ -27,7 +27,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
           const isActive = activeCategory === item;
 
           return (
-            <Pressable
+            <TouchableOpacity
               onPress={() => onSelect(item)}
               style={{
                 backgroundColor: isActive ? colors.primary : colors.card,
@@ -44,7 +44,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
               >
                 {item}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           );
         }}
       />
