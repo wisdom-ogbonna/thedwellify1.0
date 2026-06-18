@@ -163,7 +163,7 @@ export default function OtpScreen() {
               <ActivityIndicator color={colors.background} />
             ) : (
               <Text
-                style={{ color: colors.text }}
+                style={{ color: !isValid ? colors.text : "#ffffff" }}
                 className={`font-bold text-lg`}
               >
                 Verify & Access
