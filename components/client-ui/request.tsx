@@ -1,6 +1,6 @@
 import { useTheme } from "@/hooks/use-theme";
 import React from "react";
-import { ActivityIndicator, TouchableOpacity, Text, View } from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
 function Request({
   locationLoading,
@@ -12,7 +12,7 @@ function Request({
   handleRequest,
   loading,
 }: any): React.JSX.Element {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
     <View className="px-1">
@@ -25,13 +25,13 @@ function Request({
 
       <View
         style={{
-          backgroundColor: colors.text,
+          backgroundColor: colors.background,
           borderColor: colors.border,
         }}
-        className="p-5 border rounded-3xl mb-5 shadow-sm"
+        className={`p-5 border rounded-3xl mb-5 shadow-sm ${isDark ? "shadow-white/10" : "shadow-gray-300/10"}`}
       >
         <Text
-          style={{ color: colors.background }}
+          style={{ color: colors.text }}
           className="opacity-50 text-xs font-bold uppercase tracking-widest mb-3"
         >
           Your Location
@@ -39,12 +39,12 @@ function Request({
 
         {locationLoading ? (
           <View className="py-2 items-start">
-            <ActivityIndicator color={colors.background} />
+            <ActivityIndicator color={colors.text} />
           </View>
         ) : (
           <>
             <Text
-              style={{ color: colors.background }}
+              style={{ color: colors.text }}
               className="font-semibold text-base"
             >
               {address || "Locating..."}
@@ -104,12 +104,12 @@ function Request({
         onPress={handleRequest}
         disabled={loading}
         style={{ backgroundColor: colors.primary }}
-        className="w-full py-5 rounded-2xl items-center border border-white/50 shadow-lg active:scale-[0.98]"
+        className={`w-full py-5 rounded-2xl items-center border border-white/50 shadow-sm active:scale-[0.98] ${isDark ? "shadow-white/20" : "shadow-black/20"}`}
       >
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="text-white text-lg uppercase tracking-tight">
+          <Text className="text-white font-bold text-lg uppercase tracking-tight">
             Request Match
           </Text>
         )}
