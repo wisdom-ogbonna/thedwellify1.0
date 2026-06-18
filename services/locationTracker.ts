@@ -273,12 +273,32 @@ export const startLocationTracking = async () => {
     console.log(
       "🚀 Production geolocation services fully mounted successfully."
     );
-  } catch (err: any) {
-    console.error(
-      "Failed to safely scale geolocation engine:",
-      err?.message || err
-    );
-    throw err;
+} catch (err: any) {
+    console.error("Failed to safely scale geolocation engine:", err?.message || err);
+    
+    // Check if the error is related to hardware capabilities or disabled GPS
+    const errorMsg = err?.message || "";
+    if (
+      errorMsg.includes("hardware tracking capabilities") || 
+      errorMsg.includes("hardware GPS configuration is disabled")
+    ) {
+      return {
+        success: false,
+        errorType: "HARDWARE_DISABLED",
+        message: "Please enable GPS/location services on your device and ensure your simulator simulates a location."
+      };
+    }
+
+    if (errorMsg.includes("denied")) {
+      return {
+        success: false,
+        errorType: "PERMISSION_DENIED",
+        message: "Location permissions were denied. Please enable them in your device settings."
+      };
+    }
+
+    // Return generic failure instead of throwing a crash
+    return { success: false, errorType: "UNKNOWN", message: errorMsg };
   }
 };
 
