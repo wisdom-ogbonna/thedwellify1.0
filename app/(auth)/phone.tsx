@@ -1,5 +1,4 @@
 import { useTheme } from "@/hooks/use-theme";
-import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -7,9 +6,9 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   Text,
   TextInput,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
@@ -119,7 +118,7 @@ export default function PhoneScreen() {
           </Text>
 
           {/* Bold Action Button */}
-          <Pressable
+          <TouchableOpacity
             onPress={sendOTP}
             disabled={!isValid || loading}
             className="mt-12 h-16 rounded-full items-center justify-center shadow-lg"
@@ -130,11 +129,14 @@ export default function PhoneScreen() {
             {loading ? (
               <ActivityIndicator color={colors.background} />
             ) : (
-              <Text className="text-white font-bold text-lg">
+              <Text
+                style={{ color: colors.text }}
+                className={`font-bold text-lg`}
+              >
                 Send Verification
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
 
           <Text
             className="text-center text-[10px] mt-8 opacity-30"

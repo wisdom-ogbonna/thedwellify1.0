@@ -1,9 +1,15 @@
+import { useTheme } from "@/hooks/use-theme";
 import React, { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
-import { auth } from "../../config/firebase";
-import { useTheme } from "@/hooks/use-theme";
 
 export default function RoleScreen() {
   const { setUserRole, checkProfile } = useAuth();
@@ -58,7 +64,7 @@ export default function RoleScreen() {
       </View>
 
       {/* Agent Card */}
-      <Pressable
+      <TouchableOpacity
         onPress={() => selectRole("agent")}
         disabled={!!loading}
         className="h-32 rounded-3xl mb-4 p-6 justify-center border-2"
@@ -79,10 +85,10 @@ export default function RoleScreen() {
             </Text>
           </>
         )}
-      </Pressable>
+      </TouchableOpacity>
 
       {/* Client Card */}
-      <Pressable
+      <TouchableOpacity
         onPress={() => selectRole("client")}
         disabled={!!loading}
         className="h-32 rounded-3xl p-6 justify-center border-2"
@@ -103,7 +109,7 @@ export default function RoleScreen() {
             </Text>
           </>
         )}
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }

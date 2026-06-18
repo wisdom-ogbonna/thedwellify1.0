@@ -4,7 +4,7 @@ import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { BellIcon, CaretLeftIcon } from "phosphor-react-native";
 import React from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, TouchableOpacity, Text, View } from "react-native";
 
 interface AgentProps {
   agentId?: string;
@@ -167,7 +167,7 @@ function Matched({
       {/* STATUS MESSAGE */}
       <View className="my-4">
         <Text
-          style={{ color: "#000000" }}
+          style={{ color: colors.text }}
           className="text-center text-sm opacity-80"
         >
           {requestStatus === "inspection_started"
@@ -178,26 +178,26 @@ function Matched({
 
       {/* AGENT CARD */}
       <View
-        style={{ backgroundColor: "#FFFFFF" }}
-        className="p-6 rounded-3xl shadow-xl"
+        style={{ backgroundColor: colors.background, borderColor: colors.text }}
+        className="p-6 rounded-3xl shadow-xl border"
       >
         <View className="flex-row justify-between items-start mb-4">
           <View>
-            <Text style={{ color: "#000000" }} className="text-2xl font-bold">
+            <Text style={{ color: colors.text }} className="text-2xl font-bold">
               {name}
             </Text>
           </View>
 
-          <View className="bg-white px-2 py-1 rounded-lg flex-row items-center">
+          <View style={{ backgroundColor: colors.background }} className="px-2 py-1 rounded-lg flex-row items-center">
             <Text className="text-yellow-400 mr-1">⭐</Text>
-            <Text style={{ color: "#000000" }} className="font-bold">
+            <Text style={{ color: colors.text }} className="font-bold">
               {rating}
             </Text>
           </View>
         </View>
 
         <View
-          style={{ backgroundColor: "#000000" }}
+          style={{ backgroundColor: colors.background }}
           className="h-px w-full mb-4 opacity-20"
         />
 
@@ -206,7 +206,7 @@ function Matched({
           requestStatus === "inspection_started" ? (
             <View className="flex-row flex-1 items-center justify-between">
               <Text
-                style={{ color: "#000000" }}
+                style={{ color: colors.text }}
                 className="text-xs uppercase tracking-widest opacity-70"
               >
                 Phone Number
@@ -214,7 +214,7 @@ function Matched({
 
               <Text
                 onPress={handleCopyPhone}
-                style={{ color: "#000000" }}
+                style={{ color: colors.text }}
                 className="font-semibold underline"
               >
                 {phone}
@@ -223,13 +223,13 @@ function Matched({
           ) : (
             <View className="flex-row flex-1 items-center justify-between">
               <Text
-                style={{ color: "#000000" }}
+                style={{ color: colors.text }}
                 className="text-xs uppercase tracking-widest opacity-70"
               >
                 Agency
               </Text>
 
-              <Text style={{ color: "#000000" }} className="font-semibold">
+              <Text style={{ color: colors.text }} className="font-semibold">
                 {agency}
               </Text>
             </View>
@@ -240,41 +240,41 @@ function Matched({
       {/* ACTIONS */}
       {requestStatus === "inspection_started" ? (
         <View className="mt-6 gap-4 items-center flex-col">
-          <Pressable
-            style={{ backgroundColor: "#ffffff" }}
-            className="w-full h-14 rounded-2xl items-center justify-center border border-black"
+          <TouchableOpacity
+            style={{ backgroundColor: colors.background, borderColor: colors.text }}
+            className="w-full h-14 rounded-2xl items-center justify-center border"
             onPress={handlePropertyView}
           >
-            <Text className="text-black font-bold text-base">
+            <Text style={{ color: colors.text }} className="font-bold text-base">
               View Agent Listings
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       ) : (
         <View className="mt-6 flex-row gap-4 items-center">
           {requestStatus === "matched" ? (
-            <Pressable
+            <TouchableOpacity
               onPress={() =>
                 Alert.alert(
                   "Notify Agent to start Inspection",
                   "Coming soon...",
                 )
               }
-              style={{ borderColor: "#000000" }}
+              style={{ borderColor: colors.text }}
               className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
             >
-              <BellIcon color={"#000000"} size={24} />
-            </Pressable>
+              <BellIcon color={colors.text} size={24} />
+            </TouchableOpacity>
           ) : (
-            <Pressable
+            <TouchableOpacity
               onPress={handleCancel}
-              style={{ borderColor: "#000000" }}
+              style={{ borderColor: colors.text }}
               className="w-[20%] h-14 rounded-2xl items-center justify-center border opacity-70"
             >
-              <CaretLeftIcon color={"#000000"} size={24} />
-            </Pressable>
+              <CaretLeftIcon color={colors.text} size={24} />
+            </TouchableOpacity>
           )}
-          <Pressable
+          <TouchableOpacity
             style={{ backgroundColor: colors.primary }}
             className="flex-1 h-14 rounded-2xl items-center justify-center"
             onPress={handlePropertyView}
@@ -282,18 +282,18 @@ function Matched({
             <Text className="text-white font-bold text-base">
               View Agent Listings
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       )}
       {requestStatus === "matched" ? (
-        <Pressable
+        <TouchableOpacity
           className="w-full h-14 rounded-2xl items-center justify-center border border-red-500 mt-4 opacity-70"
           onPress={() => cancelRequest(matchData?.requestId || "")}
         >
           <Text className="text-lg font-semibold text-red-500">
             Cancel Match
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       ) : null}
     </View>
   );
