@@ -45,9 +45,14 @@ const PropertyCard = ({ item }: { item: any }) => {
                 ? new Intl.NumberFormat("en-NG", {
                     style: "currency",
                     currency: "NGN",
-                    minimumFractionDigits: 2,
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
                   }).format(Number(item.price))
                 : "Price not available"}
+              /
+              <Text className="text-md font-black tracking-tight">
+                {item.propertyType === "Apartment" ? "year" : "day"}
+              </Text>
             </Text>
           </View>
 
