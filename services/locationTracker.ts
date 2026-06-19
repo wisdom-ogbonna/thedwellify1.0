@@ -3,9 +3,9 @@ import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { API } from "./api";
-import { auth } from "../config/firebase"; // Verified Firebase hook bridge
+import { auth } from "../config/firebase";
 
-// Constants (Resolves task-definition cache collisions between native & JS engines)
+// Constants
 const BACKGROUND_TRACKING_TASK_OLD = "BACKGROUND_AGENT_LOCATION_TRACKING";
 const BACKGROUND_TRACKING_TASK_NEW = "background-location-task";
 const MIN_DISTANCE_METERS = 5;
@@ -43,11 +43,8 @@ let netInfoUnsubscribe: (() => void) | null = null;
 let isConnected: boolean = true;
 let processingQueue: boolean = false;
 
-/**
- * Calculates distance using the Haversine formula
- */
 const getDistance = (loc1: Coordinates, loc2: Coordinates): number => {
-  const R = 6371e3; // Earth's radius in meters
+  const R = 6371e3;
   const rad = (deg: number) => (deg * Math.PI) / 180;
   const φ1 = rad(loc1.lat);
   const φ2 = rad(loc2.lat);
@@ -59,9 +56,6 @@ const getDistance = (loc1: Coordinates, loc2: Coordinates): number => {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-/**
- * Serializes and saves failed requests to local disk safely
- */
 const stashPayloadToQueue = async (payload: QueuedPayload) => {
   try {
     const rawQueue = await AsyncStorage.getItem(KEYS.FAILED_QUEUE);
@@ -73,12 +67,9 @@ const stashPayloadToQueue = async (payload: QueuedPayload) => {
   }
 };
 
-/**
- * Dispatches location payloads to API endpoints or queues them if offline
- */
 const dispatchLocationUpdate = async (
   coords: Coordinates,
-  isHeartbeat = false
+  isHeartbeat = false,
 ): Promise<void> => {
   const payload: QueuedPayload = {
     ...coords,
@@ -114,22 +105,19 @@ const dispatchLocationUpdate = async (
   } catch (error: any) {
     console.warn(
       "⚠️ Remote location sync failed. Stashing entry locally:",
-      error?.message || error
+      error?.message || error,
     );
     await stashPayloadToQueue(payload);
   }
 };
 
-/**
- * Flushes backlogged offline items sequentially when connectivity recovers
- */
 const drainLocalQueue = async () => {
   if (processingQueue) return;
-  
+
   const netState = await NetInfo.fetch();
   const networkAvailable = netState.isConnected ?? false;
   if (!networkAvailable) return;
-  
+
   processingQueue = true;
 
   try {
@@ -148,7 +136,9 @@ const drainLocalQueue = async () => {
     console.log(`♻️ Processing ${queue.length} cached offline updates...`);
 
     const savedToken = await AsyncStorage.getItem("@secure_auth_token");
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     if (savedToken) {
       headers["Authorization"] = `Bearer ${savedToken}`;
     }
@@ -156,16 +146,22 @@ const drainLocalQueue = async () => {
     while (queue.length > 0) {
       const currentItem = queue[0];
       try {
-        await API.post("/location/update", {
-          lat: currentItem.lat,
-          lng: currentItem.lng,
-          load: currentItem.load,
-          rating: currentItem.rating,
-        }, { headers, timeout: 8000 });
-        
+        await API.post(
+          "/location/update",
+          {
+            lat: currentItem.lat,
+            lng: currentItem.lng,
+            load: currentItem.load,
+            rating: currentItem.rating,
+          },
+          { headers, timeout: 8000 },
+        );
+
         queue.shift();
       } catch (err) {
-        console.warn("⚠️ Queue clearing interrupted, network down again or request timed out.");
+        console.warn(
+          "⚠️ Queue clearing interrupted, network down again or request timed out.",
+        );
         break;
       }
     }
@@ -178,9 +174,6 @@ const drainLocalQueue = async () => {
   }
 };
 
-/**
- * Periodic fallback routine ensuring backend stays warm even when geofence stays idle
- */
 const startHeartbeatSystem = () => {
   if (heartbeatTimer) clearInterval(heartbeatTimer);
 
@@ -206,7 +199,7 @@ const startHeartbeatSystem = () => {
             lat: freshPosition.coords.latitude,
             lng: freshPosition.coords.longitude,
           },
-          true
+          true,
         );
       }
     } catch (err) {
@@ -216,43 +209,62 @@ const startHeartbeatSystem = () => {
 };
 
 /**
- * Handles explicit hardware and subscription initializations
+ * Handles explicit hardware, permissions, and native OS dialog triggers
  */
 export const startLocationTracking = async (): Promise<TrackerResponse> => {
   try {
-    // 1. Core Hardware Check First
-    const isGpsEnabled = await Location.hasServicesEnabledAsync();
+    // 1. Verify global device hardware configuration status first
+    let isGpsEnabled = await Location.hasServicesEnabledAsync();
+
+    if (!isGpsEnabled) {
+      try {
+        // ✅ Explicitly prompts Android native system dialog to switch GPS on directly
+        await Location.enableNetworkProviderAsync();
+        // Check state again after system prompt resolution
+        isGpsEnabled = await Location.hasServicesEnabledAsync();
+      } catch (providerError) {
+        console.log(
+          "System provider intent prompt rejected or failed",
+          providerError,
+        );
+      }
+    }
+
+    // Re-check hardware layer. If still false, user denied or hardware doesn't exist
     if (!isGpsEnabled) {
       return {
         success: false,
         errorType: "HARDWARE_DISABLED",
-        message: "Your location settings are turned off. Please turn on location services/GPS to continue.",
+        message:
+          "Device system location/GPS hardware configuration is disabled. Please enable location services.",
       };
     }
 
-    // 2. Clear out any hanging setups cleanly
-    await stopLocationTracking();
-
-    // 3. Permission Validations
-    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    // 2. Clear out permissions mapping
+    const { status: foregroundStatus } =
+      await Location.requestForegroundPermissionsAsync();
     if (foregroundStatus !== "granted") {
       return {
         success: false,
         errorType: "PERMISSION_DENIED",
-        message: "Foreground location access denied. Please enable permission in device settings.",
+        message: "Foreground location access denied.",
       };
     }
 
-    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+    const { status: backgroundStatus } =
+      await Location.requestBackgroundPermissionsAsync();
     if (backgroundStatus !== "granted") {
       return {
         success: false,
         errorType: "PERMISSION_DENIED",
-        message: "Background location access denied. Please allow 'Always Track' permissions.",
+        message: "Background location access denied.",
       };
     }
 
-    // 4. Establish System Network Monitoring
+    // Clean tracking states safely to prevent duplicate background leaks
+    await stopLocationTracking();
+
+    // Establish System Network Monitoring
     netInfoUnsubscribe = NetInfo.addEventListener((state) => {
       const previouslyOffline = !isConnected;
       isConnected = state.isConnected ?? false;
@@ -262,7 +274,7 @@ export const startLocationTracking = async (): Promise<TrackerResponse> => {
       }
     });
 
-    // 5. Start Foreground Location Engine
+    // Start Foreground Location Engine
     foregroundSubscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.High,
@@ -275,10 +287,10 @@ export const startLocationTracking = async (): Promise<TrackerResponse> => {
           lng: location.coords.longitude,
         };
         await dispatchLocationUpdate(coords, false);
-      }
+      },
     );
 
-    // 6. Start Native Expo Background Module
+    // Start Native Expo Background Module
     await Location.startLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_NEW, {
       accuracy: Location.Accuracy.High,
       timeInterval: 15000,
@@ -291,34 +303,29 @@ export const startLocationTracking = async (): Promise<TrackerResponse> => {
       pausesLocationUpdatesAutomatically: false,
     });
 
-    // 7. Start Heartbeat Watchdog
+    // Start Heartbeat Watchdog
     startHeartbeatSystem();
 
     // Persist Tracking State
     await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "true");
-    console.log("🚀 Production geolocation services fully mounted successfully.");
-    
-    return { success: true, message: "Tracking started successfully." };
+    console.log(
+      "🚀 Production geolocation services fully mounted successfully.",
+    );
 
+    return { success: true };
   } catch (err: any) {
-    console.error("Failed to safely scale geolocation engine:", err?.message || err);
-    
-    const errorMsg = err?.message || "";
-    if (errorMsg.includes("settings") || errorMsg.includes("disabled") || errorMsg.includes("capabilities")) {
-      return {
-        success: false,
-        errorType: "HARDWARE_DISABLED",
-        message: "Please turn on device location services.",
-      };
-    }
-
-    return { success: false, errorType: "UNKNOWN", message: errorMsg };
+    console.error(
+      "Failed to safely scale geolocation engine:",
+      err?.message || err,
+    );
+    return {
+      success: false,
+      errorType: "UNKNOWN",
+      message: err?.message || "An unexpected error occurred.",
+    };
   }
 };
 
-/**
- * Clear memory configurations, subscriptions, intervals, and device persistent flags cleanly
- */
 export const stopLocationTracking = async () => {
   if (foregroundSubscription) {
     foregroundSubscription.remove();
@@ -335,12 +342,16 @@ export const stopLocationTracking = async () => {
     netInfoUnsubscribe = null;
   }
 
-  const isOldTaskRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_TRACKING_TASK_OLD);
+  const isOldTaskRunning = await TaskManager.isTaskRegisteredAsync(
+    BACKGROUND_TRACKING_TASK_OLD,
+  );
   if (isOldTaskRunning) {
     try { await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_OLD); } catch {}
   }
 
-  const isNewTaskRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_TRACKING_TASK_NEW);
+  const isNewTaskRunning = await TaskManager.isTaskRegisteredAsync(
+    BACKGROUND_TRACKING_TASK_NEW,
+  );
   if (isNewTaskRunning) {
     try { await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_NEW); } catch {}
   }
@@ -349,92 +360,129 @@ export const stopLocationTracking = async () => {
   console.log("🛑 Geoloc platform components teardown completely executed.");
 };
 
-/**
- * Recovery execution mechanism checking storage profiles upon app initialization
- */
 export const bootstrapLocationTracker = async () => {
   try {
     const isOnlineFlag = await AsyncStorage.getItem(KEYS.TRACKING_STATUS);
     if (isOnlineFlag === "true") {
-      console.log("🔄 App restart recovery caught tracking state flag. Re-initializing engine...");
+      console.log(
+        "🔄 App restart recovery caught tracking state flag. Re-initializing engine...",
+      );
       await startLocationTracking();
     }
   } catch (err) {
-    console.error("Failed recovering geolocation task on boot state routing:", err);
+    console.error(
+      "Failed recovering geolocation task on boot state routing:",
+      err,
+    );
   }
 };
 
-/* =========================================================================
-   NATIVE HEADLESS SHARED GLOBAL TASK RUNNER EXECUTOR
-   ========================================================================= */
-const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.TaskManagerTaskBody<any>) => {
+const sharedHeadlessLocationEngineRunner = async ({
+  data,
+  error,
+}: TaskManager.TaskManagerTaskBody<any>) => {
   if (error) {
     console.error("TaskManager task error caught:", error.message);
     return;
   }
-  
+
   if (data) {
     const { locations } = data;
     if (!locations || locations.length === 0) return;
 
-    const primaryFix = locations[locations.length - 1]; 
+    const primaryFix = locations[locations.length - 1];
     if (!primaryFix || !primaryFix.coords) return;
 
     const lat = primaryFix.coords.latitude;
     const lng = primaryFix.coords.longitude;
 
-    if (lat === undefined || lng === undefined || lat === null || lng === null) {
+    if (
+      lat === undefined ||
+      lng === undefined ||
+      lat === null ||
+      lng === null
+    ) {
       return;
     }
 
     const coords: Coordinates = { lat, lng };
-    const payload: QueuedPayload = { ...coords, load: 0, rating: 5, timestamp: Date.now() };
+    const payload: QueuedPayload = {
+      ...coords,
+      load: 0,
+      rating: 5,
+      timestamp: Date.now(),
+    };
 
     try {
       const rawQueue = await AsyncStorage.getItem(KEYS.FAILED_QUEUE);
-      const currentQueue: QueuedPayload[] = rawQueue ? JSON.parse(rawQueue) : [];
-      
+      const currentQueue: QueuedPayload[] = rawQueue
+        ? JSON.parse(rawQueue)
+        : [];
+
       const netState = await NetInfo.fetch();
       const networkAvailable = netState.isConnected ?? false;
 
       if (!networkAvailable) {
         currentQueue.push(payload);
-        await AsyncStorage.setItem(KEYS.FAILED_QUEUE, JSON.stringify(currentQueue));
+        await AsyncStorage.setItem(
+          KEYS.FAILED_QUEUE,
+          JSON.stringify(currentQueue),
+        );
         return;
       }
 
       await drainLocalQueue();
 
       const savedToken = await AsyncStorage.getItem("@secure_auth_token");
+
       if (!savedToken) {
         currentQueue.push(payload);
-        await AsyncStorage.setItem(KEYS.FAILED_QUEUE, JSON.stringify(currentQueue));
+        await AsyncStorage.setItem(
+          KEYS.FAILED_QUEUE,
+          JSON.stringify(currentQueue),
+        );
         return;
       }
 
       const authHeader = `Bearer ${savedToken}`;
 
-      await API.post("/location/update", {
-        lat: coords.lat,
-        lng: coords.lng,
-        load: 0,
-        rating: 5,
-      }, {
-        headers: { Authorization: authHeader, "Content-Type": "application/json" },
-        timeout: 10000 
-      });
+      await API.post(
+        "/location/update",
+        {
+          lat: coords.lat,
+          lng: coords.lng,
+          load: 0,
+          rating: 5,
+        },
+        {
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        },
+      );
 
       await AsyncStorage.setItem(KEYS.LAST_LOCATION, JSON.stringify(coords));
-
+      console.log(`📍 Background sync success: ${coords.lat}, ${coords.lng}`);
     } catch (err: any) {
       console.warn("Headless OS Engine choked. Stashing in outbox safely.");
       const rawQueue = await AsyncStorage.getItem(KEYS.FAILED_QUEUE);
       const currentQueue = rawQueue ? JSON.parse(rawQueue) : [];
       currentQueue.push(payload);
-      await AsyncStorage.setItem(KEYS.FAILED_QUEUE, JSON.stringify(currentQueue));
+      await AsyncStorage.setItem(
+        KEYS.FAILED_QUEUE,
+        JSON.stringify(currentQueue),
+      );
     }
   }
 };
 
-TaskManager.defineTask(BACKGROUND_TRACKING_TASK_OLD, sharedHeadlessLocationEngineRunner);
-TaskManager.defineTask(BACKGROUND_TRACKING_TASK_NEW, sharedHeadlessLocationEngineRunner);
+TaskManager.defineTask(
+  BACKGROUND_TRACKING_TASK_OLD,
+  sharedHeadlessLocationEngineRunner,
+);
+TaskManager.defineTask(
+  BACKGROUND_TRACKING_TASK_NEW,
+  sharedHeadlessLocationEngineRunner,
+);

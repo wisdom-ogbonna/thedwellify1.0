@@ -1,19 +1,19 @@
 import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Image, TouchableOpacity, Text, View } from "react-native";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const PropertyCard = ({ item }: { item: any }) => {
   const { colors } = useTheme();
   const router = useRouter();
 
   const handleNavigation = () => {
-  router.push({
-    pathname: "/(utilities)/property-view",
-    params: {
-      propertyId: item.id,
-    },
-  });
+    router.push({
+      pathname: "/(utilities)/property-view",
+      params: {
+        propertyId: item.id,
+      },
+    });
   };
 
   return (
@@ -32,17 +32,27 @@ const PropertyCard = ({ item }: { item: any }) => {
           <View>
             <Text
               style={{ color: colors.text }}
-              className="text-xl font-semibold mb-1 tracking-tight"
+              className="text-xl font-bold mb-1 tracking-tight"
               numberOfLines={1}
             >
-              {item.location || "Location not available"}
+              {item.propertyType || "NaN"}
             </Text>
             <Text
               style={{ color: colors.text }}
               className="text-3xl font-black tracking-tight"
             >
-              $
-              {item.price ? item.price.toLocaleString() : "Price not available"}
+              {item.price
+                ? new Intl.NumberFormat("en-NG", {
+                    style: "currency",
+                    currency: "NGN",
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  }).format(Number(item.price))
+                : "Price not available"}
+              /
+              <Text className="text-md font-black tracking-tight">
+                {item.propertyType === "Apartment" ? "year" : "day"}
+              </Text>
             </Text>
           </View>
 

@@ -28,7 +28,6 @@ export default function MapScreen() {
   const [agent, setAgent] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  console.log(agent);
   const ref = useRef<BottomSheetRefProps>(null);
 
   const SNAP_25 = -height * 0.2;

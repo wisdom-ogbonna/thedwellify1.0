@@ -34,7 +34,7 @@ const PropertyView = () => {
 
   const [error, setError] = useState("");
 
-  const userRole:string = "client";
+  const userRole: string = "client";
 
   const fetchProperty = useCallback(async () => {
     try {
@@ -165,6 +165,23 @@ const PropertyView = () => {
         <ArrowLeft size={22} color="#000" weight="bold" />
       </TouchableOpacity>
 
+      <View
+        className="absolute right-5 top-13 z-50 flex-row items-center rounded-sm border-[0.5px] px-3 py-3"
+        style={{
+          backgroundColor: "rgba(255,255,255,0.8)",
+          borderColor: "rgba(0,0,0,0.1)",
+        }}
+      >
+        <Text
+          className="text-[10px] font-bold uppercase tracking-[2px]"
+          style={{
+            color: "#000",
+          }}
+        >
+          {property?.propertyType}
+        </Text>
+      </View>
+
       <ScrollView
         bounces={false}
         showsVerticalScrollIndicator={false}
@@ -181,23 +198,6 @@ const PropertyView = () => {
             className="h-full w-full"
             resizeMode="cover"
           />
-
-          <View
-            className="absolute right-5 top-13 flex-row items-center rounded-sm border-[0.5px] px-3 py-3"
-            style={{
-              backgroundColor: "rgba(255,255,255,0.8)",
-              borderColor: "rgba(0,0,0,0.1)",
-            }}
-          >
-            <Text
-              className="text-[10px] font-bold uppercase tracking-[2px]"
-              style={{
-                color: "#000",
-              }}
-            >
-              {property?.propertyType}
-            </Text>
-          </View>
         </View>
 
         {/* CONTENT */}
@@ -329,7 +329,18 @@ const PropertyView = () => {
               color: colors.text,
             }}
           >
-            ₦{Number(property?.price || 0).toLocaleString()}
+            {property?.price
+              ? new Intl.NumberFormat("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                }).format(Number(property?.price))
+              : "Price not available"}
+            /
+            <Text className="text-md font-black tracking-tight">
+              {property?.propertyType === "Apartment" ? "year" : "day"}
+            </Text>
           </Text>
         </View>
 

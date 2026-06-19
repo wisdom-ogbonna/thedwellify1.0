@@ -38,7 +38,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
     const SNAP_POINTS = {
       CLOSED: -usableHeight * 0.15,
       LOW: -usableHeight * 0.15,
-      MID: -usableHeight * 0.5,
+      MID: -usableHeight * 0.8,
     };
 
     const translateY = useSharedValue(0);
