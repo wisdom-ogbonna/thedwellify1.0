@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Pressable,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
   ScrollView,
@@ -74,12 +74,12 @@ export default function InspectionScreen() {
     >
       {/* Close */}
       <View className="px-8 py-4 flex-row justify-end">
-        <Pressable
+        <TouchableOpacity
           onPress={() => router.replace("/(agent)/dashboard")}
           className="p-2 rounded-full"
         >
           <X size={30} color={colors.text} weight="bold" />
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 32 }}>
@@ -119,7 +119,7 @@ export default function InspectionScreen() {
         {/* ACTION BUTTON */}
         {!started ? (
           // 🔵 START BUTTON
-          <Pressable
+          <TouchableOpacity
             onPress={startInspection}
             disabled={loading}
             className="py-6 rounded-full items-center justify-center flex-row gap-3"
@@ -135,10 +135,10 @@ export default function InspectionScreen() {
                 </Text>
               </>
             )}
-          </Pressable>
+          </TouchableOpacity>
         ) : (
           // 🔴 END BUTTON
-          <Pressable
+          <TouchableOpacity
             onPress={endInspection}
             disabled={loading}
             className="py-6 rounded-full items-center justify-center"
@@ -151,7 +151,7 @@ export default function InspectionScreen() {
                 End Inspection
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
         )}
       </ScrollView>
     </View>

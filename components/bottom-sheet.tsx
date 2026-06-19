@@ -182,7 +182,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
               {
                 height: usableHeight + tabBarHeight,
                 top: SCREEN_HEIGHT,
-                backgroundColor: "#f8f8f8",
+                backgroundColor: colors.background,
                 shadowColor: colors.text,
                 paddingBottom: insets.bottom,
               },

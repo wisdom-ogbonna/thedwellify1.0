@@ -1,21 +1,21 @@
-import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { useTheme } from "@react-navigation/native";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import {
+  ArrowClockwiseIcon,
+  CalendarBlankIcon,
+  ClockIcon,
+  MapPinIcon,
+} from "phosphor-react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   Text,
+  TouchableOpacity,
   View,
-  Pressable,
 } from "react-native";
-import * as Location from "expo-location";
-import { useTheme } from "@react-navigation/native";
-import {
-  ArrowClockwiseIcon,
-  ClockIcon,
-  FileTextIcon,
-  CalendarBlankIcon,
-  MapPinIcon,
-} from "phosphor-react-native";
 import { API } from "../../services/api";
 
 // --- TYPES & INTERFACES ---
@@ -24,7 +24,7 @@ interface FirestoreTimestamp {
   _nanoseconds?: number;
 }
 
-interface HistoryItem {
+export interface HistoryItem {
   id: string;
   requestId?: string;
   propertyType?: string;
@@ -45,7 +45,7 @@ interface StatusStyle {
 }
 
 // --- HELPER FUNCTIONS ---
-const formatDate = (createdAt?: FirestoreTimestamp): string => {
+export const formatDate = (createdAt?: FirestoreTimestamp): string => {
   if (!createdAt?._seconds) return "Unknown Date";
   try {
     return new Date(createdAt._seconds * 1000).toLocaleDateString(undefined, {
@@ -61,16 +61,19 @@ const formatDate = (createdAt?: FirestoreTimestamp): string => {
 };
 
 // --- MEMOIZED CHILD ITEM COMPONENT ---
-const HistoryListItem = React.memo(({ 
-  item, 
-  address, 
-  colors 
-}: { 
-  item: HistoryItem; 
-  address?: string; 
-  colors: any 
+const HistoryListItemComponent = ({
+  item,
+  address,
+  colors,
+  onPress,
+}: {
+  item: HistoryItem;
+  address?: string;
+  colors: any;
+  onPress: () => void;
 }) => {
-  const hasCoordinates = typeof item.lat === "number" && typeof item.lng === "number";
+  const hasCoordinates =
+    typeof item.lat === "number" && typeof item.lng === "number";
 
   const statusStyle = useMemo((): StatusStyle => {
     switch (item.status?.toLowerCase()) {
@@ -88,7 +91,8 @@ const HistoryListItem = React.memo(({
   }, [item.status, colors]);
 
   return (
-    <View
+    <TouchableOpacity
+      onPress={onPress}
       className="p-5 mb-4 border rounded-3xl shadow-sm"
       style={{ backgroundColor: colors.card, borderColor: colors.border }}
     >
@@ -115,17 +119,17 @@ const HistoryListItem = React.memo(({
 
       {/* Separator Line */}
       <View
-        className="h-[1px] my-4 opacity-40"
+        className="h-px my-4 opacity-40"
         style={{ backgroundColor: colors.border }}
       />
 
       <View className="flex-row justify-between">
-        {/* Request ID Field */}
+        {/* Start Date Field */}
         <View className="flex-1 mr-2">
           <View className="flex-row items-center gap-1">
-            <FileTextIcon size={12} color="#71717a" weight="medium" />
+            <CalendarBlankIcon size={12} color="#71717a" weight="regular" />
             <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
-              Request ID
+              Inspection started at
             </Text>
           </View>
           <Text
@@ -133,23 +137,23 @@ const HistoryListItem = React.memo(({
             style={{ color: colors.text }}
             numberOfLines={1}
           >
-            {item.requestId || "N/A"}
+            {formatDate(item.inspectionStartedAt)}
           </Text>
         </View>
 
-        {/* Date Field */}
+        {/* End Date Field */}
         <View className="flex-1 items-end">
           <View className="flex-row items-center gap-1">
-            <CalendarBlankIcon size={12} color="#71717a" weight="medium" />
+            <CalendarBlankIcon size={12} color="#71717a" weight="regular" />
             <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
-              Created On
+              Inspection ended at
             </Text>
           </View>
           <Text
             className="text-sm font-semibold mt-1"
             style={{ color: colors.text }}
           >
-            {formatDate(item.createdAt)}
+            {formatDate(item.inspectionEndedAt)}
           </Text>
         </View>
       </View>
@@ -157,7 +161,7 @@ const HistoryListItem = React.memo(({
       {/* Location Field */}
       <View className="mt-4">
         <View className="flex-row items-center gap-1">
-          <MapPinIcon size={12} color="#71717a" weight="medium" />
+          <MapPinIcon size={12} color="#71717a" weight="regular" />
           <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
             Inspection Location
           </Text>
@@ -166,25 +170,32 @@ const HistoryListItem = React.memo(({
           className="text-sm font-semibold mt-1 pl-4"
           style={{ color: colors.text }}
         >
-          {address || (hasCoordinates ? "Loading address..." : "Address unavailable")}
+          {address ||
+            (hasCoordinates ? "Loading address..." : "Address unavailable")}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
-});
+};
+
+const HistoryListItem = React.memo(HistoryListItemComponent);
+HistoryListItem.displayName = "HistoryListItem";
 
 // --- MAIN SCREEN COMPONENT ---
 export default function HistoryScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [addresses, setAddresses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  // Parallelized reverse geocoding to prevent thread-blocking
-  const fetchAddressesBatch = async (items: HistoryItem[], isMounted: boolean) => {
+  const fetchAddressesBatch = async (
+    items: HistoryItem[],
+    isMounted: boolean,
+  ) => {
     const validItems = items.filter(
-      (item) => typeof item.lat === "number" && typeof item.lng === "number"
+      (item) => typeof item.lat === "number" && typeof item.lng === "number",
     );
 
     if (validItems.length === 0) return;
@@ -217,7 +228,7 @@ export default function HistoryScreen() {
     });
 
     const results = await Promise.allSettled(promises);
-    
+
     if (!isMounted) return;
 
     const updates: Record<string, string> = {};
@@ -234,14 +245,13 @@ export default function HistoryScreen() {
     try {
       const response = await API.get("/client/history");
       const fetchedData = response.data?.history;
-      
+
       const data: HistoryItem[] = Array.isArray(fetchedData) ? fetchedData : [];
 
       if (isMounted) {
         setHistory(data);
       }
 
-      // Geocode addresses asynchronously
       if (data.length > 0) {
         await fetchAddressesBatch(data, isMounted);
       }
@@ -255,11 +265,10 @@ export default function HistoryScreen() {
     }
   }, []);
 
-  // Handle Initial Load and Mount/Unmount Tracking
   useEffect(() => {
     let isMounted = true;
     loadHistory(isMounted);
-    
+
     return () => {
       isMounted = false;
     };
@@ -270,14 +279,32 @@ export default function HistoryScreen() {
     loadHistory(true);
   }, [loadHistory]);
 
-  // Stable RenderItem reference
-  const renderItem = useCallback(({ item }: { item: HistoryItem }) => (
-    <HistoryListItem 
-      item={item} 
-      address={addresses[item.id]} 
-      colors={colors} 
-    />
-  ), [addresses, colors]);
+  const filteredHistory = useMemo(() => {
+    return history.filter(
+      (currentItem: HistoryItem) =>
+        currentItem.status?.toLowerCase() !== "matched",
+    );
+  }, [history]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: HistoryItem }) => (
+      <HistoryListItem
+        item={item}
+        address={addresses[item.id]}
+        colors={colors}
+        onPress={() => {
+          router.push({
+            pathname: "/(utilities)/client-history-event",
+            params: {
+              item: JSON.stringify(item),
+              address: addresses[item.id] || "",
+            },
+          });
+        }}
+      />
+    ),
+    [addresses, colors, router],
+  );
 
   if (loading) {
     return (
@@ -308,27 +335,38 @@ export default function HistoryScreen() {
         >
           No History Found
         </Text>
-        <Text className="mt-2 text-zinc-500 text-sm text-center mb-6rows-2">
-          Your full history listings and status updates will be safely displayed here.
+        <Text className="mt-2 text-zinc-500 text-sm text-center mb-6">
+          Your full history listings and status updates will be safely displayed
+          here.
         </Text>
-        <Pressable
+        <TouchableOpacity
           onPress={onRefresh}
           className="flex-row items-center px-5 py-3 rounded-xl"
           style={{ backgroundColor: colors.primary }}
         >
-          <ArrowClockwiseIcon size={14} color={colors.background} weight="bold" />
-          <Text className="text-sm font-semibold ml-2" style={{ color: colors.background }}>
+          <ArrowClockwiseIcon
+            size={14}
+            color={colors.background}
+            weight="bold"
+          />
+          <Text
+            className="text-sm font-semibold ml-2"
+            style={{ color: colors.background }}
+          >
             Check Again
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 pt-4" style={{ backgroundColor: colors.background }}>
+    <View
+      className="flex-1 pt-8"
+      style={{ backgroundColor: colors.background }}
+    >
       <FlatList
-        data={history}
+        data={filteredHistory}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         refreshControl={

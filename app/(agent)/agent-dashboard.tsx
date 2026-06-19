@@ -16,7 +16,7 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Pressable,
+  TouchableOpacity,
   RefreshControl,
   ScrollView,
   Text,
@@ -360,11 +360,11 @@ export default function AgentDashboard() {
             alignItems: "center",
             justifyContent: "space-between",
             paddingHorizontal: 20,
-            paddingTop: 50,
+            paddingTop: 60,
             paddingBottom: 20,
           }}
         >
-          <Pressable
+          <TouchableOpacity
             onPress={toggleSidebar}
             style={{ padding: 10, borderRadius: 8 }}
           >
@@ -394,18 +394,18 @@ export default function AgentDashboard() {
                 borderRadius: 2,
               }}
             />
-          </Pressable>
+          </TouchableOpacity>
 
           <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>
             Welcome, {agentName}
           </Text>
 
-          <Pressable
+          <TouchableOpacity
             onPress={() => router.push("/notifications")}
             style={{ padding: 10, borderRadius: 8 }}
           >
             <BellIcon size={20} color={colors.text} weight="bold" />
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Status Card Body */}
@@ -536,11 +536,11 @@ export default function AgentDashboard() {
                   />
                 </View>
               ) : !isWorkflowActive ? (
-                <Pressable
+                <TouchableOpacity
                   onPress={() => handleOnlineToggle(!isOnline)}
                   disabled={toggling}
                   style={{
-                    backgroundColor: isOnline ? colors.text : colors.primary,
+                    backgroundColor: isOnline ? "red" : colors.primary,
                     paddingVertical: 14,
                     borderRadius: 12,
                     width: "85%",
@@ -550,19 +550,19 @@ export default function AgentDashboard() {
                 >
                   <Text
                     style={{
-                      color: isOnline ? colors.background : "#ffffff",
+                      color: "#ffffff",
                       fontWeight: "600",
                       fontSize: 15,
                     }}
                   >
                     {isOnline ? "Go Offline" : "Go Online"}
                   </Text>
-                </Pressable>
+                </TouchableOpacity>
               ) : null}
 
               {/* Core Workflow Actions */}
               {agentStatus === "suspended" && (
-                <Pressable
+                <TouchableOpacity
                   onPress={triggerPayment}
                   disabled={paying}
                   style={{
@@ -583,7 +583,7 @@ export default function AgentDashboard() {
                       Pay Now
                     </Text>
                   )}
-                </Pressable>
+                </TouchableOpacity>
               )}
 
               {/* Matched State Action Section */}
@@ -595,7 +595,7 @@ export default function AgentDashboard() {
                     width: "85%",
                   }}
                 >
-                  <Pressable
+                  <TouchableOpacity
                     onPress={startInspection}
                     style={{
                       backgroundColor: colors.primary,
@@ -615,9 +615,9 @@ export default function AgentDashboard() {
                     >
                       Start Inspection
                     </Text>
-                  </Pressable>
+                  </TouchableOpacity>
 
-                  <Pressable
+                  <TouchableOpacity
                     onPress={() =>
                       Alert.alert(
                         "Decline Request",
@@ -652,12 +652,12 @@ export default function AgentDashboard() {
                     >
                       Decline
                     </Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 </View>
               )}
 
               {agentStatus === "inspection_started" && requestId && (
-                <Pressable
+                <TouchableOpacity
                   onPress={endInspection}
                   style={{
                     backgroundColor: "#2563eb",
@@ -675,7 +675,7 @@ export default function AgentDashboard() {
                   >
                     End Inspection
                   </Text>
-                </Pressable>
+                </TouchableOpacity>
               )}
             </>
           )}
@@ -698,7 +698,7 @@ export default function AgentDashboard() {
           <View
             style={{ flexDirection: "row", justifyContent: "space-between" }}
           >
-            <Pressable
+            <TouchableOpacity
               onPress={onRefresh}
               style={{ flex: 1, alignItems: "center" }}
             >
@@ -723,9 +723,9 @@ export default function AgentDashboard() {
               >
                 Refresh Status
               </Text>
-            </Pressable>
+            </TouchableOpacity>
 
-            <Pressable style={{ flex: 1, alignItems: "center" }}>
+            <TouchableOpacity style={{ flex: 1, alignItems: "center" }}>
               <View
                 style={{
                   backgroundColor: colors.border,
@@ -747,9 +747,9 @@ export default function AgentDashboard() {
               >
                 Support
               </Text>
-            </Pressable>
+            </TouchableOpacity>
 
-            <Pressable style={{ flex: 1, alignItems: "center" }}>
+            <TouchableOpacity style={{ flex: 1, alignItems: "center" }}>
               <View
                 style={{
                   backgroundColor: colors.border,
@@ -769,9 +769,9 @@ export default function AgentDashboard() {
               <Text
                 style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
               >
-                Activity Log
+                History
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

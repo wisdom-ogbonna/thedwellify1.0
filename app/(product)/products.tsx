@@ -11,7 +11,7 @@ import {
   Alert,
   FlatList,
   Image,
-  Pressable,
+  TouchableOpacity,
   RefreshControl,
   Text,
   View,
@@ -54,7 +54,7 @@ const EmptyState = ({ colors }: any) => (
 // Product Card (Reusable)
 const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={() =>
         router.push({
           pathname: "/(product)/[id]",
@@ -113,7 +113,7 @@ const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
           className="flex-row mt-6 border-t pt-4"
           style={{ borderColor: colors.border }}
         >
-          <Pressable
+          <TouchableOpacity
             onPress={() =>
               router.push({
                 pathname: "/(product)/[id]",
@@ -130,18 +130,18 @@ const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
             >
               Edit
             </Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             onPress={() => onDelete(item.id)}
             className="flex-1 flex-row items-center justify-center py-2"
           >
             <Trash size={16} color="#ef4444" weight="bold" />
             <Text className="font-bold text-sm ml-2 text-red-500">Delete</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
-    </Pressable>
+    </TouchableOpacity>
   );
 });
 
@@ -206,9 +206,9 @@ export default function RentalProductsScreen() {
         }
         ListHeaderComponent={
           <View className="flex-row items-center mb-8 mt-2 gap-3">
-            <Pressable onPress={() => router.push("/(agent)/dashboard")} className="px-2 py-1">
+            <TouchableOpacity onPress={() => router.push("/(agent)/dashboard")} className="px-2 py-1">
               <CaretLeftIcon size={22} weight="bold" color={colors.text} />
-            </Pressable>
+            </TouchableOpacity>
             <Text
               className="text-2xl font-black tracking-tight px-2 py-1"
               style={{ color: colors.text }}
@@ -240,7 +240,7 @@ export default function RentalProductsScreen() {
           right: 24,
         }}
       >
-        <Pressable
+        <TouchableOpacity
           onPress={() => router.push("/(product)/create")}
           className="shadow-xl justify-center items-center rounded-3xl"
           style={{
@@ -250,7 +250,7 @@ export default function RentalProductsScreen() {
           }}
         >
           <Plus size={28} color={colors.background} weight="bold" />
-        </Pressable>
+        </TouchableOpacity>
       </View>
     </View>
   );

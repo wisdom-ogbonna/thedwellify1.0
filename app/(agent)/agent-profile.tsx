@@ -1,21 +1,21 @@
+import { useTheme } from "@/hooks/use-theme";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
+  Appearance,
   RefreshControl,
   ScrollView,
   Switch,
   Text,
+  TouchableOpacity,
   View,
   useColorScheme,
-  Appearance,
 } from "react-native";
-import { useTheme } from "@/hooks/use-theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
-import { useRouter } from "expo-router";
 // Imported CaretLeft to match your design vocabulary
 import { ArrowRight, ClipboardText } from "phosphor-react-native";
 
@@ -70,6 +70,27 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Confirm Sign out",
+      "This action will log you out of your account. You will need to sign in again to access your account.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: async () => await logout(),
+        },
+      ],
+      {
+        cancelable: true,
+      },
+    );
+  };
+
   if (loading)
     return (
       <View
@@ -97,7 +118,6 @@ export default function ProfileScreen() {
         />
       }
     >
-
       {/* Header */}
       <View className="mb-10 flex-row justify-between items-start">
         <View>
@@ -114,23 +134,10 @@ export default function ProfileScreen() {
             {profile.email}
           </Text>
         </View>
-        <View
-          className={`px-4 py-2 rounded-full ${
-            profile.verified ? "bg-green-100" : "bg-amber-100"
-          }`}
-        >
-          <Text
-            className={`text-[10px] font-bold uppercase ${
-              profile.verified ? "text-green-800" : "text-amber-800"
-            }`}
-          >
-            {profile.verified ? "Verified" : "Pending"}
-          </Text>
-        </View>
       </View>
 
       {/* Requests Navigation Card */}
-      <Pressable
+      <TouchableOpacity
         onPress={() => router.push({ pathname: "/(utilities)/requests" })}
         className="border-2 rounded-3xl p-6 mb-8 flex-row items-center justify-between"
         style={{
@@ -145,7 +152,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
         <ArrowRight size={16} color={colors.text} />
-      </Pressable>
+      </TouchableOpacity>
 
       {/* Settings Grid */}
       <View className="flex-row gap-4 mb-8">
@@ -174,7 +181,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Theme Toggle Card */}
-        <Pressable
+        <TouchableOpacity
           onPress={handleThemeChange}
           className="flex-1 border-2 rounded-3xl p-6 justify-between"
           style={{ borderColor: colors.border }}
@@ -192,7 +199,7 @@ export default function ProfileScreen() {
                 ? "Light"
                 : "System"}
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       {/* Details List */}
@@ -204,8 +211,8 @@ export default function ProfileScreen() {
       </View>
 
       {/* Logout */}
-      <Pressable
-        onPress={logout}
+      <TouchableOpacity
+        onPress={handleLogout}
         style={{ backgroundColor: colors.primary }}
         className="py-5 rounded-4xl items-center"
       >
@@ -215,7 +222,7 @@ export default function ProfileScreen() {
         >
           Sign Out
         </Text>
-      </Pressable>
+      </TouchableOpacity>
     </ScrollView>
   );
 }

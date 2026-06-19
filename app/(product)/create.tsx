@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Pressable,
+  TouchableOpacity,
   ScrollView,
   Text,
   TextInput,
@@ -198,9 +198,9 @@ export default function CreateProduct() {
             Create Listing
           </Text>
 
-          <Pressable onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.back()}>
             <X size={22} color={colors.text} />
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* INPUTS */}
@@ -241,7 +241,7 @@ export default function CreateProduct() {
         {/* PROPERTY TYPE */}
         <View className="flex-row gap-2 mb-4">
           {TYPES.map((type) => (
-            <Pressable
+            <TouchableOpacity
               key={type}
               onPress={() => setPropertyType(type)}
               className="px-4 py-2 rounded-lg border"
@@ -259,27 +259,27 @@ export default function CreateProduct() {
               >
                 {type}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           ))}
         </View>
 
         {/* IMAGE PICKER */}
-        <Pressable
+        <TouchableOpacity
           onPress={pickImages}
           className="p-6 border-dashed border rounded-xl items-center mb-4"
         >
           <ImageIcon size={30} color={colors.text} />
           <Text style={{ color: colors.text }}>Add Images</Text>
-        </Pressable>
+        </TouchableOpacity>
 
         {/* VIDEO PICKER (FIXED) */}
-        <Pressable
+        <TouchableOpacity
           onPress={pickVideo}
           className="p-6 border-dashed border rounded-xl items-center mb-4"
         >
           <VideoCamera size={30} color={colors.text} />
           <Text style={{ color: colors.text }}>Add Video (MP4, max 15MB)</Text>
-        </Pressable>
+        </TouchableOpacity>
 
         {/* IMAGE PREVIEW */}
         <ScrollView horizontal className="mb-4">
@@ -289,12 +289,12 @@ export default function CreateProduct() {
                 source={{ uri: img.uri }}
                 className="w-24 h-24 rounded-xl"
               />
-              <Pressable
+              <TouchableOpacity
                 onPress={() => removeImage(i)}
                 className="absolute top-1 right-1 bg-black/70 p-1 rounded-full"
               >
                 <X size={12} color="#fff" />
-              </Pressable>
+              </TouchableOpacity>
             </View>
           ))}
         </ScrollView>
@@ -308,12 +308,12 @@ export default function CreateProduct() {
               useNativeControls
               resizeMode={ResizeMode.COVER}
             />
-            <Pressable
+            <TouchableOpacity
               onPress={removeVideo}
               className="absolute top-2 right-2 bg-black/70 p-2 rounded-full"
             >
               <X size={14} color="#fff" />
-            </Pressable>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -328,7 +328,7 @@ export default function CreateProduct() {
         )}
 
         {/* SUBMIT */}
-        <Pressable
+        <TouchableOpacity
           onPress={handleSubmit}
           className="p-5 rounded-xl items-center"
           style={{ backgroundColor: colors.text }}
@@ -339,7 +339,7 @@ export default function CreateProduct() {
               Create Listing
             </Text>
           </View>
-        </Pressable>
+        </TouchableOpacity>
 
         <View className="h-20" />
       </ScrollView>

@@ -1,6 +1,6 @@
 import { useTheme } from "@/hooks/use-theme";
 import React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
 function Request({
   locationLoading,
@@ -12,11 +12,14 @@ function Request({
   handleRequest,
   loading,
 }: any): React.JSX.Element {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
     <View className="px-1">
-      <Text className="text-3xl font-extrabold mb-6 text-black">
+      <Text
+        style={{ color: colors.text }}
+        className="text-3xl font-extrabold mb-6"
+      >
         Find Property
       </Text>
 
@@ -25,7 +28,7 @@ function Request({
           backgroundColor: colors.background,
           borderColor: colors.border,
         }}
-        className="p-5 border rounded-3xl mb-5 shadow-sm"
+        className={`p-5 border rounded-3xl mb-5 shadow-sm ${isDark ? "shadow-white/10" : "shadow-gray-300/10"}`}
       >
         <Text
           style={{ color: colors.text }}
@@ -49,11 +52,14 @@ function Request({
           </>
         )}
 
-        <Pressable onPress={getLocation} className="mt-4 active:opacity-60">
+        <TouchableOpacity
+          onPress={getLocation}
+          className="mt-4 active:opacity-60"
+        >
           <Text style={{ color: colors.placeholder }} className="font-bold">
             Refresh Location
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       <View
@@ -61,7 +67,7 @@ function Request({
         className="p-5 rounded-3xl mb-8"
       >
         <Text
-          style={{ color: "#000000" }}
+          style={{ color: colors.text }}
           className="opacity-50 text-sm font-bold uppercase tracking-widest mb-4"
         >
           Property Type
@@ -72,13 +78,13 @@ function Request({
             const active = selectedType === type;
 
             return (
-              <Pressable
+              <TouchableOpacity
                 key={type}
                 onPress={() => setSelectedType(type)}
                 style={{
                   backgroundColor: active ? colors.text : colors.background,
                   borderWidth: 1,
-                  borderColor: active ? colors.primary : colors.border,
+                  borderColor: active ? colors.primary : colors.text,
                 }}
                 className="flex-1 py-3 rounded-2xl items-center transition-all"
               >
@@ -88,26 +94,26 @@ function Request({
                 >
                   {type}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             );
           })}
         </View>
       </View>
 
-      <Pressable
+      <TouchableOpacity
         onPress={handleRequest}
         disabled={loading}
         style={{ backgroundColor: colors.primary }}
-        className="w-full py-5 rounded-2xl items-center border border-white/50 shadow-lg active:scale-[0.98]"
+        className={`w-full py-5 rounded-2xl items-center border border-white/50 shadow-sm active:scale-[0.98] ${isDark ? "shadow-white/20" : "shadow-black/20"}`}
       >
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="text-white text-lg font-black uppercase tracking-tight">
+          <Text className="text-white font-bold text-lg uppercase tracking-tight">
             Request Match
           </Text>
         )}
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }

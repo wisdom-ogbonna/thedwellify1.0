@@ -1,16 +1,16 @@
+import { useTheme } from "@/hooks/use-theme";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Appearance,
-  Pressable,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
   useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@/hooks/use-theme";
 
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
@@ -80,6 +80,27 @@ export default function ClientDashboard() {
         },
       ],
       { cancelable: true },
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Confirm Sign out",
+      "This action will log you out of your account. You will need to sign in again to access your account.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: async () => await logout(),
+        },
+      ],
+      {
+        cancelable: true,
+      },
     );
   };
 
@@ -246,7 +267,7 @@ export default function ClientDashboard() {
           </Text>
         </View>
 
-        <Pressable
+        <TouchableOpacity
           onPress={handleThemeChange}
           className="px-5 py-3 rounded-full"
           style={{
@@ -261,14 +282,14 @@ export default function ClientDashboard() {
           >
             Change
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       {/* =========================
           SIGN OUT
       ========================= */}
-      <Pressable
-        onPress={logout}
+      <TouchableOpacity
+        onPress={handleLogout}
         className="py-5 rounded-3xl items-center mb-4"
         style={{
           backgroundColor: colors.primary,
@@ -282,12 +303,12 @@ export default function ClientDashboard() {
         >
           Sign Out
         </Text>
-      </Pressable>
+      </TouchableOpacity>
 
       {/* =========================
           DELETE ACCOUNT
       ========================= */}
-      <Pressable
+      <TouchableOpacity
         onPress={handleDeleteAccount}
         disabled={deleting}
         className="py-5 rounded-3xl items-center border"
@@ -308,7 +329,7 @@ export default function ClientDashboard() {
             Delete Account
           </Text>
         )}
-      </Pressable>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
