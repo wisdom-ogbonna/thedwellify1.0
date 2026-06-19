@@ -8,8 +8,8 @@ import {
   Alert,
   AppState,
   AppStateStatus,
-  TouchableOpacity,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -114,7 +114,7 @@ const ClientPaymentStartInspection: React.FC = () => {
     );
     return () => subscription.remove();
   }, [screenState]);
-  
+
   useEffect(() => {
     if (timeLeft === 0 && screenState === "awaiting") {
       cleanUpTimers();
@@ -500,7 +500,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                             "Phone number copied to clipboard!",
                           );
                         }}
-                        style={({ pressed }) => ({
+                        style={{
                           flexDirection: "row",
                           alignItems: "center",
                           alignSelf: "flex-start",
@@ -510,8 +510,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                           borderRadius: 8,
                           marginTop: 8,
                           gap: 6,
-                          opacity: pressed ? 0.6 : 1,
-                        })}
+                        }}
                       >
                         <Text
                           numberOfLines={1}
@@ -636,14 +635,10 @@ const ClientPaymentStartInspection: React.FC = () => {
           {screenState === "matched" && (
             <TouchableOpacity
               onPress={() => router.replace("/(client)/dashboard")}
-              style={({ pressed }) => ({
-                width: "100%",
-                paddingVertical: 16,
-                borderRadius: 14,
-                alignItems: "center",
+              className="w-full py-4 rounded-md items-center justify-center"
+              style={{
                 backgroundColor: colors.primary,
-                opacity: pressed ? 0.85 : 1,
-              })}
+              }}
             >
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
                 Continue to Dashboard
@@ -655,14 +650,13 @@ const ClientPaymentStartInspection: React.FC = () => {
           {screenState === "timeout" && (
             <TouchableOpacity
               onPress={() => router.replace("/(client)/dashboard")}
-              style={({ pressed }) => ({
+              style={{
                 width: "100%",
                 paddingVertical: 16,
                 borderRadius: 14,
                 alignItems: "center",
                 backgroundColor: colors.primary,
-                opacity: pressed ? 0.85 : 1,
-              })}
+              }}
             >
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
                 Rematch & Rebook
@@ -675,7 +669,7 @@ const ClientPaymentStartInspection: React.FC = () => {
             <View style={{ flexDirection: "row", gap: 10 }}>
               <TouchableOpacity
                 onPress={() => router.replace("/(client)/dashboard")}
-                style={({ pressed }) => ({
+                style={{
                   flex: 1,
                   paddingVertical: 16,
                   borderRadius: 14,
@@ -683,8 +677,7 @@ const ClientPaymentStartInspection: React.FC = () => {
                   borderWidth: 1,
                   borderColor: colors.border || "#e5e5e5",
                   backgroundColor: colors.background,
-                  opacity: pressed ? 0.7 : 1,
-                })}
+                }}
               >
                 <Text
                   style={{
@@ -699,14 +692,13 @@ const ClientPaymentStartInspection: React.FC = () => {
 
               <TouchableOpacity
                 onPress={sendInspectionRequest}
-                style={({ pressed }) => ({
+                style={{
                   flex: 1,
                   paddingVertical: 16,
                   borderRadius: 14,
                   alignItems: "center",
                   backgroundColor: colors.primary,
-                  opacity: pressed ? 0.85 : 1,
-                })}
+                }}
               >
                 <Text
                   style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}

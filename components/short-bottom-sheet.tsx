@@ -36,9 +36,9 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
     const usableHeight = SCREEN_HEIGHT - tabBarHeight - insets.bottom;
 
     const SNAP_POINTS = {
-      CLOSED: -usableHeight * 0.11,
-      LOW: -usableHeight * 0.11,
-      MID: -usableHeight * 0.3,
+      CLOSED: -usableHeight * 0.15,
+      LOW: -usableHeight * 0.15,
+      MID: -usableHeight * 0.5,
     };
 
     const translateY = useSharedValue(0);

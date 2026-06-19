@@ -45,7 +45,7 @@ function Matched({
   const name = agent?.name || "Agent";
   const phone = agent?.phone || "Not Available";
   const rating = agent?.rating || "5.0";
-  const agency = agent?.agencyName || "Agency";
+  const distance = agent?.distanceKm + "km" || "NaN";
 
   const getStatus = () => {
     switch (requestStatus) {
@@ -226,11 +226,11 @@ function Matched({
                 style={{ color: colors.text }}
                 className="text-xs uppercase tracking-widest opacity-70"
               >
-                Agency
+                Distance
               </Text>
 
               <Text style={{ color: colors.text }} className="font-semibold">
-                {agency}
+                {distance}
               </Text>
             </View>
           )}
