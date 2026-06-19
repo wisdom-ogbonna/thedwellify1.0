@@ -93,7 +93,7 @@ export default function RequestMatchScreen() {
 
     setTimeout(() => {
       ref.current?.scrollTo(SNAP_50);
-    }, 100);
+    }, 1000);
   }, [SNAP_50]);
 
   useEffect(() => {
