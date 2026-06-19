@@ -30,6 +30,12 @@ interface QueuedPayload extends Coordinates {
   timestamp: number;
 }
 
+export interface TrackerResponse {
+  success: boolean;
+  errorType?: "PERMISSION_DENIED" | "HARDWARE_DISABLED" | "UNKNOWN";
+  message?: string;
+}
+
 // Memory States
 let foregroundSubscription: Location.LocationSubscription | null = null;
 let heartbeatTimer: NodeJS.Timeout | null = null;
@@ -173,6 +179,13 @@ const startHeartbeatSystem = () => {
 
   heartbeatTimer = setInterval(async () => {
     try {
+      // Direct fail-safe check: Is GPS disabled mid-session during this heartbeat cycle?
+      const isGpsEnabled = await Location.hasServicesEnabledAsync();
+      if (!isGpsEnabled) {
+        console.warn("⚠️ Heartbeat blocked: Device GPS services are turned off.");
+        return; 
+      }
+
       const storedLastLocStr = await AsyncStorage.getItem(KEYS.LAST_LOCATION);
       if (storedLastLocStr) {
         const parsedCoords: Coordinates = JSON.parse(storedLastLocStr);
@@ -190,7 +203,7 @@ const startHeartbeatSystem = () => {
         );
       }
     } catch (err) {
-      console.error("Heartbeat routine execution failed", err);
+      console.error("Heartbeat routine execution failed safely:", err);
     }
   }, HEARTBEAT_INTERVAL_MS);
 };
@@ -198,7 +211,7 @@ const startHeartbeatSystem = () => {
 /**
  * Handles explicit hardware, permissions, and native OS dialog triggers
  */
-export const startLocationTracking = async () => {
+export const startLocationTracking = async (): Promise<TrackerResponse> => {
   try {
     // 1. Verify global device hardware configuration status first
     let isGpsEnabled = await Location.hasServicesEnabledAsync();
@@ -333,14 +346,14 @@ export const stopLocationTracking = async () => {
     BACKGROUND_TRACKING_TASK_OLD,
   );
   if (isOldTaskRunning) {
-    await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_OLD);
+    try { await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_OLD); } catch {}
   }
 
   const isNewTaskRunning = await TaskManager.isTaskRegisteredAsync(
     BACKGROUND_TRACKING_TASK_NEW,
   );
   if (isNewTaskRunning) {
-    await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_NEW);
+    try { await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_NEW); } catch {}
   }
 
   await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
@@ -423,7 +436,6 @@ const sharedHeadlessLocationEngineRunner = async ({
       const savedToken = await AsyncStorage.getItem("@secure_auth_token");
 
       if (!savedToken) {
-        console.warn("⚠️ No saved token found in storage. Stashing update.");
         currentQueue.push(payload);
         await AsyncStorage.setItem(
           KEYS.FAILED_QUEUE,
