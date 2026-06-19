@@ -30,6 +30,12 @@ interface QueuedPayload extends Coordinates {
   timestamp: number;
 }
 
+export interface TrackerResponse {
+  success: boolean;
+  errorType?: "PERMISSION_DENIED" | "HARDWARE_DISABLED" | "UNKNOWN";
+  message?: string;
+}
+
 // Memory States
 let foregroundSubscription: Location.LocationSubscription | null = null;
 let heartbeatTimer: NodeJS.Timeout | null = null;
@@ -88,7 +94,6 @@ const dispatchLocationUpdate = async (
       const storedLastLoc: Coordinates = JSON.parse(storedLastLocStr);
       const distanceMoved = getDistance(storedLastLoc, coords);
       if (distanceMoved < MIN_DISTANCE_METERS) {
-        // Drop excessive API calls if agent is standing still (unless it is an explicit heartbeat)
         return;
       }
     }
@@ -121,7 +126,6 @@ const dispatchLocationUpdate = async (
 const drainLocalQueue = async () => {
   if (processingQueue) return;
   
-  // Fetch fresh connectivity state if evaluated inside an isolated background task execution thread
   const netState = await NetInfo.fetch();
   const networkAvailable = netState.isConnected ?? false;
   if (!networkAvailable) return;
@@ -159,7 +163,7 @@ const drainLocalQueue = async () => {
           rating: currentItem.rating,
         }, { headers, timeout: 8000 });
         
-        queue.shift(); // Remove successfully sent item
+        queue.shift();
       } catch (err) {
         console.warn("⚠️ Queue clearing interrupted, network down again or request timed out.");
         break;
@@ -182,6 +186,13 @@ const startHeartbeatSystem = () => {
 
   heartbeatTimer = setInterval(async () => {
     try {
+      // Direct fail-safe check: Is GPS disabled mid-session during this heartbeat cycle?
+      const isGpsEnabled = await Location.hasServicesEnabledAsync();
+      if (!isGpsEnabled) {
+        console.warn("⚠️ Heartbeat blocked: Device GPS services are turned off.");
+        return; 
+      }
+
       const storedLastLocStr = await AsyncStorage.getItem(KEYS.LAST_LOCATION);
       if (storedLastLocStr) {
         const parsedCoords: Coordinates = JSON.parse(storedLastLocStr);
@@ -199,7 +210,7 @@ const startHeartbeatSystem = () => {
         );
       }
     } catch (err) {
-      console.error("Heartbeat routine execution failed", err);
+      console.error("Heartbeat routine execution failed safely:", err);
     }
   }, HEARTBEAT_INTERVAL_MS);
 };
@@ -207,26 +218,41 @@ const startHeartbeatSystem = () => {
 /**
  * Handles explicit hardware and subscription initializations
  */
-export const startLocationTracking = async () => {
+export const startLocationTracking = async (): Promise<TrackerResponse> => {
   try {
-    const { status: foregroundStatus } =
-      await Location.requestForegroundPermissionsAsync();
-    if (foregroundStatus !== "granted")
-      throw new Error("Foreground geoloc access denied");
-
-    const { status: backgroundStatus } =
-      await Location.requestBackgroundPermissionsAsync();
-    if (backgroundStatus !== "granted")
-      throw new Error("Background geoloc access denied");
-
+    // 1. Core Hardware Check First
     const isGpsEnabled = await Location.hasServicesEnabledAsync();
-    if (!isGpsEnabled)
-      throw new Error("Device system hardware GPS configuration is disabled");
+    if (!isGpsEnabled) {
+      return {
+        success: false,
+        errorType: "HARDWARE_DISABLED",
+        message: "Your location settings are turned off. Please turn on location services/GPS to continue.",
+      };
+    }
 
-    // Clean tracking states cleanly to prevent duplicate background processes running
+    // 2. Clear out any hanging setups cleanly
     await stopLocationTracking();
 
-    // 1. Establish System Network Monitoring
+    // 3. Permission Validations
+    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    if (foregroundStatus !== "granted") {
+      return {
+        success: false,
+        errorType: "PERMISSION_DENIED",
+        message: "Foreground location access denied. Please enable permission in device settings.",
+      };
+    }
+
+    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+    if (backgroundStatus !== "granted") {
+      return {
+        success: false,
+        errorType: "PERMISSION_DENIED",
+        message: "Background location access denied. Please allow 'Always Track' permissions.",
+      };
+    }
+
+    // 4. Establish System Network Monitoring
     netInfoUnsubscribe = NetInfo.addEventListener((state) => {
       const previouslyOffline = !isConnected;
       isConnected = state.isConnected ?? false;
@@ -236,7 +262,7 @@ export const startLocationTracking = async () => {
       }
     });
 
-    // 2. Start Foreground Location Engine
+    // 5. Start Foreground Location Engine
     foregroundSubscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.High,
@@ -252,7 +278,7 @@ export const startLocationTracking = async () => {
       }
     );
 
-    // 3. Start Native Expo Background Module (Maps directly to your production app.json config key)
+    // 6. Start Native Expo Background Module
     await Location.startLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_NEW, {
       accuracy: Location.Accuracy.High,
       timeInterval: 15000,
@@ -265,39 +291,27 @@ export const startLocationTracking = async () => {
       pausesLocationUpdatesAutomatically: false,
     });
 
-    // 4. Start Heartbeat Watchdog
+    // 7. Start Heartbeat Watchdog
     startHeartbeatSystem();
 
     // Persist Tracking State
     await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "true");
-    console.log(
-      "🚀 Production geolocation services fully mounted successfully."
-    );
-} catch (err: any) {
+    console.log("🚀 Production geolocation services fully mounted successfully.");
+    
+    return { success: true, message: "Tracking started successfully." };
+
+  } catch (err: any) {
     console.error("Failed to safely scale geolocation engine:", err?.message || err);
     
-    // Check if the error is related to hardware capabilities or disabled GPS
     const errorMsg = err?.message || "";
-    if (
-      errorMsg.includes("hardware tracking capabilities") || 
-      errorMsg.includes("hardware GPS configuration is disabled")
-    ) {
+    if (errorMsg.includes("settings") || errorMsg.includes("disabled") || errorMsg.includes("capabilities")) {
       return {
         success: false,
         errorType: "HARDWARE_DISABLED",
-        message: "Please enable GPS/location services on your device and ensure your simulator simulates a location."
+        message: "Please turn on device location services.",
       };
     }
 
-    if (errorMsg.includes("denied")) {
-      return {
-        success: false,
-        errorType: "PERMISSION_DENIED",
-        message: "Location permissions were denied. Please enable them in your device settings."
-      };
-    }
-
-    // Return generic failure instead of throwing a crash
     return { success: false, errorType: "UNKNOWN", message: errorMsg };
   }
 };
@@ -321,20 +335,14 @@ export const stopLocationTracking = async () => {
     netInfoUnsubscribe = null;
   }
 
-  // Safely clean older legacy task tracking queues if they persist in native memory
-  const isOldTaskRunning = await TaskManager.isTaskRegisteredAsync(
-    BACKGROUND_TRACKING_TASK_OLD
-  );
+  const isOldTaskRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_TRACKING_TASK_OLD);
   if (isOldTaskRunning) {
-    await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_OLD);
+    try { await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_OLD); } catch {}
   }
 
-  // Safely stop your current standard task engine setup
-  const isNewTaskRunning = await TaskManager.isTaskRegisteredAsync(
-    BACKGROUND_TRACKING_TASK_NEW
-  );
+  const isNewTaskRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_TRACKING_TASK_NEW);
   if (isNewTaskRunning) {
-    await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_NEW);
+    try { await Location.stopLocationUpdatesAsync(BACKGROUND_TRACKING_TASK_NEW); } catch {}
   }
 
   await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
@@ -348,16 +356,11 @@ export const bootstrapLocationTracker = async () => {
   try {
     const isOnlineFlag = await AsyncStorage.getItem(KEYS.TRACKING_STATUS);
     if (isOnlineFlag === "true") {
-      console.log(
-        "🔄 App restart recovery caught tracking state flag. Re-initializing engine..."
-      );
+      console.log("🔄 App restart recovery caught tracking state flag. Re-initializing engine...");
       await startLocationTracking();
     }
   } catch (err) {
-    console.error(
-      "Failed recovering geolocation task on boot state routing:",
-      err
-    );
+    console.error("Failed recovering geolocation task on boot state routing:", err);
   }
 };
 
@@ -400,13 +403,10 @@ const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.T
         return;
       }
 
-      // ♻️ Clear out older backlogged mutations first before executing the current API request
       await drainLocalQueue();
 
       const savedToken = await AsyncStorage.getItem("@secure_auth_token");
-      
       if (!savedToken) {
-        console.warn("⚠️ No saved token found in storage. Stashing update.");
         currentQueue.push(payload);
         await AsyncStorage.setItem(KEYS.FAILED_QUEUE, JSON.stringify(currentQueue));
         return;
@@ -420,19 +420,14 @@ const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.T
         load: 0,
         rating: 5,
       }, {
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json"
-        },
-        timeout: 10000 // Fast-fail threshold preventing background thread hangs
+        headers: { Authorization: authHeader, "Content-Type": "application/json" },
+        timeout: 10000 
       });
 
       await AsyncStorage.setItem(KEYS.LAST_LOCATION, JSON.stringify(coords));
-      console.log(`📍 Background sync success: ${coords.lat}, ${coords.lng}`);
 
     } catch (err: any) {
       console.warn("Headless OS Engine choked. Stashing in outbox safely.");
-      
       const rawQueue = await AsyncStorage.getItem(KEYS.FAILED_QUEUE);
       const currentQueue = rawQueue ? JSON.parse(rawQueue) : [];
       currentQueue.push(payload);
@@ -441,8 +436,5 @@ const sharedHeadlessLocationEngineRunner = async ({ data, error }: TaskManager.T
   }
 };
 
-// =========================================================================
-// REGISTRATION
-// =========================================================================
 TaskManager.defineTask(BACKGROUND_TRACKING_TASK_OLD, sharedHeadlessLocationEngineRunner);
 TaskManager.defineTask(BACKGROUND_TRACKING_TASK_NEW, sharedHeadlessLocationEngineRunner);
