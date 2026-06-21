@@ -132,11 +132,22 @@ export default function AgentDashboard() {
     });
   };
 
+  // UPDATED: Catch tracking failure object response cleanly instead of crashing
   const handleOnlineToggle = async (value: boolean) => {
     setToggling(true);
     try {
       if (value) {
-        await goOnline();
+        const response = await goOnline();
+        
+        // If your tracking initialization returned a failed hardware payload
+        if (response && response.success === false) {
+          Alert.alert(
+            "Location Required", 
+            response.message || "Please enable location services on your device to go online."
+          );
+          setToggling(false);
+          return;
+        }
       } else {
         await goOffline();
       }
@@ -269,7 +280,6 @@ export default function AgentDashboard() {
     }
   };
 
-  // ADDED: Handles declining a live client match
   const declineRequest = async () => {
     try {
       const user = auth.currentUser;
