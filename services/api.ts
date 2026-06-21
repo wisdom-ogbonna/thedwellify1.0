@@ -3,7 +3,7 @@ import { auth } from "../config/firebase";
 
 // ✅ Create Axios instance
 export const API = axios.create({
-  baseURL: "https://126f-102-90-98-216.ngrok-free.app/api",
+  baseURL: "https://dwellify-backend-bq39.onrender.com/api",
   timeout: 120000,
 });
 
