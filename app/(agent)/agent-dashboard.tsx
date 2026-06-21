@@ -132,14 +132,29 @@ export default function AgentDashboard() {
     });
   };
 
-  // UPDATED: Catch tracking failure object response cleanly instead of crashing
+// UPDATED: Added a status validation guard before allowing toggles
   const handleOnlineToggle = async (value: boolean) => {
+    const status = agentStatus?.toLowerCase();
+
+    // 🔒 SAFETY GATE: Intercept if the account isn't approved/active yet
+    if (value && (status === "suspended" || status === "pending" || !status || status === "offline")) {
+      // Allow passing through if status is 'offline' but they are approved
+      if (status === "offline") {
+         // Proceed to allow going online
+      } else {
+        Alert.alert(
+          "Account Restrictions",
+          "Your agent registration is currently undergoing review or requires an outstanding payment update."
+        );
+        return;
+      }
+    }
+
     setToggling(true);
     try {
       if (value) {
         const response = await goOnline();
         
-        // If your tracking initialization returned a failed hardware payload
         if (response && response.success === false) {
           Alert.alert(
             "Location Required", 

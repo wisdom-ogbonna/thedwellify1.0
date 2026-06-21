@@ -382,7 +382,7 @@ const sharedHeadlessLocationEngineRunner = async ({
   error,
 }: TaskManager.TaskManagerTaskBody<any>) => {
   if (error) {
-    console.error("TaskManager task error caught:", error.message);
+    console.log("TaskManager task error caught:", error.message);
     return;
   }
 

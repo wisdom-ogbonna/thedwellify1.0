@@ -11,37 +11,47 @@ import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
 
+
 export default function RoleScreen() {
-  const { setUserRole, checkProfile } = useAuth();
+const { login, setUserRole, checkProfile } = useAuth();
   const { colors } = useTheme();
   const [loading, setLoading] = useState<"agent" | "client" | null>(null);
 
-  const selectRole = async (role: "agent" | "client") => {
-    try {
-      setLoading(role);
-      const res = await API.post("/role/assign", { role });
-      if (!res?.data?.success) throw new Error("Role assignment failed");
+const selectRole = async (selectedRole: "agent" | "client") => {
+  try {
+    setLoading(selectedRole);
+    
+    // Normalize string to lowercase
+    const normalizedRole = selectedRole.toLowerCase() as "agent" | "client";
+    
+    // 1. Assign role metadata via custom Backend API endpoint
+    const res = await API.post("/role/assign", { role: normalizedRole });
+    if (!res?.data?.success) throw new Error("Role assignment failed");
 
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser) throw new Error("Session lost.");
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) throw new Error("Session lost.");
 
-      await firebaseUser.getIdToken(true);
-      const tokenResult = await firebaseUser.getIdTokenResult();
-      const roleFromClaims = tokenResult.claims.role as
-        | "agent"
-        | "client"
-        | undefined;
+    // 2. Force token structural update refresh to pull down fresh custom claims
+    await firebaseUser.getIdToken(true);
+    const tokenResult = await firebaseUser.getIdTokenResult();
+    const roleFromClaims = tokenResult.claims.role as "agent" | "client" | undefined;
 
-      if (!roleFromClaims) throw new Error("Role not found in token.");
+    if (!roleFromClaims) throw new Error("Role validation mapping not found in token.");
 
-      await setUserRole(roleFromClaims);
-      await checkProfile(roleFromClaims);
-    } catch (err: any) {
-      Alert.alert("Error", err?.response?.data?.error || "Assignment failed");
-    } finally {
-      setLoading(null);
-    }
-  };
+    // 3. Hand off control to the updated context engine 
+    await login({
+      uid: firebaseUser.uid,
+      phone: firebaseUser.phoneNumber || "",
+      role: roleFromClaims,
+    });
+    
+  } catch (err: any) {
+    console.log("Role Selection Error Debug:", err);
+    Alert.alert("Error", err?.response?.data?.error || err.message || "Assignment failed");
+  } finally {
+    setLoading(null);
+  }
+};
 
   return (
     <View
