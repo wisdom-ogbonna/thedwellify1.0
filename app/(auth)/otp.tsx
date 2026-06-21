@@ -17,6 +17,7 @@ import { OtpInput } from "react-native-otp-entry";
 import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function OtpScreen() {
   const params = useLocalSearchParams();
@@ -34,55 +35,51 @@ export default function OtpScreen() {
   /* =========================
      VERIFY OTP LOGIC
   ========================= */
-  const verifyOTP = async () => {
-    if (!isValid) return;
+const verifyOTP = async () => {
+  if (!isValid) return;
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      // 🔐 Step 1: Verify OTP with backend
-      const res = await API.post("/otp/verify", {
-        phone_number: phone,
-        pin_id: pinId,
-        pin: otp,
-      });
+    // 🔐 Step 1: Verify OTP with backend
+    const res = await API.post("/otp/verify", {
+      phone_number: phone,
+      pin_id: pinId,
+      pin: otp,
+    });
 
-      const { firebaseToken } = res.data;
-      if (!firebaseToken) throw new Error("Invalid server response");
+    // Extract firebaseToken AND role directly from backend response
+    const { firebaseToken, role: backendRole } = res.data; 
+    if (!firebaseToken) throw new Error("Invalid server response");
 
-      // 🔐 Step 2: Sign in to Firebase
-      await signInWithCustomToken(auth, firebaseToken);
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser) throw new Error("Authentication failed. Try again.");
-
-      // 🔥 Step 3: Get fresh token + claims
-      const tokenResult = await firebaseUser.getIdTokenResult(true);
-      const roleFromClaims = tokenResult.claims.role as
-        | "agent"
-        | "client"
-        | undefined;
-
-      // 🔥 Step 4: Update app state
-      await login({
-        uid: firebaseUser.uid,
-        phone: firebaseUser.phoneNumber || phone,
-      });
-
-      // 🔥 Step 5: Handle role
-      if (roleFromClaims) {
-        await setUserRole(roleFromClaims);
-        checkProfile(roleFromClaims);
-      }
-    } catch (err: any) {
-      console.log("OTP Error:", err?.response || err);
-      Alert.alert(
-        "Verification Failed",
-        err?.response?.data?.error || err.message || "Something went wrong.",
-      );
-    } finally {
-      setLoading(false);
+    // 🔐 Step 2: Set the role state on disk BEFORE signing in 
+    // This guarantees onAuthStateChanged reads the correct value if it races
+    if (backendRole) {
+      await AsyncStorage.setItem("role", backendRole); 
     }
-  };
+
+    // 🔐 Step 3: Sign in to Firebase
+    await signInWithCustomToken(auth, firebaseToken);
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) throw new Error("Authentication failed. Try again.");
+
+    // 🔐 Step 4: Pass everything into your updated unified login context
+    await login({
+      uid: firebaseUser.uid,
+      phone: firebaseUser.phoneNumber || phone,
+      role: backendRole, // Pass it here
+    });
+
+  } catch (err: any) {
+    console.log("OTP Error:", err?.response || err);
+    Alert.alert(
+      "Verification Failed",
+      err?.response?.data?.error || err.message || "Something went wrong.",
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView

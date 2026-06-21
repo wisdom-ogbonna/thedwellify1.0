@@ -29,7 +29,12 @@ type AuthContextType = {
   loading: boolean;
   isOnline: boolean;
 
-  login: (data: { uid: string; phone?: string }) => Promise<void>;
+  // 🔽 UPDATE THIS LINE to accept the role argument
+  login: (data: {
+    uid: string;
+    phone?: string;
+    role: RoleType | null;
+  }) => Promise<void>;
   setUserRole: (role: RoleType) => Promise<void>;
   checkProfile: (roleParam?: RoleType) => Promise<void>;
   logout: () => Promise<void>;
@@ -83,7 +88,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(userData);
 
             // Fetch structural storage tracking rules
-            const storedStatus = await AsyncStorage.getItem(KEYS.TRACKING_STATUS);
+            const storedStatus = await AsyncStorage.getItem(
+              KEYS.TRACKING_STATUS
+            );
             const userWantsOnline = storedStatus === "true";
 
             const storedRole = await AsyncStorage.getItem(KEYS.ROLE);
@@ -93,14 +100,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               setRole(roleValue);
               await checkProfile(roleValue);
 
-              // AUTOMATED BACKGROUND AGENT RESTART RECOVERY STATE HANDSHAKE
+              // 🔄 AUTOMATED BACKGROUND AGENT RESTART RECOVERY STATE HANDSHAKE
               if (roleValue === "agent" && userWantsOnline) {
                 try {
-                  console.log("🔄 Recovery engine starting tracker module setup...");
+                  console.log(
+                    "🔄 Recovery engine starting tracker module setup..."
+                  );
                   await bootstrapLocationTracker();
                   setIsOnline(true);
-                } catch (bootstrapErr) {
-                  console.error("❌ Recovery bootstrap trace error:", bootstrapErr);
+                } catch (bootstrapErr: any) {
+                  // ✅ FIX: Catch the backend rejection safely here so it doesn't throw globally!
+                  console.log(
+                    "⚠️ Background recovery blocked by backend status checks:",
+                    bootstrapErr?.response?.data || bootstrapErr.message
+                  );
                   setIsOnline(false);
                   await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
                 }
@@ -131,10 +144,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   /* =========================================================================
      LOGIN PROXY HANDLER
      ========================================================================= */
-  const login = async ({ uid, phone }: { uid: string; phone?: string }) => {
-    setUser({ uid, phone });
-    setRole(null);
-    setIsVerified(false);
+  const login = async ({
+    uid,
+    phone,
+    role: initialRole,
+  }: {
+    uid: string;
+    phone?: string;
+    role: RoleType | null;
+  }) => {
+    try {
+      setLoading(true); // 🔒 Lock navigation logic matching while updating
+      setUser({ uid, phone });
+
+      if (initialRole) {
+        await AsyncStorage.setItem(KEYS.ROLE, initialRole);
+        setRole(initialRole);
+        // Wait for backend validation to complete entirely while still loading
+        await checkProfile(initialRole);
+      } else {
+        await AsyncStorage.removeItem(KEYS.ROLE);
+        setRole(null);
+        setIsVerified(false);
+      }
+    } catch (error) {
+      console.error("Login initialization update failed:", error);
+    } finally {
+      setLoading(false); // 🔓 Release navigation safely once all states match perfectly
+    }
   };
 
   /* =========================================================================
@@ -162,15 +199,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsVerified(true);
     } catch (error: any) {
       const status = error?.response?.status;
+      const errorMessage = error?.response?.data?.error;
+
       if (status === 401) {
         await logout();
         return;
       }
-      if (status === 404) {
+
+      // ✅ FIX: If the profile is missing (404) OR they haven't completed setup (400),
+      // mark them cleanly as unverified so the router sends them to the setup screen.
+      if (
+        status === 404 ||
+        (status === 400 && errorMessage === "User is not an agent")
+      ) {
         setIsVerified(false);
         return;
       }
-      console.log("Profile verification handle error:", error?.response || error);
+
+      console.log(
+        "Profile verification handle error:",
+        error?.response || error
+      );
       setIsVerified(false);
     }
   };
@@ -178,13 +227,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   /* =========================================================================
      ONLINE DISPATCH PIPELINE (GEOLOCATION PRIMING ENTRYWAY)
      ========================================================================= */
-  const goOnline = async () => {
+/* =========================================================================
+     ONLINE DISPATCH PIPELINE (GEOLOCATION PRIMING ENTRYWAY)
+     ========================================================================= */
+const goOnline = async () => {
     try {
       // 1. Hardware Availability Pipeline Validations
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
         Alert.alert("GPS Disabled", "Please activate device hardware location features before connecting.");
-        throw new Error("Hardware tracking capabilities disabled.");
+        return { success: false, message: "GPS is disabled." };
       }
 
       // 2. Foreground Permissions Guard
@@ -196,10 +248,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (status !== "granted") {
         Alert.alert("Permission Required", "Foreground location configurations are missing.");
-        return;
+        return { success: false, message: "Foreground permission denied." };
       }
 
-      // 3. Background Isolation Verification Guard (Ensures compliance for app tracking in pocket)
+      // 3. Background Isolation Verification Guard
       const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
       if (bgStatus !== "granted") {
         const bgRes = await Location.requestBackgroundPermissionsAsync();
@@ -208,11 +260,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             "Background Location Required",
             "Change location settings selection to 'Allow all the time' to continue working when backgrounded."
           );
-          return;
+          return { success: false, message: "Background permission denied." };
         }
       }
 
-      // 4. Fetch seed positioning data to map baseline coordinate states cleanly
+      // 4. Fetch seed positioning data
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -231,11 +283,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsOnline(true);
       await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "true");
       console.log("✅ Agent registration online pipeline validated cleanly.");
+      
+      return { success: true };
     } catch (error: any) {
-      console.error("❌ Error setting state online:", error?.response?.data || error);
+      console.log("❌ Error setting state online:", error?.response?.data || error);
+      
       setIsOnline(false);
       await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
-      throw error;
+      
+      // ✅ FIX: Extract the backend message if available to return to the component
+      const backendError = error?.response?.data?.error || "Your account is pending approval or suspended";
+      
+      return { 
+        success: false, 
+        message: backendError 
+      };
+      
+      // 🚫 REMOVED: throw error;  <--- This was causing the unhandled crash
     }
   };
 
@@ -250,7 +314,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         await API.post("/location/offline");
       } catch (apiErr) {
-        console.warn("⚠️ Remote logout update offline alert skipped (likely offline):", apiErr);
+        console.warn(
+          "⚠️ Remote logout update offline alert skipped (likely offline):",
+          apiErr
+        );
       }
 
       setIsOnline(false);
@@ -268,7 +335,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await goOffline();
       await signOut(auth);
-      
+
       // Wipe structural disk profiles to ensure clean states on subsequent logins
       await AsyncStorage.removeItem(KEYS.ROLE);
       await AsyncStorage.removeItem(KEYS.TRACKING_STATUS);

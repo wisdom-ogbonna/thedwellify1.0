@@ -52,14 +52,14 @@ function AppContent() {
             params: {
               requestId: String(data.requestId),
               agentId: String(data.agentId),
-               clientName: String(data.clientName),
+              clientName: String(data.clientName),
               propertyType: String(data.propertyType),
               lat: String(data.lat),
               lng: String(data.lng),
             },
           });
         }
-      },
+      }
     );
 
     return () => {
@@ -92,7 +92,9 @@ function AppContent() {
 
     /* 🧩 ROLE NOT SELECTED */
     if (!role) {
-      if (!inAuth) {
+      // ✅ FIX: Check if the screen is specifically NOT the selection screen,
+      // instead of checking the whole group folder.
+      if (screen !== "role") {
         router.replace("/role");
       }
       return;
