@@ -16,10 +16,10 @@ import {
   Animated,
   Dimensions,
   Easing,
-  TouchableOpacity,
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { auth } from "../../config/firebase";
@@ -36,6 +36,7 @@ export default function AgentDashboard() {
 
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [btnLoading, setBtnLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [paying, setPaying] = useState<boolean>(false);
   const [toggling, setToggling] = useState<boolean>(false);
@@ -112,7 +113,6 @@ export default function AgentDashboard() {
     };
   }, [currentStatusText]);
 
-  // Optimized Sidebar Toggle to handle state immediately
   const toggleSidebar = () => {
     const toOpen = !isSidebarVisible;
 
@@ -132,19 +132,25 @@ export default function AgentDashboard() {
     });
   };
 
-// UPDATED: Added a status validation guard before allowing toggles
+  // UPDATED: Added a status validation guard before allowing toggles
   const handleOnlineToggle = async (value: boolean) => {
     const status = agentStatus?.toLowerCase();
 
     // 🔒 SAFETY GATE: Intercept if the account isn't approved/active yet
-    if (value && (status === "suspended" || status === "pending" || !status || status === "offline")) {
+    if (
+      value &&
+      (status === "suspended" ||
+        status === "pending" ||
+        !status ||
+        status === "offline")
+    ) {
       // Allow passing through if status is 'offline' but they are approved
       if (status === "offline") {
-         // Proceed to allow going online
+        // Proceed to allow going online
       } else {
         Alert.alert(
           "Account Restrictions",
-          "Your agent registration is currently undergoing review or requires an outstanding payment update."
+          "Your agent registration is currently undergoing review or requires an outstanding payment update.",
         );
         return;
       }
@@ -154,11 +160,12 @@ export default function AgentDashboard() {
     try {
       if (value) {
         const response = await goOnline();
-        
+
         if (response && response.success === false) {
           Alert.alert(
-            "Location Required", 
-            response.message || "Please enable location services on your device to go online."
+            "Location Required",
+            response.message ||
+              "Please enable location services on your device to go online.",
           );
           setToggling(false);
           return;
@@ -222,6 +229,45 @@ export default function AgentDashboard() {
       }
 
       try {
+        const response: any = await API.get("/agent/requests", authHeader);
+
+        const requestsList = response?.requests || response?.data?.requests;
+
+        if (
+          requestsList &&
+          Array.isArray(requestsList) &&
+          requestsList.length > 0
+        ) {
+          const sorted = [...requestsList].sort(
+            (a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0),
+          );
+          const latestItem = sorted[0];
+
+          if (
+            latestItem &&
+            latestItem.status === "pending" &&
+            latestItem.requestId
+          ) {
+            router.push({
+              pathname: "/(utilities)/requests",
+              params: {
+                requestId: String(latestItem.requestId),
+                agentId: String(latestItem.agentId),
+                clientName: String(latestItem.clientName),
+                propertyType: String(latestItem.propertyType),
+                lat: String(latestItem.lat),
+                lng: String(latestItem.lng),
+              },
+            });
+          }
+        } else {
+          console.log("No requests found in the response.");
+        }
+      } catch (err: any) {
+        console.error("Request Check failed:", err);
+      }
+
+      try {
         const profileRes = await API.get("/agent/profile", authHeader);
         const profileData = profileRes.data;
         setAgentName(
@@ -252,6 +298,7 @@ export default function AgentDashboard() {
   };
 
   const startInspection = async () => {
+    setBtnLoading(true);
     try {
       const user = auth.currentUser;
       if (!user || !requestId) {
@@ -266,6 +313,7 @@ export default function AgentDashboard() {
       });
 
       setMessage("Inspection started successfully");
+      setBtnLoading(false);
       await fetchAgentStatus();
     } catch (err: any) {
       console.log("Start inspection error:", err.response?.data || err.message);
@@ -274,6 +322,7 @@ export default function AgentDashboard() {
   };
 
   const endInspection = async () => {
+    setBtnLoading(true);
     try {
       const user = auth.currentUser;
       if (!user || !requestId) {
@@ -288,6 +337,7 @@ export default function AgentDashboard() {
       });
 
       setMessage("Inspection completed successfully");
+      setBtnLoading(false);
       await fetchAgentStatus();
     } catch (err: any) {
       console.log("End inspection error:", err.response?.data || err.message);
@@ -528,7 +578,7 @@ export default function AgentDashboard() {
                 {agentStatus === "suspended"
                   ? "Your matches are blocked until outstanding requests are paid."
                   : isWorkflowActive
-                    ? "You have an ongoing inspection or request. Complete your ongoing inspection to update your status."
+                    ? "Please confirm availability of property before starting inspection, note: you can't be rematched while on inspection"
                     : isOnline
                       ? "Your agent profile is currently live and waiting for requests."
                       : "Your agent profile is currently offline.\nYou can go online to start receiving requests."}
@@ -620,16 +670,21 @@ export default function AgentDashboard() {
                       justifyContent: "center",
                       alignItems: "center",
                     }}
+                    disabled={btnLoading}
                   >
-                    <Text
-                      style={{
-                        color: "#ffffff",
-                        fontWeight: "600",
-                        textAlign: "center",
-                      }}
-                    >
-                      Start Inspection
-                    </Text>
+                    {btnLoading ? (
+                      <ActivityIndicator color="#ffffff" size={25} />
+                    ) : (
+                      <Text
+                        style={{
+                          color: "#ffffff",
+                          fontWeight: "600",
+                          textAlign: "center",
+                        }}
+                      >
+                        Start Inspection
+                      </Text>
+                    )}
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -680,16 +735,21 @@ export default function AgentDashboard() {
                     borderRadius: 12,
                     width: "85%",
                   }}
+                  disabled={btnLoading}
                 >
-                  <Text
-                    style={{
-                      color: "#fff",
-                      textAlign: "center",
-                      fontWeight: "600",
-                    }}
-                  >
-                    End Inspection
-                  </Text>
+                  {btnLoading ? (
+                    <ActivityIndicator color="#ffffff" size={25} />
+                  ) : (
+                    <Text
+                      style={{
+                        color: "#fff",
+                        textAlign: "center",
+                        fontWeight: "600",
+                      }}
+                    >
+                      End Inspection
+                    </Text>
+                  )}
                 </TouchableOpacity>
               )}
             </>

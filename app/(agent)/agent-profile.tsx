@@ -1,5 +1,6 @@
 import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
+import { ArrowRight, ClipboardText } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,10 +15,9 @@ import {
   useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
-// Imported CaretLeft to match your design vocabulary
-import { ArrowRight, ClipboardText } from "phosphor-react-native";
 
 export default function ProfileScreen() {
   const { logout, isOnline, goOnline, goOffline } = useAuth();
@@ -40,6 +40,62 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleRequests = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      return;
+    }
+
+    const token = await user.getIdToken();
+    const authHeader = {
+      headers: { Authorization: `Bearer ${token}` },
+    };
+
+    try {
+      const response: any = await API.get("/agent/requests", authHeader);
+
+      const requestsList = response?.requests || response?.data?.requests;
+
+      if (
+        requestsList &&
+        Array.isArray(requestsList) &&
+        requestsList.length > 0
+      ) {
+        const sorted = [...requestsList].sort(
+          (a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0),
+        );
+        const latestItem = sorted[0];
+
+        if (
+          latestItem &&
+          latestItem.status === "pending" &&
+          latestItem.requestId
+        ) {
+          router.push({
+            pathname: "/(utilities)/requests",
+            params: {
+              requestId: String(latestItem.requestId),
+              agentId: String(latestItem.agentId),
+              clientName: String(latestItem.clientName),
+              propertyType: String(latestItem.propertyType),
+              lat: String(latestItem.lat),
+              lng: String(latestItem.lng),
+            },
+          });
+        } else {
+          Alert.alert(
+            "You have no requests at this moment",
+            "Please try again later!",
+          );
+        }
+      } else {
+        console.log("No requests found in the response.");
+      }
+    } catch (err: any) {
+      console.error("Request Check failed:", err);
     }
   };
 
@@ -138,7 +194,7 @@ export default function ProfileScreen() {
 
       {/* Requests Navigation Card */}
       <TouchableOpacity
-        onPress={() => router.push({ pathname: "/(utilities)/requests" })}
+        onPress={handleRequests}
         className="border-2 rounded-3xl p-6 mb-8 flex-row items-center justify-between"
         style={{
           borderColor: colors.primary,

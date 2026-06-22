@@ -59,6 +59,7 @@ export default function AgentSetupScreen() {
             flexGrow: 1,
             paddingHorizontal: 32,
             paddingVertical: 60,
+            paddingBottom: 300,
           }}
         >
           <View className="mb-12">
