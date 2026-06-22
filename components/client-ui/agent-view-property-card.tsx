@@ -39,7 +39,7 @@ const PropertyCard = ({ item }: { item: any }) => {
             </Text>
             <Text
               style={{ color: colors.text }}
-              className="text-3xl font-black tracking-tight"
+              className="text-lg font-black tracking-tight"
             >
               {item.price
                 ? new Intl.NumberFormat("en-NG", {
