@@ -25,7 +25,7 @@ const getRealAddress = async (lat: number, lng: number) => {
     const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
 
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`
     );
 
     const data = await res.json();
@@ -42,64 +42,58 @@ const getRealAddress = async (lat: number, lng: number) => {
 
 export default function RequestMatchScreen() {
   const [loading, setLoading] = useState(false);
-
   const [locationLoading, setLocationLoading] = useState(true);
-
   const [lat, setLat] = useState<number | null>(null);
-
   const [lng, setLng] = useState<number | null>(null);
-
   const [address, setAddress] = useState("");
-
   const [selectedType, setSelectedType] = useState("Hotel");
-
   const [matchData, setMatchData] = useState<any>(null);
 
   const ref = useRef<BottomSheetRefProps>(null);
-
   const mapRef = useRef<MapView>(null);
-
   const insets = useSafeAreaInsets();
 
   const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-  const SNAP_25 = -SCREEN_HEIGHT * 0.1;
-
   const SNAP_50 = -SCREEN_HEIGHT * 0.59;
 
-  const SNAP_80 = -SCREEN_HEIGHT * 0.8;
-
   const [liveData, setLiveData] = useState<any>(null);
-
   const [agentLocation, setAgentLocation] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
 
   const [requestStatus, setRequestStatus] = useState<string | null>(null);
-
   const [lastKnownLocation, setLastKnownLocation] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
 
+  // Sync last known agent coordinates safely
   useEffect(() => {
     if (agentLocation?.lat && agentLocation?.lng) {
       setLastKnownLocation(agentLocation);
     }
   }, [agentLocation]);
 
+  // Production Rule: Register the device token exactly ONCE on mount
+  useEffect(() => {
+    registerDevice();
+  }, []);
 
+  // Fetch initial position and manage structural bottom sheet offsets
   useEffect(() => {
     getLocation();
-    registerDevice();
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       ref.current?.scrollTo(SNAP_50);
     }, 100);
+
+    return () => clearTimeout(timeoutId); // Memory cleanup rule
   }, [SNAP_50]);
 
+  // Manage reactive location pulling cycles
   useEffect(() => {
+    getLiveData();
     const interval = setInterval(() => {
       getLiveData();
     }, 5000);
@@ -115,7 +109,6 @@ export default function RequestMatchScreen() {
 
       if (status !== "granted") {
         const res = await Location.requestForegroundPermissionsAsync();
-
         status = res.status;
       }
 
@@ -140,15 +133,13 @@ export default function RequestMatchScreen() {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         },
-        800,
+        800
       );
 
       const realAddress = await getRealAddress(latitude, longitude);
-
       setAddress(realAddress);
     } catch (error) {
       Alert.alert("Error", "Failed to get location");
-
       console.error(error);
     } finally {
       setLocationLoading(false);
@@ -180,12 +171,10 @@ export default function RequestMatchScreen() {
       console.log("REQUEST ID:", requestId);
 
       const matchRes = await API.post(`/match/match/${requestId}`);
-
       const { request, agent } = matchRes.data;
 
       if (!agent) {
         Alert.alert("No Agent", "Try again later");
-
         return;
       }
 
@@ -195,11 +184,10 @@ export default function RequestMatchScreen() {
       });
     } catch (error: any) {
       console.log(error);
-
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "There's currently no agents available with this property. Please try again later.",
+          "There's currently no agents available with this property. Please try again later."
       );
     } finally {
       setLoading(false);
@@ -209,11 +197,9 @@ export default function RequestMatchScreen() {
   const getLiveData = async () => {
     try {
       const res = await API.get("/client/live");
-
       const data = res.data;
 
       setLiveData(data);
-
       setRequestStatus(data.requestStatus);
 
       if (data.agent) {
@@ -233,18 +219,12 @@ export default function RequestMatchScreen() {
     clientLat: number,
     clientLng: number,
     agentLat: number,
-    agentLng: number,
+    agentLng: number
   ) => {
     mapRef.current?.fitToCoordinates(
       [
-        {
-          latitude: clientLat,
-          longitude: clientLng,
-        },
-        {
-          latitude: agentLat,
-          longitude: agentLng,
-        },
+        { latitude: clientLat, longitude: clientLng },
+        { latitude: agentLat, longitude: agentLng },
       ],
       {
         edgePadding: {
@@ -254,9 +234,10 @@ export default function RequestMatchScreen() {
           left: 100,
         },
         animated: true,
-      },
+      }
     );
   };
+
   return (
     <View className="flex-1 relative bg-[#0B0F1A]">
       <MapView
@@ -288,10 +269,7 @@ export default function RequestMatchScreen() {
       >
         {lat && lng && (
           <Marker
-            coordinate={{
-              latitude: lat,
-              longitude: lng,
-            }}
+            coordinate={{ latitude: lat, longitude: lng }}
             title="You"
             description="Your Location"
           />
@@ -300,20 +278,20 @@ export default function RequestMatchScreen() {
         {liveData?.agent &&
           (agentLocation?.lat ?? lastKnownLocation?.lat) != null &&
           (agentLocation?.lng ?? lastKnownLocation?.lng) != null && (
-          <Marker
-            coordinate={{
-              latitude: agentLocation?.lat ?? lastKnownLocation!.lat,
-              longitude: agentLocation?.lng ?? lastKnownLocation!.lng,
-            }}
-            title={liveData.agent.name}
-            description={
-              agentLocation?.lat
-                ? liveData.agent.phone
-                : `${liveData.agent.phone} (Offline - Last Known Location)`
-            }
-            pinColor={agentLocation?.lat ? "green" : "orange"}
-          />
-        )}
+            <Marker
+              coordinate={{
+                latitude: agentLocation?.lat ?? lastKnownLocation!.lat,
+                longitude: agentLocation?.lng ?? lastKnownLocation!.lng,
+              }}
+              title={liveData.agent.name}
+              description={
+                agentLocation?.lat
+                  ? liveData.agent.phone
+                  : `${liveData.agent.phone} (Offline - Last Known Location)`
+              }
+              pinColor={agentLocation?.lat ? "green" : "orange"}
+            />
+          )}
       </MapView>
 
       <BottomSheet ref={ref}>
