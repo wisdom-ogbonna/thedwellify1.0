@@ -3,10 +3,9 @@ import { auth } from "../config/firebase";
 
 // ✅ Create Axios instance
 export const API = axios.create({
-  baseURL: "https://dwellify-backend-bq39.onrender.com/api",
+  baseURL: "https://656e-102-90-103-127.ngrok-free.app/api",
   timeout: 120000,
 });
-
 
 // ✅ Attach Firebase token automatically (AUTO REFRESH 🔥)
 API.interceptors.request.use(
