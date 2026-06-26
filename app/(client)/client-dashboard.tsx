@@ -6,6 +6,7 @@ import { Alert, Dimensions, ScrollView, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { API } from "../../services/api";
+import { registerDevice } from "../../services/device";
 
 const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet"];
 
@@ -88,8 +89,10 @@ export default function RequestMatchScreen() {
     }
   }, [agentLocation]);
 
+
   useEffect(() => {
     getLocation();
+    registerDevice();
 
     setTimeout(() => {
       ref.current?.scrollTo(SNAP_50);
