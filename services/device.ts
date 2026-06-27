@@ -1,51 +1,37 @@
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
-import * as Application from "expo-application";
-import { Platform } from "react-native";
-import { auth } from "../config/firebase"; 
+import { auth } from "../config/firebase"; // your firebase config
 import { API } from "./api";
 
 export const registerDevice = async () => {
   try {
     const user = auth.currentUser;
-    if (!user) return;
 
-    // 1. Check & Request Notification Permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    
-    if (finalStatus !== "granted") {
-      console.log("Notification permissions denied.");
+    if (!user) {
+      console.log("No logged in user");
       return;
     }
 
-    // 2. Fetch the PURE NATIVE device token (FCM for Android, APNs for iOS)
-    const deviceTokenResponse = await Notifications.getDevicePushTokenAsync();
-    const nativeToken = deviceTokenResponse.data; 
-
-    // 3. Generate a robust unique device ID
-    const uniqueDeviceId = Platform.OS === 'android' 
-      ? Application.androidId 
-      : await Application.getIosIdForVendorAsync() || Device.osInternalBuildId;
-
-    if (!uniqueDeviceId) return;
-
+    // Firebase token
     const firebaseToken = await user.getIdToken();
+
+    // Expo notification token
+    const expoToken = (await Notifications.getExpoPushTokenAsync()).data;
 
     await API.post(
       "/device",
       {
-        deviceId: uniqueDeviceId,
-        platform: Platform.OS, 
-        pushToken: nativeToken, // Raw FCM Token sent here
-        deviceName: Device.modelName || "Unknown Device",
-        osVersion: Device.osVersion || "Unknown OS",
-        appVersion: Application.nativeApplicationVersion || "1.0.0",
+        deviceId: Device.osInternalBuildId,
+
+        platform: Device.osName,
+
+        pushToken: expoToken,
+
+        deviceName: Device.modelName,
+
+        osVersion: Device.osVersion,
+
+        appVersion: Device.osBuildId,
       },
       {
         headers: {
@@ -54,8 +40,8 @@ export const registerDevice = async () => {
       }
     );
 
-    console.log("Device synchronized successfully with raw FCM token.");
+    console.log("Device registered");
   } catch (error) {
-    console.error("Device registration error:", error);
+    console.log("Device registration error", error);
   }
 };
