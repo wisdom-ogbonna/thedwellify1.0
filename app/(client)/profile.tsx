@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useRouter } from "expo-router";
+import { CaretLeftIcon } from "phosphor-react-native";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
 
@@ -26,6 +28,7 @@ export default function ClientDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
 
   /**
    * =========================
@@ -197,19 +200,25 @@ export default function ClientDashboard() {
         paddingHorizontal: 24,
       }}
     >
+      <View className="flex-row items-center mb-5" style={{ gap: 12 }}>
+        <TouchableOpacity
+          className="p-1 -ml-1"
+          onPress={() => router.push("/(client)/client-dashboard")}
+        >
+          <CaretLeftIcon size={28} color={colors.text} />
+        </TouchableOpacity>
+
+        <Text
+          style={{ color: colors.text }}
+          className="text-2xl font-black tracking-tight"
+        >
+          PROFILE
+        </Text>
+      </View>
       {/* =========================
           HEADER
       ========================= */}
       <View className="mb-12">
-        <Text
-          className="text-xs font-bold uppercase tracking-widest opacity-40"
-          style={{
-            color: colors.text,
-          }}
-        >
-          Dashboard
-        </Text>
-
         <Text
           className="text-5xl font-black tracking-tight mt-2"
           style={{

@@ -858,15 +858,27 @@ export default function AgentDashboard() {
         onOverlayPress={toggleSidebar}
         name={agentName}
         items={[
-          { label: "Dashboard", icon: "House" },
+          {
+            label: "Home",
+            icon: "House",
+            isActive: true,
+            onPress: () => router.push("/(agent)/agent-dashboard"),
+          },
           {
             label: "My Listings",
             icon: "Buildings",
             onPress: () => router.push("/(product)/products"),
           },
-          { label: "Earnings", icon: "CurrencyNgn" },
-          { label: "Settings", icon: "Gear" },
-          { label: "Logout", icon: "SignOut" },
+          {
+            label: "Map",
+            icon: "MapTrifold",
+            onPress: () => router.push("/(agent)/map"),
+          },
+          {
+            label: "Profile",
+            icon: "User",
+            onPress: () => router.push("/(agent)/agent-profile"),
+          },
         ]}
         rating={5}
       />
