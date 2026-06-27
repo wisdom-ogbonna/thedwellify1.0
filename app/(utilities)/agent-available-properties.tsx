@@ -90,7 +90,7 @@ const AvailableProperties: React.FC = () => {
   }, [filteredProperties]);
 
   const handleBooking = () => {
-    router.push({
+    router.replace({
       pathname: "/(utilities)/client-payment-start-inspection",
       params: {
         agentId,
