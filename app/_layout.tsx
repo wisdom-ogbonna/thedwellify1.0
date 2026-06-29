@@ -46,9 +46,10 @@ function AppContent() {
       (response) => {
         const data = response.notification.request.content.data;
 
-        if (data?.requestId) {
+        if (data?.type === "incoming_request") {
           router.push({
             pathname: "/requests",
+
             params: {
               requestId: String(data.requestId),
               agentId: String(data.agentId),
@@ -56,6 +57,20 @@ function AppContent() {
               propertyType: String(data.propertyType),
               lat: String(data.lat),
               lng: String(data.lng),
+            },
+          });
+        }
+
+        if (data?.type === "NEW_PROPERTY") {
+          router.push({
+            pathname: "/",
+
+            params: {
+              productId: String(data.productId),
+              title: String(data.title),
+              propertyType: String(data.propertyType),
+              location: String(data.location),
+              price: String(data.price),
             },
           });
         }

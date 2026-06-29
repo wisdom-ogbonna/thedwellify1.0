@@ -1,5 +1,4 @@
 import { useTheme } from "@/hooks/use-theme";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useImperativeHandle } from "react";
 import { Dimensions, View } from "react-native";
@@ -31,9 +30,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
 
     const insets = useSafeAreaInsets();
 
-    const tabBarHeight = useBottomTabBarHeight();
-
-    const usableHeight = SCREEN_HEIGHT - tabBarHeight - insets.bottom;
+    const usableHeight = SCREEN_HEIGHT -  insets.bottom;
 
     const SNAP_POINTS = {
       CLOSED: -usableHeight * 0.11,
@@ -180,7 +177,7 @@ const BottomSheet = React.forwardRef<BottomSheetRefProps, BottomSheetProps>(
           <Animated.View
             style={[
               {
-                height: usableHeight + tabBarHeight,
+                height: usableHeight,
                 top: SCREEN_HEIGHT,
                 backgroundColor: colors.background,
                 shadowColor: colors.text,
