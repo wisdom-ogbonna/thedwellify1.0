@@ -4,6 +4,8 @@ import BottomSheet, {
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard"; // ✅ Added Clipboard support
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import { CaretLeftIcon } from "phosphor-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -27,6 +29,7 @@ export default function MapScreen() {
   const [location, setLocation] = useState(null);
   const [agent, setAgent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const ref = useRef<BottomSheetRefProps>(null);
 
@@ -169,6 +172,21 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View className="fixed top-1 left-1 z-50 flex-row items-center px-5 py-5" style={{ gap: 12 }}>
+        <TouchableOpacity
+          className="p-1 -ml-1"
+          onPress={() => router.push("/(agent)/agent-dashboard")}
+        >
+          <CaretLeftIcon size={28} color={"#000000"} />
+        </TouchableOpacity>
+
+        <Text
+          style={{ color: "#000000" }}
+          className="text-2xl font-black tracking-tight"
+        >
+          MAP
+        </Text>
+      </View>
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -282,7 +300,10 @@ export default function MapScreen() {
                   )}
                 </View>
                 <Text style={styles.infoValue}>
-                  {agent?.status === "matched" || agent?.status === "inspection_started" ? agent?.clientName || "Client" : "Not matched yet"}
+                  {agent?.status === "matched" ||
+                  agent?.status === "inspection_started"
+                    ? agent?.clientName || "Client"
+                    : "Not matched yet"}
                 </Text>
               </TouchableOpacity>
 
@@ -300,7 +321,10 @@ export default function MapScreen() {
                   )}
                 </View>
                 <Text style={styles.infoValue}>
-                {agent?.status === "matched" || agent?.status === "inspection_started" ? agent?.clientPhone || "Client" : "Not matched yet"}
+                  {agent?.status === "matched" ||
+                  agent?.status === "inspection_started"
+                    ? agent?.clientPhone || "Client"
+                    : "Not matched yet"}
                 </Text>
               </TouchableOpacity>
             </ScrollView>

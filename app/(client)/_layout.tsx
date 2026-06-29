@@ -1,59 +1,12 @@
-import { useTheme } from "@/hooks/use-theme";
-import { Tabs } from "expo-router";
-import { Clock, House, User } from "phosphor-react-native";
+import { Stack } from "expo-router";
 import React from "react";
 
 export default function ClientLayout() {
-  const { colors } = useTheme();
-
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.placeholder,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 75,
-          paddingBottom: 20,
-          paddingTop: 10,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "700",
-          letterSpacing: 1,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="client-dashboard"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <House size={24} color={color} weight={focused ? "fill" : "regular"} />
-          ),
-        }}
-      />
-        <Tabs.Screen
-          name="history"
-          options={{
-            title: "History",
-            tabBarIcon: ({ color, focused }) => (
-              <Clock size={24} color={color} weight={focused ? "fill" : "regular"} />
-            ),
-          }}
-        />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, focused }) => (
-            <User size={24} color={color} weight={focused ? "fill" : "regular"} />
-          ),
-        }}
-      />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="client-dashboard" />
+      <Stack.Screen name="history" />
+      <Stack.Screen name="profile" />
+    </Stack>
   );
 }

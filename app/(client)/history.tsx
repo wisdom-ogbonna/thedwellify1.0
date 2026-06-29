@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import {
   ArrowClockwiseIcon,
   CalendarBlankIcon,
+  CaretLeftIcon,
   ClockIcon,
   MapPinIcon,
 } from "phosphor-react-native";
@@ -365,6 +366,18 @@ export default function HistoryScreen() {
       className="flex-1 pt-8"
       style={{ backgroundColor: colors.background }}
     >
+      <View className="flex-row items-center px-5 py-5" style={{ gap: 12 }}>
+        <TouchableOpacity className="p-1 -ml-1" onPress={() => router.push("/(client)/client-dashboard")}>
+          <CaretLeftIcon size={28} color={colors.text} />
+        </TouchableOpacity>
+
+        <Text
+          style={{ color: colors.text }}
+          className="text-2xl font-black tracking-tight"
+        >
+          HISTORY
+        </Text>
+      </View>
       <FlatList
         data={filteredHistory}
         keyExtractor={(item) => item.id}

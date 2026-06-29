@@ -1,6 +1,10 @@
 import { useTheme } from "@/hooks/use-theme";
 import { useRouter } from "expo-router";
-import { ArrowRight, ClipboardText } from "phosphor-react-native";
+import {
+  ArrowRight,
+  CaretLeftIcon,
+  ClipboardText,
+} from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -174,6 +178,21 @@ export default function ProfileScreen() {
         />
       }
     >
+      <View className="flex-row items-center mb-5" style={{ gap: 12 }}>
+        <TouchableOpacity
+          className="p-1 -ml-1"
+          onPress={() => router.push("/(agent)/agent-dashboard")}
+        >
+          <CaretLeftIcon size={28} color={colors.text} />
+        </TouchableOpacity>
+
+        <Text
+          style={{ color: colors.text }}
+          className="text-2xl font-black tracking-tight"
+        >
+          PROFILE
+        </Text>
+      </View>
       {/* Header */}
       <View className="mb-10 flex-row justify-between items-start">
         <View>
