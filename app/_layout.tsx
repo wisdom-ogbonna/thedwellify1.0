@@ -5,17 +5,21 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
+import * as NavigationBar from "expo-navigation-bar";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, useColorScheme, View } from "react-native";
+import { useColorScheme, AppState } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import "../global.css";
 import { setupNotifications } from "../services/notification";
 import OfflineModal from "./(utilities)/offlineModal";
+
+SplashScreen.preventAutoHideAsync();
 
 /* =========================
    NOTIFICATIONS CONFIG
@@ -74,7 +78,7 @@ function AppContent() {
             },
           });
         }
-      }
+      },
     );
 
     return () => {
@@ -100,7 +104,7 @@ function AppContent() {
     /* 🚫 NOT LOGGED IN */
     if (!user) {
       if (!inAuth) {
-        router.replace("/phone");
+        router.replace("/onboarding");
       }
       return;
     }
@@ -141,28 +145,53 @@ function AppContent() {
     }
   }, [user, role, isVerified, loading, segments, router]);
 
+  /* Hide android navigation buttons and auto-fade them out */
+  useEffect(() => {
+    const configureNavBar = async () => {
+      try {
+        await NavigationBar.setPositionAsync("absolute");
+
+        await NavigationBar.setBehaviorAsync("inset-swipe");
+
+        await NavigationBar.setVisibilityAsync("hidden");
+      } catch (error) {
+        console.warn("NavigationBar layout configuration failed:", error);
+      }
+    };
+
+    configureNavBar();
+
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        configureNavBar();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [segments]);
+
   /* =========================
-     LOADING SCREEN
-  ========================= */
+   SPLASH SCREEN MANAGEMENT
+========================= */
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync().catch((err) => {
+        console.warn("Splash screen hide error:", err);
+      });
+    }
+  }, [loading]);
+
   if (loading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: colors.background,
-        }}
-      >
-        <ActivityIndicator size="large" color={colors.text} />
-      </View>
-    );
+    return null;
   }
 
   return (
     <>
       <StatusBar style={isDark ? "light" : "dark"} animated={true} />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false, animation: "fade" }} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 const COLORS = {
   // 1. Primary: Dark Blue (#2A69AC) / (#2B6CB0)
-  PRIMARY: "#2A69AC",
+  PRIMARY: "#0055CE",
   LIGHTER_PRIMARY: "#3D82C4", // For gradients/hover states
   DARKER_PRIMARY: "#1D4E80", // For active states/contrast text
   // 2 & 3. Black/White (Swappable for Dark/Light Mode)
