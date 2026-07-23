@@ -1,3 +1,4 @@
+import { useTheme } from "@/hooks/use-theme";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -37,8 +38,8 @@ const SLIDES: Slide[] = [
   {
     id: "1",
     headlineParts: [
-      { text: "Find your perfect ", accent: false },
-      { text: "home", accent: true },
+      { text: "Find your ", accent: false },
+      { text: "perfect home", accent: true },
       { text: ", anywhere.", accent: false },
     ],
     subtitle:
@@ -74,6 +75,7 @@ const SLIDES: Slide[] = [
 
 // ─── PROGRESS DASHES ───────────────────────────────────────────────────────────
 function ProgressDashes({ activeIndex }: { activeIndex: number }) {
+  const { colors } = useTheme();
   return (
     <View className="flex-row items-center justify-center gap-x-2 w-full px-5 absolute top-14 z-20">
       {SLIDES.map((_, i) => {
@@ -84,7 +86,7 @@ function ProgressDashes({ activeIndex }: { activeIndex: number }) {
             style={[
               styles.dash,
               {
-                backgroundColor: isActive ? "#0888FF" : "#E2E8F0",
+                backgroundColor: isActive ? colors.primary : "#E2E8F0",
                 flex: 1,
               },
             ]}
@@ -97,17 +99,18 @@ function ProgressDashes({ activeIndex }: { activeIndex: number }) {
 
 // ─── TERMS FOOTER ─────────────────────────────────────────────────────────────
 function TermsText() {
+  const { colors } = useTheme();
   return (
     <Text
-      style={styles.termsText}
-      className="text-center text-[12px] text-slate-400 px-6 mt-6 leading-relaxed"
+      style={styles.termsText && { color: colors.text }}
+      className="text-center text-[12px] px-6 mt-7 mb-7 leading-relaxed"
     >
       {"By continuing, you accept our "}
-      <Text className="text-slate-700 font-semibold underline">
+      <Text className="text-slate-600 font-semibold underline">
         Terms & Conditions
       </Text>
       {" and "}
-      <Text className="text-slate-700 font-semibold underline">
+      <Text className="text-slate-600 font-semibold underline">
         Privacy Policy.
       </Text>
     </Text>
@@ -119,6 +122,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
+  const { colors } = useTheme();
 
   const [fontsLoaded] = useFonts({
     Sora_600SemiBold,
@@ -149,8 +153,8 @@ export default function OnboardingScreen() {
 
   const renderItem = ({ item }: ListRenderItemInfo<Slide>) => (
     <View
-      style={{ width: SCREEN_W }}
-      className="flex-1 justify-between bg-white pt-24 pb-8"
+      style={{ width: SCREEN_W, backgroundColor: colors.background }}
+      className="flex-1 justify-between pt-24 pb-8"
     >
       {/* Visual Asset Section */}
       <View className="flex-1 justify-center items-center px-6">
@@ -170,7 +174,7 @@ export default function OnboardingScreen() {
           {item.headlineParts.map((part, i) => (
             <Text
               key={i}
-              style={{ color: part.accent ? "#0888FF" : "#0B0B0E" }}
+              style={{ color: part.accent ? colors.primary : colors.text }}
             >
               {part.text}
             </Text>
@@ -178,7 +182,7 @@ export default function OnboardingScreen() {
         </Text>
 
         <Text
-          style={styles.subtitle}
+          style={styles.subtitle && { color: colors.text, marginVertical: 12, }}
           className="text-center text-slate-500 mb-8 px-2"
         >
           {item.subtitle}
@@ -187,8 +191,8 @@ export default function OnboardingScreen() {
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.9}
-          className="bg-[#0888FF] rounded-2xl h-14 items-center justify-center w-full"
-          style={styles.button}
+          className="rounded-2xl h-14 items-center justify-center w-full"
+          style={styles.button && { backgroundColor: colors.primary }}
         >
           <Text style={styles.buttonText} className="text-white text-[16px]">
             {item.cta}
@@ -201,7 +205,10 @@ export default function OnboardingScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView
+      style={{ backgroundColor: colors.background }}
+      className="flex-1"
+    >
       <StatusBar style="dark" />
       {/* Global Interactive Elements over Slides */}
       <ProgressDashes activeIndex={activeIndex} />
@@ -264,7 +271,7 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   button: {
-    shadowColor: "#0888FF",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,

@@ -1,0 +1,551 @@
+import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/hooks/use-theme";
+import { API } from "@/services/api";
+import { useRouter } from "expo-router";
+import {
+  Calendar,
+  ChevronRight,
+  CreditCard,
+  Heart,
+  LifeBuoy,
+  LogOut,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  Trash2Icon,
+} from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Appearance,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
+export default function PremiumProfileScreen() {
+  const { isDark } = useTheme();
+  const { logout } = useAuth();
+
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const scheme = useColorScheme();
+
+  const [profile, setProfile] = useState<any>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+
+  /**
+   * =========================
+   * FETCH PROFILE
+   * =========================
+   */
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+
+      const res = await API.get("/client/profile");
+
+      setProfile(res.data);
+    } catch (error) {
+      console.log("PROFILE ERROR:", error);
+
+      Alert.alert("Error", "Failed to load your profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  /**
+   * =========================
+   * THEME SWITCHER
+   * =========================
+   */
+  const handleThemeChange = () => {
+    Alert.alert(
+      "Appearance Settings",
+      "Choose your preferred theme",
+      [
+        {
+          text: "Light Mode",
+          onPress: () => Appearance.setColorScheme("light"),
+        },
+        {
+          text: "Dark Mode",
+          onPress: () => Appearance.setColorScheme("dark"),
+        },
+        {
+          text: "System Default",
+          onPress: () => Appearance.setColorScheme(null),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Confirm Sign out",
+      "This action will log you out of your account. You will need to sign in again to access your account.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: async () => await logout(),
+        },
+      ],
+      {
+        cancelable: true,
+      },
+    );
+  };
+
+  /**
+   * =========================
+   * DELETE ACCOUNT
+   * =========================
+   */
+  const deleteAccount = async () => {
+    try {
+      setDeleting(true);
+
+      const res = await API.delete("/client/delete");
+
+      Alert.alert(
+        "Account Deleted",
+        res.data?.message || "Your account was deleted successfully.",
+        [
+          {
+            text: "OK",
+            onPress: async () => {
+              await logout();
+            },
+          },
+        ],
+      );
+    } catch (error: any) {
+      console.log("DELETE ACCOUNT ERROR:", error);
+
+      const message =
+        error?.response?.data?.error ||
+        "Unable to delete account. Please try again.";
+
+      Alert.alert("Delete Failed", message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /**
+   * =========================
+   * CONFIRM DELETE
+   * =========================
+   */
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This action permanently removes your account and all associated data. This cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: deleteAccount,
+        },
+      ],
+      {
+        cancelable: true,
+      },
+    );
+  };
+
+  /**
+   * =========================
+   * LOADING
+   * =========================
+   */
+  if (loading) {
+    return (
+      <View
+        className="flex-1 justify-center items-center"
+        style={{
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  const themeOptions = [
+    { id: "light", label: "Light", icon: Sun },
+    { id: "dark", label: "Dark", icon: Moon },
+    { id: "system", label: "System", icon: Monitor },
+  ] as const;
+
+  const textColor = isDark ? "#FFFFFF" : "#0F172A";
+  const subTextColor = isDark ? "#94A3B8" : "#64748B";
+  const cardBg = isDark ? "#111111" : "#F8FAFC";
+  const borderColor = isDark ? "#222222" : "#F1F5F9";
+
+  return (
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: isDark ? "#000000" : "#FFFFFF" }}
+      edges={["top"]}
+    >
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* User Profile Info Card Area */}
+        <View
+          style={{
+            alignItems: "center",
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 24,
+            borderBottomWidth: 1,
+            borderBottomColor: borderColor,
+          }}
+        >
+          <View className="relative">
+            <Image
+              source={{
+                uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
+              }}
+              className="w-24 h-24 rounded-full border-2 border-blue-600"
+            />
+            <View
+              style={{
+                position: "absolute",
+                bottom: 0,
+                right: 4,
+                backgroundColor: "#22C55E",
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                borderWidth: 2,
+                borderColor: isDark ? "#000000" : "#FFFFFF",
+              }}
+            />
+          </View>
+
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "900",
+              color: textColor,
+              marginTop: 16,
+              letterSpacing: -0.5,
+            }}
+          >
+            {profile?.name?.split(" ")[0] || "User"}
+          </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: "700",
+              color: "#2563EB",
+              marginTop: 4,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+            }}
+          >
+            DWELLIFY USER • Joined 2023
+          </Text>
+
+          <TouchableOpacity className="mt-4 bg-blue-600 px-6 py-2 rounded-full shadow-none">
+            <Text className="text-white text-xs font-bold">Edit Profile</Text>
+          </TouchableOpacity>
+
+          {/* User Metrics Boxes */}
+          <View className="flex-row justify-center space-x-4 mt-6 w-full">
+            <View
+              style={{
+                backgroundColor: cardBg,
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                alignItems: "center",
+                flex: 1,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}
+            >
+              <Text
+                style={{ fontSize: 20, fontWeight: "900", color: textColor }}
+              >
+                12
+              </Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: "500",
+                  color: subTextColor,
+                  marginTop: 2,
+                }}
+              >
+                Saved Homes
+              </Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: cardBg,
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                alignItems: "center",
+                flex: 1,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}
+            >
+              <Text
+                style={{ fontSize: 20, fontWeight: "900", color: textColor }}
+              >
+                3
+              </Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: "500",
+                  color: subTextColor,
+                  marginTop: 2,
+                }}
+              >
+                Scheduled
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* System Theme Switcher Controls Menu */}
+        <View className="px-5 pt-5 pb-2">
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: "900",
+              color: subTextColor,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+              marginBottom: 12,
+              marginLeft: 5,
+            }}
+          >
+            Theme Configuration
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 16,
+              padding: 6,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+          >
+            <View
+              className="border rounded-3xl w-full p-6 mb-8 flex-row items-center justify-between"
+              style={{
+                borderColor: colors.placeholder,
+              }}
+            >
+              <View>
+                <Text
+                  className="text-xs uppercase tracking-widest opacity-40 font-bold mb-1"
+                  style={{
+                    color: colors.text,
+                  }}
+                >
+                  Theme
+                </Text>
+
+                <Text
+                  className="font-semibold text-base"
+                  style={{
+                    color: colors.text,
+                  }}
+                >
+                  {scheme === "dark"
+                    ? "Dark Mode"
+                    : scheme === "light"
+                      ? "Light Mode"
+                      : "System Default"}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleThemeChange}
+                className="px-5 py-3 rounded-full"
+                style={{
+                  backgroundColor: colors.primary + "15",
+                }}
+              >
+                <Text
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{
+                    color: colors.primary,
+                  }}
+                >
+                  Change
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Settings Navigation List Groups */}
+        <View className="px-5 mt-4">
+          <ProfileMenuRow
+            Icon={Heart}
+            title="Saved Properties"
+            badge="12"
+            iconColor="#3B82F6"
+          />
+          <ProfileMenuRow
+            Icon={Calendar}
+            title="Scheduled Visits"
+            iconColor="#10B981"
+          />
+          <ProfileMenuRow
+            Icon={CreditCard}
+            title="Payment Methods"
+            iconColor="#6366F1"
+          />
+          <ProfileMenuRow
+            Icon={LifeBuoy}
+            title="Support & Help"
+            iconColor="#F59E0B"
+          />
+          <ProfileMenuRow
+            Icon={Settings}
+            title="Settings"
+            iconColor="#64748B"
+          />
+          <ProfileMenuRow
+            Icon={LogOut}
+            title="Logout"
+            onPress={handleLogout}
+            isDanger={true}
+            iconColor="#EF4444"
+          />
+          <ProfileMenuRow
+            Icon={Trash2Icon}
+            title="Delete Account"
+            onPress={handleDeleteAccount}
+            isDanger={true}
+            iconColor="#EF4444"
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+interface RowProps {
+  Icon: any;
+  title: string;
+  badge?: string;
+  isDanger?: boolean;
+  onPress?: () => void;
+  iconColor: string;
+}
+
+function ProfileMenuRow({
+  Icon,
+  title,
+  badge,
+  isDanger = false,
+  iconColor,
+  onPress,
+}: RowProps) {
+  const { isDark } = useTheme();
+  const textColor = isDanger ? "#EF4444" : isDark ? "#FFFFFF" : "#0F172A";
+  const borderColor = isDark ? "#1F2937" : "#F1F5F9";
+  const rowIconBg = isDark ? "#111111" : "#F8FAFC";
+
+  return (
+    <TouchableOpacity
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "between",
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: borderColor,
+      }}
+      onPress={onPress}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            backgroundColor: rowIconBg,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: isDark ? "#222" : "#F1F5F9",
+          }}
+        >
+          <Icon size={18} color={isDanger ? "#EF4444" : iconColor} />
+        </View>
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: "600",
+            color: textColor,
+            marginLeft: 16,
+          }}
+        >
+          {title}
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {badge && (
+          <View
+            style={{
+              backgroundColor: isDark ? "rgba(37,99,235,0.2)" : "#EFF6FF",
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 6,
+              marginRight: 8,
+            }}
+          >
+            <Text style={{ fontSize: 10, fontWeight: "700", color: "#2563EB" }}>
+              {badge}
+            </Text>
+          </View>
+        )}
+        <ChevronRight size={16} color={isDark ? "#4B5563" : "#CBD5E1"} />
+      </View>
+    </TouchableOpacity>
+  );
+}

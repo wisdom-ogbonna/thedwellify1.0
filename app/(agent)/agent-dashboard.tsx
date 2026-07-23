@@ -1,887 +1,463 @@
-import Sidebar from "@/components/sidebar/sidebar";
-import { useTheme } from "@react-navigation/native";
-import { useFocusEffect, useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import {
-  ArrowClockwiseIcon,
-  BellIcon,
-  BroadcastIcon,
-  ClockIcon,
-  HeadphonesIcon,
-} from "phosphor-react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import BottomSheet, {
+  BottomSheetRefProps,
+} from "@/components/short-bottom-sheet";
+import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard"; // ✅ Added Clipboard support
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import { CaretLeftIcon } from "phosphor-react-native";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   Dimensions,
-  Easing,
-  RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { auth } from "../../config/firebase";
-import { useAuth } from "../../context/AuthContext";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { API } from "../../services/api";
-import { registerForPushNotificationsAsync } from "../../services/notification";
 
-const { width } = Dimensions.get("screen");
+const { width, height } = Dimensions.get("screen");
 
-export default function AgentDashboard() {
-  const { colors } = useTheme();
+export default function MapScreen() {
+  const mapRef = useRef(null);
+
+  const [location, setLocation] = useState(null);
+  const [agent, setAgent] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { isOnline, goOnline, goOffline } = useAuth();
 
-  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [btnLoading, setBtnLoading] = useState<boolean>(false);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [paying, setPaying] = useState<boolean>(false);
-  const [toggling, setToggling] = useState<boolean>(false);
-  const [agentName, setAgentName] = useState<string>("Agent");
-  const [agentStatus, setAgentStatus] = useState<string | null>(null);
-  const [message, setMessage] = useState<string>("");
-  const [requestId, setRequestId] = useState<string | null>(null);
+  const ref = useRef<BottomSheetRefProps>(null);
 
-  const sidebarX = useRef(new Animated.Value(-width)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const SNAP_25 = -height * 0.2;
+  const SNAP_50 = -height * 0.5;
+  const SNAP_80 = -height * 0.8;
 
-  const isWorkflowActive = [
-    "suspended",
-    "matched",
-    "inspection_started",
-  ].includes(agentStatus || "");
-
-  const getFormattedStatusLabel = () => {
-    switch (agentStatus) {
-      case "suspended":
-        return "Account Suspended";
-      case "matched":
-        return "Matched with Client";
-      case "inspection_started":
-        return "Inspection in Progress";
-      case "online":
-      case "active":
-        return "Available & Active";
-      case "offline":
-        return "Agent is Offline";
-      default:
-        return "Active";
-    }
-  };
-
-  const getHeaderStatusText = () => {
-    if (toggling) return "UPDATING...";
-    if (agentStatus === "suspended") return "SUSPENDED";
-    if (agentStatus === "matched") return "MATCHED";
-    if (agentStatus === "inspection_started") return "INSPECTION";
-    return isOnline ? "ONLINE" : "OFFLINE";
-  };
-
-  const currentStatusText = getHeaderStatusText();
-
-  // Handle Online-Only Pulse Animation
+  /**
+   * ✅ Get user location
+   */
   useEffect(() => {
-    let animation: Animated.CompositeAnimation | null = null;
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
 
-    if (currentStatusText === "ONLINE") {
-      animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.15,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      animation.start();
-    } else {
-      pulseAnim.setValue(1);
-    }
+        if (status !== "granted") {
+          setLoading(false);
+          return;
+        }
 
-    return () => {
-      if (animation) animation.stop();
-    };
-  }, [currentStatusText]);
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
 
-  const toggleSidebar = () => {
-    const toOpen = !isSidebarVisible;
-
-    if (toOpen) {
-      setIsSidebarVisible(true);
-    }
-
-    Animated.timing(sidebarX, {
-      toValue: toOpen ? 0 : -width,
-      duration: 250,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
-      if (!toOpen) {
-        setIsSidebarVisible(false);
+        setLocation(loc.coords);
+      } catch (err) {
+        console.log("Location error:", err);
+      } finally {
+        setLoading(false);
       }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (ref.current) {
+        ref.current.scrollTo(SNAP_50);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [SNAP_50]);
+
+  /**
+   * ✅ Fetch live agent data
+   */
+  const fetchAgent = async () => {
+    try {
+      const res = await API.get("/agent/live");
+      setAgent(res.data);
+    } catch (err) {
+      console.log("Agent fetch error:", err.response?.data || err.message);
+    }
+  };
+
+  /**
+   * ✅ Auto refresh
+   */
+  useEffect(() => {
+    fetchAgent();
+
+    const interval = setInterval(() => {
+      fetchAgent();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /**
+   * ✅ Focus map on current user
+   */
+  const focusUser = () => {
+    if (!location || !mapRef.current) return;
+
+    mapRef.current.animateToRegion(
+      {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      600,
+    );
+  };
+
+  /**
+   * ✅ Auto fit markers
+   */
+  useEffect(() => {
+    if (!mapRef.current || !agent?.isOnline || !agent?.lat || !agent?.lng) {
+      return;
+    }
+
+    const coordinates = [
+      {
+        latitude: agent.lat,
+        longitude: agent.lng,
+      },
+    ];
+
+    if (
+      (agent?.status === "matched" || agent?.status === "inspection_started") &&
+      agent?.clientLat &&
+      agent?.clientLng
+    ) {
+      coordinates.push({
+        latitude: agent.clientLat,
+        longitude: agent.clientLng,
+      });
+    }
+
+    mapRef.current.fitToCoordinates(coordinates, {
+      edgePadding: {
+        top: 120,
+        right: 80,
+        bottom: 120,
+        left: 80,
+      },
+      animated: true,
+    });
+  }, [agent]);
+
+  /**
+   * ✅ Handle Copy Action Method
+   */
+  const copyToClipboard = async (text: string, title: string) => {
+    if (!text || text.includes("Not matched yet")) return;
+    await Clipboard.setStringAsync(text);
+    Alert.alert("Copied", `${title} copied to clipboard!`, [{ text: "OK" }], {
+      cancelable: true,
     });
   };
 
-  // UPDATED: Added a status validation guard before allowing toggles
-  const handleOnlineToggle = async (value: boolean) => {
-    const status = agentStatus?.toLowerCase();
-
-    // 🔒 SAFETY GATE: Intercept if the account isn't approved/active yet
-    if (
-      value &&
-      (status === "suspended" ||
-        status === "pending" ||
-        !status ||
-        status === "offline")
-    ) {
-      // Allow passing through if status is 'offline' but they are approved
-      if (status === "offline") {
-        // Proceed to allow going online
-      } else {
-        Alert.alert(
-          "Account Restrictions",
-          "Your agent registration is currently undergoing review or requires an outstanding payment update.",
-        );
-        return;
-      }
-    }
-
-    setToggling(true);
-    try {
-      if (value) {
-        const response = await goOnline();
-
-        if (response && response.success === false) {
-          Alert.alert(
-            "Location Required",
-            response.message ||
-              "Please enable location services on your device to go online.",
-          );
-          setToggling(false);
-          return;
-        }
-      } else {
-        await goOffline();
-      }
-      await fetchAgentStatus();
-    } catch (e) {
-      Alert.alert("Error", "Status update failed");
-    } finally {
-      setToggling(false);
-    }
-  };
-
-  const syncPushToken = async () => {
-    try {
-      const pushData = await registerForPushNotificationsAsync();
-      if (!pushData) return;
-
-      const payload = {
-        platform: pushData.platform,
-        ...(pushData.platform === "ios"
-          ? { expoPushToken: pushData.token }
-          : { fcmToken: pushData.token }),
-      };
-
-      await API.post("/notifications/agent", payload);
-    } catch (err) {
-      console.log("Push token sync failed:", err);
-    }
-  };
-
-  const fetchAgentStatus = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        setMessage("User not authenticated");
-        return;
-      }
-
-      const token = await user.getIdToken();
-      const authHeader = {
-        headers: { Authorization: `Bearer ${token}` },
-      };
-
-      const liveRes = await API.get("/agent/live", authHeader);
-      const agent = liveRes.data;
-
-      setAgentStatus(agent.status);
-      setRequestId(agent.requestId || null);
-
-      if (agent.status === "suspended") {
-        setMessage("Your account is suspended. Please make payment.");
-      } else if (agent.status === "matched") {
-        setMessage("You have an active request. Start inspection.");
-      } else if (agent.status === "inspection_started") {
-        setMessage("Inspection in progress. Complete it when done.");
-      } else {
-        setMessage("Agent is active");
-      }
-
-      try {
-        const response: any = await API.get("/agent/requests", authHeader);
-
-        const requestsList = response?.requests || response?.data?.requests;
-
-        if (
-          requestsList &&
-          Array.isArray(requestsList) &&
-          requestsList.length > 0
-        ) {
-          const sorted = [...requestsList].sort(
-            (a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0),
-          );
-          const latestItem = sorted[0];
-
-          if (
-            latestItem &&
-            latestItem.status === "pending" &&
-            latestItem.requestId
-          ) {
-            router.push({
-              pathname: "/(utilities)/requests",
-              params: {
-                requestId: String(latestItem.requestId),
-                agentId: String(latestItem.agentId),
-                clientName: String(latestItem.clientName),
-                propertyType: String(latestItem.propertyType),
-                lat: String(latestItem.lat),
-                lng: String(latestItem.lng),
-              },
-            });
-          }
-        } else {
-          console.log("No requests found in the response.");
-        }
-      } catch (err: any) {
-        console.error("Request Check failed:", err);
-      }
-
-      try {
-        const profileRes = await API.get("/agent/profile", authHeader);
-        const profileData = profileRes.data;
-        setAgentName(
-          profileData?.name ? profileData.name.split(" ")[0] : "Agent",
-        );
-      } catch (profileErr) {
-        console.log("Profile fetch failed:", profileErr);
-      }
-    } catch (err: any) {
-      console.log("Fetch agent error:", err.response?.data || err.message);
-      setMessage("Failed to fetch agent status");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsSidebarVisible(false);
-      fetchAgentStatus();
-    }, []),
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchAgentStatus();
-  };
-
-  const startInspection = async () => {
-    setBtnLoading(true);
-    try {
-      const user = auth.currentUser;
-      if (!user || !requestId) {
-        Alert.alert("Error", "Missing active request ID");
-        return;
-      }
-
-      setMessage("Starting inspection...");
-      await API.post("/client/inspection/start", {
-        requestId,
-        agentId: user.uid,
-      });
-
-      setMessage("Inspection started successfully");
-      setBtnLoading(false);
-      await fetchAgentStatus();
-    } catch (err: any) {
-      console.log("Start inspection error:", err.response?.data || err.message);
-      setMessage("Failed to start inspection");
-    }
-  };
-
-  const endInspection = async () => {
-    setBtnLoading(true);
-    try {
-      const user = auth.currentUser;
-      if (!user || !requestId) {
-        Alert.alert("Error", "Missing active request ID");
-        return;
-      }
-
-      setMessage("Ending inspection...");
-      await API.post("/client/inspection/end", {
-        requestId,
-        agentId: user.uid,
-      });
-
-      setMessage("Inspection completed successfully");
-      setBtnLoading(false);
-      await fetchAgentStatus();
-    } catch (err: any) {
-      console.log("End inspection error:", err.response?.data || err.message);
-      setMessage("Failed to end inspection");
-    }
-  };
-
-  const declineRequest = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user || !requestId) return;
-
-      setLoading(true);
-      await API.post("/client/cancel-match", {
-        requestId,
-        reason: "Agent is busy",
-      });
-
-      Alert.alert("Declined", "Request has been successfully declined.");
-      await fetchAgentStatus();
-    } catch (err: any) {
-      console.log("Decline error:", err.response?.data || err.message);
-      Alert.alert("Error", "Failed to decline the request.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const triggerPayment = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        Alert.alert("Error", "User not authenticated");
-        return;
-      }
-
-      setPaying(true);
-      setMessage("Redirecting to payment...");
-
-      const res = await API.post("/payment/pay", { agentId: user.uid });
-      const { paymentUrl } = res.data;
-
-      if (!paymentUrl) {
-        setMessage("No payment link received");
-        return;
-      }
-
-      await WebBrowser.openBrowserAsync(paymentUrl);
-      setMessage("Checking payment status...");
-
-      setTimeout(() => {
-        fetchAgentStatus();
-      }, 3000);
-    } catch (err: any) {
-      console.log("Payment error:", err.response?.data || err.message);
-      setMessage("Payment failed. Try again.");
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  useEffect(() => {
-    syncPushToken();
-    fetchAgentStatus();
-  }, []);
+  if (loading) {
+    return (
+      <View style={[styles.loader, { backgroundColor: "#0B0F1A" }]}>
+        <ActivityIndicator size="large" color="#ffffff" />
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 30 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
+    <SafeAreaView style={styles.container}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        provider={PROVIDER_GOOGLE}
+        showsUserLocation
+        showsCompass={false}
+        showsMyLocationButton={false}
+        initialRegion={{
+          latitude: location?.latitude || 4.8156,
+          longitude: location?.longitude || 7.0498,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
       >
-        {/* Header Section */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: 20,
-            paddingTop: 60,
-            paddingBottom: 20,
-          }}
-        >
-          <TouchableOpacity
-            onPress={toggleSidebar}
-            style={{ padding: 10, borderRadius: 8 }}
-          >
-            <View
-              style={{
-                width: 22,
-                height: 2.5,
-                backgroundColor: colors.text,
-                marginBottom: 4,
-                borderRadius: 2,
-              }}
-            />
-            <View
-              style={{
-                width: 16,
-                height: 2.5,
-                backgroundColor: colors.text,
-                marginBottom: 4,
-                borderRadius: 2,
-              }}
-            />
-            <View
-              style={{
-                width: 22,
-                height: 2.5,
-                backgroundColor: colors.text,
-                borderRadius: 2,
-              }}
-            />
-          </TouchableOpacity>
-
-          <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>
-            Welcome, {agentName}
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => router.push("/notifications")}
-            style={{ padding: 10, borderRadius: 8 }}
-          >
-            <BellIcon size={20} color={colors.text} weight="bold" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Status Card Body */}
-        <View
-          style={{
-            backgroundColor: colors.background,
-            borderColor: colors.border,
-            borderWidth: 1,
-            borderRadius: 24,
-            marginHorizontal: 20,
-            paddingVertical: 30,
-            paddingHorizontal: 20,
-            alignItems: "center",
-            shadowColor: colors.text,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 1,
-          }}
-        >
-          {loading ? (
-            <ActivityIndicator size="large" color={colors.primary} />
-          ) : (
-            <>
-              <Animated.View
-                style={{
-                  backgroundColor: colors.border,
-                  padding: 12,
-                  borderRadius: 30,
-                  marginBottom: 15,
-                  transform: [{ scale: pulseAnim }],
-                }}
-              >
-                <BroadcastIcon size={25} color={colors.primary} weight="bold" />
-              </Animated.View>
-
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: colors.text,
-                  textTransform: "uppercase",
-                  opacity: 0.7,
-                  letterSpacing: 0.5,
-                }}
-              >
-                Agent Status
-              </Text>
-
-              <Text
-                style={{
-                  fontSize: 32,
-                  fontWeight: "800",
-                  color: colors.primary,
-                  marginVertical: 8,
-                }}
-              >
-                {currentStatusText}
-              </Text>
-
-              {/* Status Pill Badge */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: colors.border,
-                  paddingHorizontal: 14,
-                  paddingVertical: 5,
-                  borderRadius: 15,
-                  marginBottom: 30,
-                }}
-              >
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor:
-                      agentStatus === "suspended" ? "#ef4444" : colors.primary,
-                    marginRight: 6,
-                  }}
-                />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: colors.text,
-                  }}
-                >
-                  {getFormattedStatusLabel()}
-                </Text>
-              </View>
-
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.text,
-                  textAlign: "center",
-                  marginBottom: 30,
-                  lineHeight: 18,
-                  paddingHorizontal: 10,
-                  opacity: 0.8,
-                }}
-              >
-                {agentStatus === "suspended"
-                  ? "Your matches are blocked until outstanding requests are paid."
-                  : isWorkflowActive
-                    ? "Please confirm availability of property before starting inspection, note: you can't be rematched while on inspection"
-                    : isOnline
-                      ? "Your agent profile is currently live and waiting for requests."
-                      : "Your agent profile is currently offline.\nYou can go online to start receiving requests."}
-              </Text>
-
-              {toggling ? (
-                <View
-                  style={{
-                    backgroundColor: colors.border,
-                    paddingVertical: 14,
-                    borderRadius: 12,
-                    width: "85%",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <ActivityIndicator
-                    color={isOnline ? colors.text : colors.primary}
-                    size="small"
-                  />
-                </View>
-              ) : !isWorkflowActive ? (
-                <TouchableOpacity
-                  onPress={() => handleOnlineToggle(!isOnline)}
-                  disabled={toggling}
-                  style={{
-                    backgroundColor: isOnline ? "red" : colors.primary,
-                    paddingVertical: 14,
-                    borderRadius: 12,
-                    width: "85%",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "#ffffff",
-                      fontWeight: "600",
-                      fontSize: 15,
-                    }}
-                  >
-                    {isOnline ? "Go Offline" : "Go Online"}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {/* Core Workflow Actions */}
-              {agentStatus === "suspended" && (
-                <TouchableOpacity
-                  onPress={triggerPayment}
-                  disabled={paying}
-                  style={{
-                    backgroundColor: paying ? colors.border : colors.text,
-                    padding: 14,
-                    borderRadius: 12,
-                    width: "85%",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  {paying ? (
-                    <ActivityIndicator color={colors.background} size="small" />
-                  ) : (
-                    <Text
-                      style={{ color: colors.background, fontWeight: "600" }}
-                    >
-                      Pay Now
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              {/* Matched State Action Section */}
-              {agentStatus === "matched" && requestId && (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    width: "85%",
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={startInspection}
-                    style={{
-                      backgroundColor: colors.primary,
-                      padding: 14,
-                      borderRadius: 12,
-                      flex: 0.48,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                    disabled={btnLoading}
-                  >
-                    {btnLoading ? (
-                      <ActivityIndicator color="#ffffff" size={25} />
-                    ) : (
-                      <Text
-                        style={{
-                          color: "#ffffff",
-                          fontWeight: "600",
-                          textAlign: "center",
-                        }}
-                      >
-                        Start Inspection
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      Alert.alert(
-                        "Decline Request",
-                        "Are you sure you want to decline this assignment?",
-                        [
-                          { text: "Cancel", style: "cancel" },
-                          {
-                            text: "Decline",
-                            style: "destructive",
-                            onPress: declineRequest,
-                          },
-                        ],
-                      )
-                    }
-                    style={{
-                      backgroundColor: colors.background,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      padding: 14,
-                      borderRadius: 12,
-                      flex: 0.48,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: colors.text,
-                        fontWeight: "600",
-                        textAlign: "center",
-                      }}
-                    >
-                      Decline
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {agentStatus === "inspection_started" && requestId && (
-                <TouchableOpacity
-                  onPress={endInspection}
-                  style={{
-                    backgroundColor: "#2563eb",
-                    padding: 14,
-                    borderRadius: 12,
-                    width: "85%",
-                  }}
-                  disabled={btnLoading}
-                >
-                  {btnLoading ? (
-                    <ActivityIndicator color="#ffffff" size={25} />
-                  ) : (
-                    <Text
-                      style={{
-                        color: "#fff",
-                        textAlign: "center",
-                        fontWeight: "600",
-                      }}
-                    >
-                      End Inspection
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-
-        {/* Quick Actions Panel */}
-        <View style={{ marginHorizontal: 20, marginTop: 25 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "600",
-              color: colors.text,
-              marginBottom: 15,
-              marginLeft: 5,
+        {/* ✅ AGENT MARKER */}
+        {agent?.isOnline && agent?.lat && agent?.lng && (
+          <Marker
+            coordinate={{
+              latitude: agent.lat,
+              longitude: agent.lng,
             }}
-          >
-            Quick Actions
-          </Text>
+            title="You"
+            description="Your Location"
+          />
+        )}
 
+        {/* ✅ CLIENT MARKER */}
+        {(agent?.status === "matched" ||
+          agent?.status === "inspection_started") &&
+          agent?.clientLat &&
+          agent?.clientLng && (
+            <Marker
+              coordinate={{
+                latitude: agent.clientLat,
+                longitude: agent.clientLng,
+              }}
+              title={agent.clientName}
+              description={agent.clientPhone}
+              pinColor="green"
+            />
+          )}
+      </MapView>
+
+      <TouchableOpacity style={styles.fab} onPress={focusUser}>
+        <Ionicons name="locate" size={22} color="#ffffff" />
+      </TouchableOpacity>
+
+      <View pointerEvents="box-none" style={styles.sheetOverlayContainer}>
+        <BottomSheet ref={ref}>
           <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
+            style={{ width: "100%", minHeight: 40 }}
+            onLayout={() => ref.current?.scrollTo(SNAP_50)}
           >
-            <TouchableOpacity
-              onPress={onRefresh}
-              style={{ flex: 1, alignItems: "center" }}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              bounces={false}
+              overScrollMode="never"
             >
-              <View
-                style={{
-                  backgroundColor: colors.border,
-                  padding: 16,
-                  borderRadius: 16,
-                  width: 65,
-                  height: 65,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                <ArrowClockwiseIcon color={colors.primary} size={24} />
-              </View>
-              <Text
-                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
-              >
-                Refresh Status
-              </Text>
-            </TouchableOpacity>
+              <View className="bg-[#1E293B] border border-[#334155] rounded-xl p-5 mb-4 shadow-sm">
+                {agent?.status === "matched" ||
+                agent?.status === "inspection_started" ? (
+                  <Text className="text-sm text-slate-200 font-medium leading-relaxed">
+                    You&apos;re currently matched to this client. Please call
+                    him/her now.
+                  </Text>
+                ) : (
+                  <Text className="text-sm text-slate-400 font-medium tracking-wide italic">
+                    Awaiting match...
+                  </Text>
+                )}
 
-            <TouchableOpacity style={{ flex: 1, alignItems: "center" }}>
-              <View
-                style={{
-                  backgroundColor: colors.border,
-                  padding: 16,
-                  borderRadius: 16,
-                  width: 65,
-                  height: 65,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                <HeadphonesIcon color={colors.primary} size={24} />
+                {/* Status Badge */}
+                <View className="mt-4 pt-4 border-t border-slate-700/50 flex-row items-center justify-between">
+                  <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Status
+                  </Text>
+                  <View
+                    className={`px-3 py-1 rounded-full border ${
+                      agent?.status === "matched" ||
+                      agent?.status === "inspection_started"
+                        ? "bg-emerald-500/10 border-emerald-500/30"
+                        : "bg-amber-500/10 border-amber-500/30"
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-bold font-mono uppercase tracking-tight ${
+                        agent?.status === "matched" ||
+                        agent?.status === "inspection_started"
+                          ? "text-emerald-400"
+                          : "text-amber-400"
+                      }`}
+                    >
+                      {agent?.status || "offline"}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <Text
-                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() =>
+                  copyToClipboard(agent?.clientName, "Client Name")
+                }
+                style={styles.infoCard}
               >
-                Support
-              </Text>
-            </TouchableOpacity>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.infoLabel}>Client Name</Text>
+                  {agent?.clientName && (
+                    <Ionicons name="copy-outline" size={14} color="#94A3B8" />
+                  )}
+                </View>
+                <Text style={styles.infoValue}>
+                  {agent?.status === "matched" ||
+                  agent?.status === "inspection_started"
+                    ? agent?.clientName || "Client"
+                    : "Not matched yet"}
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={{ flex: 1, alignItems: "center" }}>
-              <View
-                style={{
-                  backgroundColor: colors.border,
-                  padding: 16,
-                  borderRadius: 16,
-                  width: 65,
-                  height: 65,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() =>
+                  copyToClipboard(agent?.clientPhone, "Phone number")
+                }
+                style={styles.infoCard}
               >
-                <ClockIcon color={colors.primary} size={24} />
-              </View>
-              <Text
-                style={{ color: colors.text, fontSize: 12, fontWeight: "500" }}
-              >
-                History
-              </Text>
-            </TouchableOpacity>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.infoLabel}>Client Phone Number</Text>
+                  {agent?.clientPhone && (
+                    <Ionicons name="copy-outline" size={14} color="#94A3B8" />
+                  )}
+                </View>
+                <Text style={styles.infoValue}>
+                  {agent?.status === "matched" ||
+                  agent?.status === "inspection_started"
+                    ? agent?.clientPhone || "Client"
+                    : "Not matched yet"}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
-        </View>
-      </ScrollView>
-
-      {/* Sidebar Component */}
-      <Sidebar
-        visible={isSidebarVisible}
-        translateX={sidebarX}
-        onOverlayPress={toggleSidebar}
-        name={agentName}
-        items={[
-          {
-            label: "Home",
-            icon: "House",
-            isActive: true,
-            onPress: () => router.push("/(agent)/agent-dashboard"),
-          },
-          {
-            label: "My Listings",
-            icon: "Buildings",
-            onPress: () => router.push("/(product)/products"),
-          },
-          {
-            label: "Map",
-            icon: "MapTrifold",
-            onPress: () => router.push("/(agent)/map"),
-          },
-          {
-            label: "Profile",
-            icon: "User",
-            onPress: () => router.push("/(agent)/agent-profile"),
-          },
-        ]}
-        rating={5}
-      />
-    </View>
+        </BottomSheet>
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0B0F1A",
+  },
+
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 90,
+    backgroundColor: "#1E293B",
+    padding: 14,
+    borderRadius: 30,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+    zIndex: 5,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  sheetOverlayContainer: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 99,
+  },
+
+  scrollContent: {
+    paddingBottom: 120,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+
+  infoCard: {
+    backgroundColor: "#1E293B",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+
+  infoLabel: {
+    flex: 1,
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+
+  infoValue: {
+    fontSize: 16,
+    color: "#FFFFFF",
+    fontWeight: "500",
+  },
+
+  agentMarker: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  pulse: {
+    position: "absolute",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(37,99,235,0.25)",
+  },
+
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: "#2563eb",
+  },
+
+  agentBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 6,
+  },
+
+  clientMarker: {
+    alignItems: "center",
+  },
+
+  clientBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#111",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 6,
+  },
+
+  clientPin: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#111",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+
+  bubbleText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+});

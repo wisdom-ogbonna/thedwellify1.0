@@ -14,6 +14,7 @@ const COLORS = {
   LIGHT_GRAY: "rgba(255, 255, 255, 0.05)", // For darker text/accents
   MID_GRAY: "rgba(0, 0, 0, 0.05)",
   DARK_GRAY: "#B3B3B3", // For lighter borders/backgrounds
+  DISABLED_GRAY: "#6B6B6B", // For disabled states
 };
 
 export default COLORS;

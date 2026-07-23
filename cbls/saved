@@ -1,0 +1,217 @@
+// app/(tabs)/saved.tsx
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppTheme } from '../../context/themeContext';
+import { 
+  ChevronLeft, 
+  Search, 
+  Heart, 
+  MapPin, 
+  BedDouble, 
+  ShowerHead, 
+  Maximize, 
+  Plus, 
+  Sparkles 
+} from 'lucide-react-native';
+import { router } from 'expo-router';
+
+const savedListings = [
+  {
+    id: '1',
+    title: '3 Bedroom Luxury Apartment',
+    price: '₦45M',
+    location: 'Lekki Phase 1, Lagos',
+    beds: 3,
+    baths: 2,
+    size: '1,250m²',
+    tag: 'VERIFIED',
+    tagColor: '#2563EB',
+    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9',
+  },
+  {
+    id: '2',
+    title: 'Seaside Modern Villa',
+    price: '₦120M',
+    location: 'Banana Island, Lagos',
+    beds: 4,
+    baths: 4,
+    size: '4,100m²',
+    tag: 'TRENDING',
+    tagColor: '#EA580C',
+    image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c',
+  },
+  {
+    id: '3',
+    title: '4 Bedroom Semi-Detached',
+    price: '₦85M',
+    location: 'Chevron, Lekki',
+    beds: 4,
+    baths: 4,
+    size: '2,850m²',
+    tag: null,
+    image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914',
+  },
+  {
+    id: '4',
+    title: 'Skyline Executive Penthouse',
+    price: '₦250M',
+    location: 'Ikoyi, Lagos',
+    beds: 4,
+    baths: 5,
+    size: '5,200ft²',
+    tag: null,
+    isExpanded: true,
+    description: 'Experience unparalleled luxury in this masterfully designed penthouse. Features customized home automation control systems...',
+    image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0',
+  }
+];
+
+export default function SavedPropertiesScreen() {
+  const [activeTab, setActiveTab] = useState('All Items');
+  const { isDark } = useAppTheme();
+  const tabs = ['All Items', 'Apartments', 'Villas', 'Prime Plots'];
+
+  // Strict structural contrast colors forcing perfect text layout visibility
+  const screenBg = isDark ? '#000000' : '#F8FAFC';
+  const elementBg = isDark ? '#000000' : '#FFFFFF';
+  const cardInteriorBg = isDark ? '#111111' : '#F8FAFC';
+  const textColor = isDark ? '#FFFFFF' : '#0F172A';
+  const subTextColor = isDark ? '#94A3B8' : '#64748B';
+  const borderColor = isDark ? '#222222' : '#E2E8F0';
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: screenBg }} edges={['top']}>
+      
+      {/* Top Main Navigation Bar */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: elementBg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+        <TouchableOpacity className="p-1" onPress={() => router.back()}>
+          <ChevronLeft size={22} color={textColor} />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#2563EB' }}>Dwellify Prop</Text>
+        <Image 
+          source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb' }} 
+          className="w-8 h-8 rounded-full"
+        />
+      </View>
+
+      <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
+        
+        {/* Title Context Layout */}
+        <View className="mb-4">
+          <Text style={{ fontSize: 24, fontWeight: '900', color: textColor, letterSpacing: -0.5 }}>Saved Properties</Text>
+          <Text style={{ fontSize: 12, color: subTextColor, marginTop: 4 }}>Review and manage your bookmarked listings.</Text>
+        </View>
+
+        {/* Search Bar Input */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: elementBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 16 }}>
+          <View style={{ marginRight: 8 }}>
+            <Search size={16} color={subTextColor} />
+          </View>
+          <TextInput 
+            placeholder="Search saved homes..." 
+            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+            style={{ flex: 1, fontSize: 13, color: textColor, padding: 0 }}
+          />
+        </View>
+
+        {/* Horizontal Category Slider */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-5">
+          {tabs.map((tab, idx) => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity 
+                key={idx} 
+                onPress={() => setActiveTab(tab)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 99,
+                  marginRight: 8,
+                  borderWidth: 1,
+                  borderColor: isActive ? '#2563EB' : borderColor,
+                  backgroundColor: isActive ? '#2563EB' : elementBg
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '600', color: isActive ? '#FFFFFF' : subTextColor }}>
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Listings Stream */}
+        {savedListings.map((item) => (
+          <View key={item.id} style={{ backgroundColor: elementBg, borderWidth: 1, borderColor: borderColor, borderRadius: 16, overflow: 'hidden', marginBottom: 20 }}>
+            
+            {/* Listing Image Top Frame */}
+            <View className="relative h-48 w-full bg-slate-100 dark:bg-neutral-900">
+              <Image source={{ uri: item.image }} className="w-full h-full" resizeMode="cover" />
+              
+              {item.tag && (
+                <View style={{ position: 'absolute', top: 12, left: 12, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: item.tagColor }}>
+                  <Text className="text-[10px] font-black text-white tracking-wider">{item.tag}</Text>
+                </View>
+              )}
+
+              {/* Heart Fav Button */}
+              <TouchableOpacity style={{ position: 'absolute', top: 12, right: 12, padding: 8, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 99 }}>
+                <Heart size={14} color="#EF4444" fill="#EF4444" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Information Inner Body text boxes */}
+            <View className="p-4">
+              <View className="flex-row justify-between items-start">
+                <View className="flex-1 pr-2">
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: textColor, lineHeight: 20 }}>{item.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                    <MapPin size={12} color={subTextColor} />
+                    <Text style={{ fontSize: 12, color: subTextColor, marginLeft: 4 }}>{item.location}</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#2563EB' }}>{item.price}</Text>
+              </View>
+
+              {/* Spec Metrics Bar */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: borderColor, gap: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <BedDouble size={14} color={subTextColor} />
+                  <Text style={{ fontSize: 12, color: subTextColor, marginLeft: 4 }}>{item.beds} Beds</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <ShowerHead size={14} color={subTextColor} />
+                  <Text style={{ fontSize: 12, color: subTextColor, marginLeft: 4 }}>{item.baths} Baths</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Maximize size={14} color={subTextColor} />
+                  <Text style={{ fontSize: 12, color: subTextColor, marginLeft: 4 }}>{item.size}</Text>
+                </View>
+              </View>
+
+              {/* Expanded Inspection Booking Panel */}
+              {item.isExpanded && (
+                <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 12 }}>
+                  <Text style={{ fontSize: 12, color: subTextColor, lineHeight: 18, marginBottom: 16 }}>
+                    {item.description}
+                  </Text>
+                  <TouchableOpacity style={{ width: '100%', backgroundColor: '#2563EB', paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }} className="space-x-2">
+                    <Text className="text-white font-bold text-sm">Book Inspection</Text>
+                    <Sparkles size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        ))}
+
+        {/* Bottom Discover More Block */}
+        <TouchableOpacity style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: isDark ? '#444444' : '#CBD5E1', borderRadius: 16, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 40, backgroundColor: cardInteriorBg }}>
+          <Plus size={20} color={subTextColor} />
+          <Text style={{ fontSize: 12, fontWeight: '600', color: subTextColor, marginTop: 8 }}>Discover More</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

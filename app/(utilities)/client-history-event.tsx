@@ -25,7 +25,7 @@ import {
   View,
 } from "react-native";
 import { API } from "../../services/api";
-import { formatDate, HistoryItem } from "../(client)/history";
+import { formatDate, HistoryItem } from "../(client)/client-map";
 
 // --- TYPES ---
 interface ReportReasonOption {

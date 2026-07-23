@@ -1,257 +1,509 @@
-import { useTheme } from "@/hooks/use-theme";
-import { useRouter } from "expo-router";
+// app/(tabs)/listings.tsx
+import React, { useState } from "react";
 import {
-  CaretLeftIcon,
-  PencilSimple,
-  Plus,
-  Trash,
-} from "phosphor-react-native";
-import React, { memo, useCallback, useEffect, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  RefreshControl,
-  Text,
   View,
+  Text,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  FlatList,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { API } from "../../services/api";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  Menu,
+  Bell,
+  Search,
+  SlidersHorizontal,
+  MapPin,
+  Eye,
+  MessageSquare,
+  MoreHorizontal,
+  Plus,
+  Building2,
+} from "lucide-react-native";
+import { Stack, router } from "expo-router";
 
-// Skeleton Loader
-const SkeletonCard = ({ colors }: any) => (
-  <View
-    className="mb-6 rounded-3xl overflow-hidden border animate-pulse"
-    style={{ borderColor: colors.border, backgroundColor: colors.card }}
-  >
-    <View className="h-48 bg-gray-200 dark:bg-gray-800 w-full" />
-    <View className="p-5">
-      <View className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-2/3 mb-3" />
-      <View className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/3" />
-    </View>
-  </View>
-);
+interface ListingItem {
+  id: string;
+  title: string;
+  location: string;
+  price: string;
+  period?: string; // e.g., "/ Year", "/ Night"
+  tag: "For Sale" | "For Rent" | "Shortlet";
+  views: number;
+  inquiries: number;
+  status: "Active" | "Inactive";
+}
 
-// Empty State
-const EmptyState = ({ colors }: any) => (
-  <View className="flex-1 justify-center items-center px-6 py-20">
-    <Text
-      className="text-xl font-black tracking-tight mb-2"
-      style={{ color: colors.text }}
-    >
-      No listings yet
-    </Text>
-    <Text
-      className="text-sm opacity-40 text-center leading-5"
-      style={{ color: colors.text }}
-    >
-      Your rental properties will appear here once created.
-    </Text>
-  </View>
-);
+export default function MyListingsScreen() {
+  const isDark = false;
+  const [activeTab, setActiveTab] = useState("All Listings");
+  const [searchQuery, setSearchQuery] = useState("");
 
-// Product Card (Reusable)
-const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
-  return (
-    <TouchableOpacity
-      onPress={() =>
-        router.push({
-          pathname: "/(product)/[id]",
-          params: { id: item.id },
-        })
-      }
-      className="mb-6 rounded-3xl overflow-hidden border"
-      style={{
-        backgroundColor: colors.background,
-        borderColor: colors.placeholder,
-        shadowColor: "#000",
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 2,
-      }}
-    >
-      {/* IMAGE */}
-      <Image
-        source={{
-          uri: item.images?.[0] || "https://via.placeholder.com/300",
-        }}
-        className="w-full h-48 bg-gray-200 dark:bg-gray-800"
-      />
+  // Theme Styling Rules
+  const bgMain = isDark ? "#000000" : "#F8FAFC";
+  const bgCard = isDark ? "#111111" : "#FFFFFF";
+  const textPrimary = isDark ? "#FFFFFF" : "#0F172A";
+  const textSecondary = isDark ? "#94A3B8" : "#64748B";
+  const borderRegular = isDark ? "#222222" : "#F1F5F9";
+  const searchBg = isDark ? "#111111" : "#F1F5F9";
+  const textMuted = isDark ? "#64748B" : "#94A3B8";
 
-      {/* CONTENT */}
-      <View className="p-5">
-        {/* TITLE + TYPE */}
-        <View className="flex-row justify-between items-start mb-2">
-          <Text
-            numberOfLines={1}
-            className="text-lg font-black tracking-tight w-[70%]"
-            style={{ color: colors.text }}
-          >
-            {item.title}
-          </Text>
+  const tabs = ["All Listings", "For Sale", "For Rent", "Sold"];
 
-          <Text
-            className="text-2xs font-bold tracking-widest uppercase opacity-40"
-            style={{ color: colors.text }}
-          >
-            {item.propertyType}
-          </Text>
-        </View>
+  const listings: ListingItem[] = [
+    {
+      id: "1",
+      title: "4 Bedroom Duplex with BQ",
+      location: "Lekki Phase 1, Lagos",
+      price: "₦120,000,000",
+      tag: "For Sale",
+      views: 245,
+      inquiries: 18,
+      status: "Active",
+    },
+    {
+      id: "2",
+      title: "3 Bedroom Apartment",
+      location: "Victoria Island, Lagos",
+      price: "₦6,500,000",
+      period: "/ Year",
+      tag: "For Rent",
+      views: 132,
+      inquiries: 7,
+      status: "Active",
+    },
+    {
+      id: "3",
+      title: "1500 Sqm Residential Plot",
+      location: "Chevron Drive, Lekki",
+      price: "₦45,000,000",
+      tag: "For Sale",
+      views: 89,
+      inquiries: 3,
+      status: "Active",
+    },
+    {
+      id: "4",
+      title: "2 Bedroom Shortlet Apartment",
+      location: "Ikoyi, Lagos",
+      price: "₦120,000",
+      period: "/ Night",
+      tag: "Shortlet",
+      views: 58,
+      inquiries: 12,
+      status: "Active",
+    },
+    {
+      id: "5",
+      title: "5 Bedroom Detached House",
+      location: "Lekki County, Lagos",
+      price: "₦250,000,000",
+      tag: "For Sale",
+      views: 310,
+      inquiries: 25,
+      status: "Active",
+    },
+  ];
 
-        {/* PRICE */}
-        <Text
-          className="text-lg font-black tracking-tight mt-1"
-          style={{ color: colors.text }}
-        >
-          ₦{Number(item.price).toLocaleString()}
-        </Text>
-
-        {/* ACTIONS */}
-        <View
-          className="flex-row mt-6 border-t pt-4"
-          style={{ borderColor: colors.border }}
-        >
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/(product)/[id]",
-                params: { id: item.id },
-              })
-            }
-            className="flex-1 flex-row items-center justify-center py-2 border-r"
-            style={{ borderColor: colors.border }}
-          >
-            <PencilSimple size={16} color={colors.text} weight="bold" />
-            <Text
-              className="font-bold text-sm ml-2 opacity-60"
-              style={{ color: colors.text }}
-            >
-              Edit
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => onDelete(item.id)}
-            className="flex-1 flex-row items-center justify-center py-2"
-          >
-            <Trash size={16} color="#ef4444" weight="bold" />
-            <Text className="font-bold text-sm ml-2 text-red-500">Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
-
-ProductCard.displayName = "ProductCard";
-
-export default function RentalProductsScreen() {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchProducts = async () => {
-    try {
-      const res = await API.get("/products/get-rental-products");
-      setProducts(res.data?.products || []);
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  // Map active status categories for proper tag design styles
+  const getTagBg = (tag: string) => {
+    switch (tag) {
+      case "For Sale":
+        return "#2563EB";
+      case "For Rent":
+        return "#1E40AF";
+      case "Shortlet":
+        return "#0284C7";
+      default:
+        return "#475569";
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const handleDelete = useCallback((id: string) => {
-    Alert.alert("Delete Listing", "This action cannot be undone.", [
-      { text: "Cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await API.delete(`/products/delete-rental-product/${id}`);
-          fetchProducts();
-        },
-      },
-    ]);
-  }, []);
-
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* LIST */}
-      <FlatList
-        data={loading ? Array(6).fill({}) : products}
-        keyExtractor={(_, i) => i.toString()}
-        contentContainerStyle={{
-          paddingTop: insets.top + 16,
-          paddingBottom: insets.bottom + 100,
-          paddingHorizontal: 20,
-        }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={fetchProducts}
-            tintColor={colors.text}
-          />
-        }
-        ListHeaderComponent={
-          <View className="flex-row items-center mb-8 mt-2 gap-3">
-            <TouchableOpacity onPress={() => router.push("/(agent)/dashboard")} className="px-2 py-1">
-              <CaretLeftIcon size={22} weight="bold" color={colors.text} />
-            </TouchableOpacity>
-            <Text
-              className="text-2xl font-black tracking-tight px-2 py-1"
-              style={{ color: colors.text }}
-            >
-              Your Listings
-            </Text>
-          </View>
-        }
-        ListEmptyComponent={!loading ? <EmptyState colors={colors} /> : null}
-        renderItem={({ item }) =>
-          loading ? (
-            <SkeletonCard colors={colors} />
-          ) : (
-            <ProductCard
-              item={item}
-              onDelete={handleDelete}
-              router={router}
-              colors={colors}
-            />
-          )
-        }
-      />
+    <SafeAreaView style={{ backgroundColor: bgMain, flex: 1 }} edges={["top"]}>
+      <Stack.Screen options={{ headerShown: false }} />
 
-      {/* 🔥 FLOATING BUTTON (FAB) */}
+      {/* 1. Top Navigation bar */}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: bgCard,
+          borderBottomWidth: 1,
+          borderBottomColor: borderRegular,
+        }}
+      >
+        <TouchableOpacity
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: isDark ? "#1E293B" : "#F1F5F9",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Menu size={20} color={textPrimary} />
+        </TouchableOpacity>
+
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "800",
+            color: textPrimary,
+            fontFamily: "Poppins",
+          }}
+        >
+          My Listings
+        </Text>
+
+        <TouchableOpacity
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: isDark ? "#1E293B" : "#EFF6FF",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Bell size={20} color="#2563EB" />
+        </TouchableOpacity>
+      </View>
+
+      {/* 2. Top Navigation Tabs Row */}
+      <View
+        style={{
+          backgroundColor: bgCard,
+          borderBottomWidth: 1,
+          borderBottomColor: borderRegular,
+        }}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            height: 48,
+            alignItems: "center",
+            gap: 24,
+          }}
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={{
+                  height: "100%",
+                  justifyContent: "center",
+                  borderBottomWidth: isActive ? 3 : 0,
+                  borderBottomColor: "#2563EB",
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: isActive ? "800" : "500",
+                    color: isActive ? "#2563EB" : textSecondary,
+                  }}
+                >
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* 3. Search Field & Control Filter Trigger */}
+      <View
+        style={{
+          flexDirection: "row",
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          gap: 12,
+          alignItems: "center",
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: searchBg,
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            height: 44,
+          }}
+        >
+          <Search size={18} color={textMuted} />
+          <TextInput
+            placeholder="Search your listings..."
+            placeholderTextColor={textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{ flex: 1, marginLeft: 8, color: textPrimary, fontSize: 14 }}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            backgroundColor: isDark ? "#1E293B" : "#EFF6FF",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <SlidersHorizontal size={18} color="#2563EB" />
+        </TouchableOpacity>
+      </View>
+
+      {/* 4. Listings Stack Scroll Container */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 110 }}
+      >
+        <View style={{ gap: 16 }}>
+          {listings.map((item) => (
+            <View
+              key={item.id}
+              style={{
+                backgroundColor: bgCard,
+                borderRadius: 20,
+                padding: 12,
+                flexDirection: "row",
+                borderWidth: 1,
+                borderColor: borderRegular,
+                position: "relative",
+              }}
+            >
+              {/* Dummy Image Placeholder with Tag badge */}
+              <View
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 16,
+                  backgroundColor: isDark ? "#1E293B" : "#EEF2F6",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  position: "relative",
+                }}
+              >
+                <Building2 size={32} color={isDark ? "#475569" : "#CBD5E1"} />
+
+                {/* Sale/Rent Label Tag */}
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    left: 6,
+                    backgroundColor: getTagBg(item.tag),
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text
+                    style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "800" }}
+                  >
+                    {item.tag}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Text Layout Metadata Info */}
+              <View
+                style={{
+                  flex: 1,
+                  marginLeft: 12,
+                  justifyContent: "space-between",
+                }}
+              >
+                {/* Title and Settings row */}
+                <View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 15,
+                        fontWeight: "800",
+                        color: textPrimary,
+                        flex: 1,
+                        paddingRight: 8,
+                      }}
+                    >
+                      {item.title}
+                    </Text>
+                    <TouchableOpacity style={{ padding: 2 }}>
+                      <MoreHorizontal size={18} color={textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Location Row */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 4,
+                    }}
+                  >
+                    <MapPin
+                      size={12}
+                      color={textSecondary}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={{ fontSize: 12, color: textSecondary }}
+                    >
+                      {item.location}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Pricing Area */}
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "800",
+                    color: "#2563EB",
+                    marginTop: 4,
+                  }}
+                >
+                  {item.price}
+                  {item.period && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "500",
+                        color: textSecondary,
+                      }}
+                    >
+                      {" "}
+                      {item.period}
+                    </Text>
+                  )}
+                </Text>
+
+                {/* Footer metadata metric tags (Views, Inquiries, and Active status) */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: 6,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <Text style={{ fontSize: 11, color: textSecondary }}>
+                        Views:{" "}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: textPrimary,
+                        }}
+                      >
+                        {item.views}
+                      </Text>
+                    </View>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <Text style={{ fontSize: 11, color: textSecondary }}>
+                        Inquiries:{" "}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: textPrimary,
+                        }}
+                      >
+                        {item.inquiries}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={{
+                      backgroundColor: isDark
+                        ? "rgba(34, 197, 94, 0.15)"
+                        : "#DCFCE7",
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#16A34A",
+                        fontSize: 10,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {item.status}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* 5. Persistent Bottom Layout Button */}
       <View
         style={{
           position: "absolute",
-          bottom: insets.bottom + 24,
-          right: 24,
+          bottom: 16,
+          left: 16,
+          right: 16,
         }}
       >
         <TouchableOpacity
           onPress={() => router.push("/(product)/create")}
-          className="shadow-xl justify-center items-center rounded-3xl"
+          activeOpacity={0.9}
           style={{
-            backgroundColor: colors.text,
-            width: 64,
-            height: 64,
+            height: 54,
+            borderRadius: 14,
+            backgroundColor: "#2563EB",
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 8,
+            shadowColor: "#2563EB",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            elevation: 4,
           }}
         >
-          <Plus size={28} color={colors.background} weight="bold" />
+          <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
+          <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>
+            Add New Listing
+          </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

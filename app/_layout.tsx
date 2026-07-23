@@ -5,7 +5,7 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import * as NavigationBar from "expo-navigation-bar";
+// import * as NavigationBar from "expo-navigation-bar";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -146,31 +146,31 @@ function AppContent() {
   }, [user, role, isVerified, loading, segments, router]);
 
   /* Hide android navigation buttons and auto-fade them out */
-  useEffect(() => {
-    const configureNavBar = async () => {
-      try {
-        await NavigationBar.setPositionAsync("absolute");
+  // useEffect(() => {
+  //   const configureNavBar = async () => {
+  //     try {
+  //       await NavigationBar.setPositionAsync("absolute");
 
-        await NavigationBar.setBehaviorAsync("inset-swipe");
+  //       await NavigationBar.setBehaviorAsync("inset-swipe");
 
-        await NavigationBar.setVisibilityAsync("hidden");
-      } catch (error) {
-        console.warn("NavigationBar layout configuration failed:", error);
-      }
-    };
+  //       await NavigationBar.setVisibilityAsync("hidden");
+  //     } catch (error) {
+  //       console.warn("NavigationBar layout configuration failed:", error);
+  //     }
+  //   };
 
-    configureNavBar();
+  //   configureNavBar();
 
-    const subscription = AppState.addEventListener("change", (nextAppState) => {
-      if (nextAppState === "active") {
-        configureNavBar();
-      }
-    });
+  //   const subscription = AppState.addEventListener("change", (nextAppState) => {
+  //     if (nextAppState === "active") {
+  //       configureNavBar();
+  //     }
+  //   });
 
-    return () => {
-      subscription.remove();
-    };
-  }, [segments]);
+  //   return () => {
+  //     subscription.remove();
+  //   };
+  // }, [segments]);
 
   /* =========================
    SPLASH SCREEN MANAGEMENT
