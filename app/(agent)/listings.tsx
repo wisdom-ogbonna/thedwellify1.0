@@ -1,27 +1,24 @@
 // app/(tabs)/listings.tsx
-import React, { useState } from "react";
+import { Stack, router } from "expo-router";
 import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-  FlatList,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Menu,
   Bell,
-  Search,
-  SlidersHorizontal,
+  Building2,
   MapPin,
-  Eye,
-  MessageSquare,
+  Menu,
   MoreHorizontal,
   Plus,
-  Building2,
+  Search,
+  SlidersHorizontal,
 } from "lucide-react-native";
-import { Stack, router } from "expo-router";
+import React, { useState } from "react";
+import {
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ListingItem {
   id: string;
@@ -481,7 +478,7 @@ export default function MyListingsScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.push("/(product)/create")}
+          onPress={() => router.push("/(product)/creater")}
           activeOpacity={0.9}
           style={{
             height: 54,

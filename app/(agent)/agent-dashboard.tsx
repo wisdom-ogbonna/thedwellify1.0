@@ -2,11 +2,11 @@ import BottomSheet, {
   BottomSheetRefProps,
 } from "@/components/short-bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
-import * as Clipboard from "expo-clipboard"; // ✅ Added Clipboard support
+import * as Clipboard from "expo-clipboard";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
-import { CaretLeftIcon } from "phosphor-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,7 +19,10 @@ import {
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { auth } from "../../config/firebase";
+import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
+import { registerForPushNotificationsAsync } from "../../services/notification";
 
 const { width, height } = Dimensions.get("screen");
 
@@ -28,14 +31,249 @@ export default function MapScreen() {
 
   const [location, setLocation] = useState(null);
   const [agent, setAgent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   const ref = useRef<BottomSheetRefProps>(null);
 
   const SNAP_25 = -height * 0.2;
   const SNAP_50 = -height * 0.5;
   const SNAP_80 = -height * 0.8;
+
+  const router = useRouter();
+  const { isOnline, goOnline, goOffline } = useAuth();
+
+  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [btnLoading, setBtnLoading] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [paying, setPaying] = useState<boolean>(false);
+  const [toggling, setToggling] = useState<boolean>(false);
+  const [agentName, setAgentName] = useState<string>("Agent");
+  const [agentStatus, setAgentStatus] = useState<string | null>(null);
+  const [message, setMessage] = useState<string>("");
+  const [requestId, setRequestId] = useState<string | null>(null);
+
+  const syncPushToken = async () => {
+    try {
+      const pushData = await registerForPushNotificationsAsync();
+      if (!pushData) return;
+
+      const payload = {
+        platform: pushData.platform,
+        ...(pushData.platform === "ios"
+          ? { expoPushToken: pushData.token }
+          : { fcmToken: pushData.token }),
+      };
+
+      await API.post("/notifications/agent", payload);
+    } catch (err) {
+      console.log("Push token sync failed:", err);
+    }
+  };
+
+  const fetchAgentStatus = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setMessage("User not authenticated");
+        return;
+      }
+
+      const token = await user.getIdToken();
+      const authHeader = {
+        headers: { Authorization: `Bearer ${token}` },
+      };
+
+      const liveRes = await API.get("/agent/live", authHeader);
+      const agent = liveRes.data;
+
+      setAgentStatus(agent.status);
+      setRequestId(agent.requestId || null);
+
+      if (agent.status === "suspended") {
+        setMessage("Your account is suspended. Please make payment.");
+      } else if (agent.status === "matched") {
+        setMessage("You have an active request. Start inspection.");
+      } else if (agent.status === "inspection_started") {
+        setMessage("Inspection in progress. Complete it when done.");
+      } else {
+        setMessage("Agent is active");
+      }
+
+      try {
+        const response: any = await API.get("/agent/requests", authHeader);
+
+        const requestsList = response?.requests || response?.data?.requests;
+
+        if (
+          requestsList &&
+          Array.isArray(requestsList) &&
+          requestsList.length > 0
+        ) {
+          const sorted = [...requestsList].sort(
+            (a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0),
+          );
+          const latestItem = sorted[0];
+
+          if (
+            latestItem &&
+            latestItem.status === "pending" &&
+            latestItem.requestId
+          ) {
+            router.push({
+              pathname: "/(utilities)/requests",
+              params: {
+                requestId: String(latestItem.requestId),
+                agentId: String(latestItem.agentId),
+                clientName: String(latestItem.clientName),
+                propertyType: String(latestItem.propertyType),
+                lat: String(latestItem.lat),
+                lng: String(latestItem.lng),
+              },
+            });
+          }
+        } else {
+          console.log("No requests found in the response.");
+        }
+      } catch (err: any) {
+        console.error("Request Check failed:", err);
+      }
+
+      try {
+        const profileRes = await API.get("/agent/profile", authHeader);
+        const profileData = profileRes.data;
+        setAgentName(
+          profileData?.name ? profileData.name.split(" ")[0] : "Agent",
+        );
+      } catch (profileErr) {
+        console.log("Profile fetch failed:", profileErr);
+      }
+    } catch (err: any) {
+      console.log("Fetch agent error:", err.response?.data || err.message);
+      setMessage("Failed to fetch agent status");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsSidebarVisible(false);
+      fetchAgentStatus();
+    }, []),
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchAgentStatus();
+  };
+
+  const startInspection = async () => {
+    setBtnLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user || !requestId) {
+        Alert.alert("Error", "Missing active request ID");
+        return;
+      }
+
+      setMessage("Starting inspection...");
+      await API.post("/client/inspection/start", {
+        requestId,
+        agentId: user.uid,
+      });
+
+      setMessage("Inspection started successfully");
+      setBtnLoading(false);
+      await fetchAgentStatus();
+    } catch (err: any) {
+      console.log("Start inspection error:", err.response?.data || err.message);
+      setMessage("Failed to start inspection");
+    }
+  };
+
+  const endInspection = async () => {
+    setBtnLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user || !requestId) {
+        Alert.alert("Error", "Missing active request ID");
+        return;
+      }
+
+      setMessage("Ending inspection...");
+      await API.post("/client/inspection/end", {
+        requestId,
+        agentId: user.uid,
+      });
+
+      setMessage("Inspection completed successfully");
+      setBtnLoading(false);
+      await fetchAgentStatus();
+    } catch (err: any) {
+      console.log("End inspection error:", err.response?.data || err.message);
+      setMessage("Failed to end inspection");
+    }
+  };
+
+  const declineRequest = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !requestId) return;
+
+      setLoading(true);
+      await API.post("/client/cancel-match", {
+        requestId,
+        reason: "Agent is busy",
+      });
+
+      Alert.alert("Declined", "Request has been successfully declined.");
+      await fetchAgentStatus();
+    } catch (err: any) {
+      console.log("Decline error:", err.response?.data || err.message);
+      Alert.alert("Error", "Failed to decline the request.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerPayment = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Error", "User not authenticated");
+        return;
+      }
+
+      setPaying(true);
+      setMessage("Redirecting to payment...");
+
+      const res = await API.post("/payment/pay", { agentId: user.uid });
+      const { paymentUrl } = res.data;
+
+      if (!paymentUrl) {
+        setMessage("No payment link received");
+        return;
+      }
+
+      await WebBrowser.openBrowserAsync(paymentUrl);
+      setMessage("Checking payment status...");
+
+      setTimeout(() => {
+        fetchAgentStatus();
+      }, 3000);
+    } catch (err: any) {
+      console.log("Payment error:", err.response?.data || err.message);
+      setMessage("Payment failed. Try again.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  useEffect(() => {
+    syncPushToken();
+    fetchAgentStatus();
+  }, []);
 
   /**
    * ✅ Get user location

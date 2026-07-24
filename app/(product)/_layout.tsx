@@ -7,6 +7,7 @@ export default function ProductLayout() {
       screenOptions={{ headerShown: false, animation: "slide_from_bottom" }}
     >
       <Stack.Screen name="create" />
+      <Stack.Screen name="creater" />
       <Stack.Screen name="[id]" />
       <Stack.Screen name="products" />
     </Stack>
