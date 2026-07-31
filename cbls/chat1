@@ -1,0 +1,123 @@
+// app/messages.tsx (or your designated route file path)
+import React from 'react';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronLeft, Phone, Send, Plus, ShieldCheck } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { useAppTheme } from '../../context/themeContext';
+
+export default function PremiumMessagesScreen() {
+  const { isDark } = useAppTheme();
+
+  // Pure dark mode fallback configuration structures
+  const screenBg = isDark ? '#000000' : '#F8FAFC';
+  const elementBg = isDark ? '#000000' : '#FFFFFF';
+  const incomingBubbleBg = isDark ? '#111111' : '#FFFFFF';
+  const textColor = isDark ? '#FFFFFF' : '#0F172A';
+  const subTextColor = isDark ? '#94A3B8' : '#64748B';
+  const borderColor = isDark ? '#222222' : '#F1F5F9';
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: elementBg }} edges={['top', 'bottom']}>
+      
+      {/* 1. Header Profile Navigation Area */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: elementBg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
+            <ChevronLeft size={24} color={textColor} />
+          </TouchableOpacity>
+          
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: textColor, marginRight: 4 }}>Dwellify Properties</Text>
+              <ShieldCheck size={14} color="#2563EB" fill={isDark ? '#000000' : '#FFFFFF'} />
+            </View>
+            <Text style={{ fontSize: 11, color: '#22C55E', fontWeight: '700', marginTop: 1 }}>Online</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? '#111111' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+          <Phone size={18} color="#2563EB" />
+        </TouchableOpacity>
+      </View>
+
+      {/* 2. Chat Bubble Content Stream */}
+      <ScrollView style={{ flex: 1, backgroundColor: screenBg, paddingHorizontal: 16 }}>
+        <Text style={{ textAlign: 'center', fontSize: 11, color: subTextColor, marginVertical: 16, fontWeight: '600', letterSpacing: 0.5 }}>TODAY</Text>
+
+        {/* Sender Attachment Message Bubble */}
+        <View style={{ alignSelf: 'flex-end', alignItems: 'flex-end', marginBottom: 16, marginLeft: 48 }}>
+          <View style={{ backgroundColor: '#2563EB', padding: 14, borderRadius: 20, borderTopRightRadius: 0 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '500', lineHeight: 20, marginBottom: 10 }}>
+              Hi Tunde, I'm interested in the 3-bedroom apartment.
+            </Text>
+            
+            {/* Embedded Luxury Property Reference Card */}
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, overflow: 'hidden', width: 240, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Image 
+                source={{ uri: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c' }} 
+                style={{ height: 110, width: '100%' }}
+              />
+              <View style={{ padding: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>3 Bedroom Apartment</Text>
+                <Text style={{ fontSize: 11, color: '#93C5FD', marginTop: 2 }}>Lekki Phase 1, Lagos</Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFFFFF', marginTop: 6 }}>₦4,500,000/year</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 10, color: '#93C5FD', marginTop: 8, alignSelf: 'flex-end' }}>10:30 AM</Text>
+          </View>
+        </View>
+
+        {/* Incoming Message Bubble */}
+        <View style={{ alignSelf: 'flex-start', alignItems: 'flex-start', marginBottom: 16, marginRight: 48 }}>
+          <View style={{ backgroundColor: incomingBubbleBg, borderWidth: 1, borderColor: borderColor, padding: 14, borderRadius: 20, borderTopLeftRadius: 0 }}>
+            <Text style={{ color: textColor, fontSize: 14, lineHeight: 20 }}>
+              Hello Adeeze, the apartment is still available.
+            </Text>
+            <Text style={{ fontSize: 10, color: subTextColor, marginTop: 6, alignSelf: 'flex-end' }}>10:31 AM</Text>
+          </View>
+        </View>
+
+        {/* Outgoing Message Bubble */}
+        <View style={{ alignSelf: 'flex-end', alignItems: 'flex-end', marginBottom: 16, marginLeft: 48 }}>
+          <View style={{ backgroundColor: '#2563EB', padding: 14, borderRadius: 20, borderTopRightRadius: 0 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 14, lineHeight: 20 }}>
+              Great! Can we schedule a viewing?
+            </Text>
+            <Text style={{ fontSize: 10, color: '#93C5FD', marginTop: 6, alignSelf: 'flex-end' }}>10:32 AM</Text>
+          </View>
+        </View>
+
+        {/* Incoming Message Bubble 2 */}
+        <View style={{ alignSelf: 'flex-start', alignItems: 'flex-start', marginBottom: 24, marginRight: 48 }}>
+          <View style={{ backgroundColor: incomingBubbleBg, borderWidth: 1, borderColor: borderColor, padding: 14, borderRadius: 20, borderTopLeftRadius: 0 }}>
+            <Text style={{ color: textColor, fontSize: 14, lineHeight: 20 }}>
+              Sure, how about tomorrow at 11 am?
+            </Text>
+            <Text style={{ fontSize: 10, color: subTextColor, marginTop: 6, alignSelf: 'flex-end' }}>10:35 AM</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* 3. Input Action Bar Component Tray */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: elementBg, borderTopWidth: 1, borderTopColor: borderColor }}>
+        <TouchableOpacity style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? '#111111' : '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+          <Plus size={20} color={subTextColor} />
+        </TouchableOpacity>
+        
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#111111' : '#F8FAFC', borderWidth: 1, borderColor: borderColor, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 8 }}>
+          <TextInput 
+            placeholder="Type a message..." 
+            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+            style={{ flex: 1, fontSize: 14, color: textColor, padding: 0 }}
+            multiline
+          />
+          <TouchableOpacity style={{ marginLeft: 10, backgroundColor: '#2563EB', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}>
+            <Send size={14} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+    </SafeAreaView>
+  );
+}

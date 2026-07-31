@@ -1,0 +1,150 @@
+// app/(tabs)/map.tsx
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MapPin, List, Bell, Compass, RefreshCw, Sparkles } from 'lucide-react-native';
+
+export default function MapDiscoveryScreen() {
+  const [propertyType, setPropertyType] = useState('Hotel');
+
+  const types = [
+    { id: 'Hotel', label: 'Hotel', icon: '🏢' },
+    { id: 'Apartment', label: 'Apartment', icon: '🏙️' },
+    { id: 'Shortlet', label: 'Shortlet', icon: '🏡' },
+    { id: 'Rent', label: 'Rent', icon: '🔑' },
+    { id: 'Sale', label: 'Sale', icon: '💰' },
+  ];
+
+  return (
+    <View className="flex-1 bg-white dark:bg-black">
+      
+      {/* 1. Map Canvas Layer Representation */}
+      <View className="absolute top-0 left-0 right-0 h-[45%] bg-[#E3F2FD] dark:bg-[#111] overflow-hidden">
+        {/* Mock Map Texture/Lines representation */}
+        <View className="absolute inset-0 opacity-40 dark:opacity-20 border-b border-l border-slate-300 dark:border-slate-800" style={{ transform: [{ rotate: '15deg' }, { scale: 1.5 }] }} />
+        
+        {/* Floating Top Left Control Button */}
+        <SafeAreaView className="absolute pt-3 left-4 z-10" edges={['top']}>
+          <TouchableOpacity className="w-11 ml-4 h-11 bg-blue-600 rounded-xl items-center justify-center shadow-none">
+            <List color="#FFFFFF" size={20} />
+          </TouchableOpacity>
+          <Text className="text-[10px] font-bold text-blue-600 py-2 dark:bg-black dark:text-blue-400 mt-1 text-center bg-white/80 px-1 py-0.5 rounded">Delta Park</Text>
+        </SafeAreaView>
+
+        {/* Floating Top Right Bell Notification */}
+        <SafeAreaView className="absolute top-3 right-4 z-10" edges={['top']}>
+          <TouchableOpacity className="w-11 h-11 ml-4 bg-blue-600 rounded-xl items-center justify-center shadow-none">
+            <Bell color="#FFFFFF" size={20} />
+          </TouchableOpacity>
+        </SafeAreaView>
+
+        {/* Center Target Marker Pin */}
+        <View className="absolute top-[45%] left-[48%] items-center justify-center">
+          <View className="w-8 h-8 bg-pink-500/30 rounded-full items-center justify-center absolute scale-[150] animate-ping" />
+          <MapPin color="#EF4444" size={36} fill="#EF4444" />
+        </View>
+
+        {/* Floating Location Target Button */}
+        <TouchableOpacity className="absolute bottom-6 right-4 w-11 h-11 bg-blue-600 rounded-full items-center justify-center shadow-none">
+          <Compass color="#FFFFFF" size={20} />
+        </TouchableOpacity>
+      </View>
+
+      {/* 2. Bottom Sliding Sheet Interface Board Container */}
+      <View className="absolute bottom-0 left-0 right-0 h-[60%] bg-white dark:bg-black border-t-2 border-slate-100 dark:border-slate-900 rounded-t-[36px] px-5 pt-3">
+        
+        {/* Top Centered Notch Sheet Decorator Handle */}
+        <View className="w-12 h-1 bg-slate-200 dark:bg-slate-800 rounded-full self-center mb-5" />
+
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          
+          {/* Main Context Callout Rows */}
+          <View className="flex-row justify-between items-start mb-5">
+            <View className="flex-1 pr-3">
+              <Text className="text-2xl font-extrabold text-slate-900 dark:text-white leading-tight">
+                Find Your <Text className="text-blue-600 dark:text-blue-400">Perfect</Text>
+              </Text>
+              <Text className="text-2xl font-extrabold text-slate-900 dark:text-white leading-none mt-1">
+                Property
+              </Text>
+              <Text className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">
+                Discover amazing places to stay
+              </Text>
+            </View>
+
+            <Image 
+              source={{ uri: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914' }} 
+              className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-neutral-900" 
+            />
+          </View>
+
+          {/* Location Details Container Card */}
+          <View className="border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 mb-5 bg-white dark:bg-black shadow-none">
+            <View className="flex-row items-start justify-between">
+              <View className="flex-row space-x-2.5 flex-1 pr-2">
+                <MapPin color="#EF4444" size={18} fill="#EF4444" className="mt-0.5" />
+                <View className="flex-1">
+                  <Text className="text-xs font-black text-slate-900 dark:text-white">Your Location</Text>
+                  <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    VWX4+5R4, Rumuokwuta Rd, Junction, Port Harcourt 500102, Rivers, Nigeria
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity>
+                <RefreshCw color="#2563EB" size={16} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Use My Current Location Action Inline Tab Button */}
+            <TouchableOpacity className="w-full bg-blue-50 dark:bg-blue-950/30 py-3 rounded-xl flex-row items-center justify-center space-x-2 mt-4 shadow-none">
+              <Compass color="#2563EB" size={14} />
+              <Text className="text-blue-600 dark:text-blue-400 text-xs font-bold">Use my current location</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Property Matrix Selection Grid Layout Area */}
+          <Text className="text-xs font-black text-slate-900 dark:text-white mb-3 uppercase tracking-wider">
+            Property Type
+          </Text>
+          
+          <View className="flex-row flex-wrap gap-2.5 mb-6">
+            {types.map((t) => {
+              const isSelected = propertyType === t.id;
+              return (
+                <TouchableOpacity
+                  key={t.id}
+                  onPress={() => setPropertyType(t.id)}
+                  className={`w-[31%] border rounded-xl py-3.5 items-center justify-center relative shadow-none ${
+                    isSelected 
+                      ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500' 
+                      : 'bg-white dark:bg-black border-slate-100 dark:border-slate-900'
+                  }`}
+                >
+                  <Text className="text-xl mb-1">{t.icon}</Text>
+                  <Text className="text-xs font-bold text-slate-800 dark:text-slate-200">{t.label}</Text>
+                  
+                  {isSelected && (
+                    <View className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-blue-600 rounded-full items-center justify-center">
+                      <Text className="text-white text-[8px] font-bold">✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Call to action confirmation Match interface Button */}
+          <TouchableOpacity className="w-full bg-blue-600 py-4 rounded-2xl flex-row items-center justify-center space-x-2 shadow-none mb-2">
+            <Text className="text-white text-sm font-bold">Request Match</Text>
+            <Sparkles color={"#FFFFFF"} size={14} />
+          </TouchableOpacity>
+          
+          <Text className="text-[10px] text-slate-400 dark:text-slate-600 text-center mb-8 font-medium">
+            We'll find the best properties for you
+          </Text>
+
+        </ScrollView>
+      </View>
+    </View>
+  );
+}

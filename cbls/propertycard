@@ -1,0 +1,30 @@
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Heart, Bed, Bathtub } from 'phosphor-react-native'
+import React from 'react';
+
+export const PropertyCard = ({ title, price, location, beds, baths }) => {
+  const [isActive, setIsActive] = React.useState(false);
+
+  return (
+    <View className="bg-white border border-slate-100 rounded-3xl p-4 mb-4 shadow-sm">
+      <View className="w-full h-48 bg-slate-200 rounded-2xl mb-3" />
+      <TouchableOpacity className="absolute top-7 right-7 bg-white/80 p-2 rounded-full" onPress={() => setIsActive(!isActive)}>
+        <Heart size={20} weight={isActive ? "fill" : "regular"} color={isActive ? "#ef4444" : "#64748b"} />
+      </TouchableOpacity>
+    
+    <Text className="text-lg font-bold text-slate-900">{title}</Text>
+    <Text className="text-blue-600 font-bold mt-1">{price}</Text>
+    <Text className="text-slate-500 text-sm mt-1">{location}</Text>
+    
+    <View className="flex-row gap-4 mt-3">
+      <View className="flex-row items-center gap-1">
+        <Bed size={16} color="#64748b" />
+        <Text className="text-slate-600">{beds} Beds</Text>
+      </View>
+      <View className="flex-row items-center gap-1">
+        <Bathtub size={16} color="#64748b" />
+        <Text className="text-slate-600">{baths} Baths</Text>
+      </View>
+    </View>
+  </View>
+);}

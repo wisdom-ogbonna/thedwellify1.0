@@ -10,6 +10,7 @@ export const Colors = {
     success: COLORS.GREEN,
     border: COLORS.MID_GRAY,
     placeholder: COLORS.DARK_GRAY,
+    disabled: COLORS.DISABLED_GRAY,
   },
   dark: {
     text: COLORS.WHITE,
@@ -20,5 +21,6 @@ export const Colors = {
     success: COLORS.GREEN,
     border: COLORS.LIGHT_GRAY,
     placeholder: COLORS.DARK_GRAY,
+    disabled: COLORS.DISABLED_GRAY,
   },
 };

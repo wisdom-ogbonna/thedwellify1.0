@@ -1,31 +1,30 @@
 import { useTheme } from "@/hooks/use-theme";
-import { useRouter } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import CountryFlag from "react-native-country-flag";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { API } from "../../services/api";
 
 export default function PhoneScreen() {
+  const { role } = useLocalSearchParams();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const { colors } = useTheme();
 
-  // Logic remains consistent
   const getFormattedNumber = (input: string) => {
     let clean = input.replace(/\D/g, "");
-    if (clean.length === 11 && clean.startsWith("0"))
+    if (clean.length === 11 && clean.startsWith("0")) {
       clean = clean.substring(1);
+    }
     return clean;
   };
 
@@ -36,7 +35,7 @@ export default function PhoneScreen() {
     if (!isValid) return;
     try {
       setLoading(true);
-      // 1. Send the request
+
       const res = await API.post("/otp/send", {
         phone_number: `+234${processedPhone}`,
       });
@@ -52,6 +51,7 @@ export default function PhoneScreen() {
         params: {
           phone: `+234${processedPhone}`,
           pinId: pinId,
+          role: role,
         },
       });
     } catch (err: any) {
@@ -62,90 +62,101 @@ export default function PhoneScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 px-8 justify-center">
-          {/* Aesthetic Header */}
-          <View className="mb-12">
-            <Text
-              className="text-4xl font-black tracking-tighter"
-              style={{ color: colors.text }}
-            >
-              Find your home.
-            </Text>
-            <Text
-              className="text-lg mt-2 font-medium opacity-60"
-              style={{ color: colors.text }}
-            >
-              Enter your mobile to get started.
-            </Text>
-          </View>
+    <SafeAreaView style={{ backgroundColor: colors.background, flex: 1 }}>
 
-          {/* Premium Input Container */}
+      {/* Back Button */}
+      <View className="mt-6 px-6">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="w-12 h-12 items-center justify-center rounded-2xl border"
+          style={{
+            backgroundColor: "#F8FAFC",
+            borderColor: "#F1F5F9",
+          }}
+        >
+          <ArrowLeft size={20} color="#0F172A" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Centered Typography Header */}
+      <View className="px-10 mt-6 items-center">
+        <Text
+          className="text-5xl font-extrabold mb-4 tracking-tight text-center"
+          style={{ color: colors.text }}
+        >
+          Let&apos;s get you <Text style={{ color: colors.primary }}>in</Text>.
+        </Text>
+        <Text className="text-slate-400 text-lg mt-4 leading-6 text-center font-normal px-2">
+          Enter your phone number to receive a one-time verification code.
+        </Text>
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <View className="px-6 mt-12">
+          {/* Input Label */}
+          <Text style={{ color: colors.text }} className="font-bold text-xl mb-2 px-1">
+            Phone Number
+          </Text>
+
+          {/* Unified Styled Input Container */}
           <View
-            className="border-b-2 pb-2 flex-row justify-center items-center"
-            style={{ borderColor: isValid ? colors.primary : colors.border }}
+            className="flex-row items-center h-16 px-4 rounded-2xl border"
+            style={{
+              borderColor: "#E2E8F0",
+              backgroundColor: "#FFFFFF",
+            }}
           >
-            <CountryFlag isoCode="ng" size={20} style={{ marginRight: 8 }} />
-
-            <Text
-              className="text-xl font-bold mr-3"
-              style={{ color: colors.text }}
+            {/* Country Badge */}
+            <View
+              className="flex-row items-center h-10 px-3 rounded-xl mr-3"
+              style={{ backgroundColor: "#F8FAFC" }}
             >
-              +234
-            </Text>
+              <Text className="text-xl mr-1.5">🇳🇬</Text>
+              <Text className="text-xl font-semibold text-slate-800">
+                +234
+              </Text>
+            </View>
+
+            {/* Core Text Input */}
             <TextInput
-              placeholder="801 234 5678"
               value={phone}
               onChangeText={(t) => setPhone(t.replace(/\D/g, "").slice(0, 11))}
               keyboardType="phone-pad"
               maxLength={11}
-              className="text-xl font-bold flex-1"
-              style={{ color: colors.text }}
-              placeholderTextColor={colors.border}
+              autoFocus
+              placeholder="801 234 5678"
+              placeholderTextColor="#94A3B8"
+              className="flex-1 text-xl font-medium text-slate-800"
+              style={{ letterSpacing: 0.5 }}
             />
           </View>
-
-          <Text
-            className="mt-4 text-xs font-semibold uppercase tracking-widest opacity-40"
-            style={{ color: colors.text }}
-          >
-            Nigeria Coverage
-          </Text>
-
-          {/* Bold Action Button */}
-          <TouchableOpacity
-            onPress={sendOTP}
-            disabled={!isValid || loading}
-            className="mt-12 h-16 rounded-full items-center justify-center shadow-lg"
-            style={{
-              backgroundColor: !isValid ? colors.border : colors.primary,
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <Text
-                style={{ color: !isValid ? colors.text : "#ffffff" }}
-                className={`font-bold text-lg`}
-              >
-                Send Verification
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          <Text
-            className="text-center text-[10px] mt-8 opacity-30"
-            style={{ color: colors.text }}
-          >
-            SECURE ACCESS BY DWELLIFY
-          </Text>
         </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+
+        {/* Primary Action Button */}
+        <View className="px-6 mt-10">
+          {loading ? (
+            <View className="h-14 items-center justify-center">
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={sendOTP}
+              disabled={!isValid}
+              className="h-14 rounded-2xl items-center justify-center"
+              style={{
+                backgroundColor: !isValid
+                  ? `${colors.disabled}`
+                  : colors.primary,
+              }}
+            >
+              <Text className="text-white font-bold text-xl">Send Code</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

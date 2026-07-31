@@ -1,500 +1,494 @@
-import BottomSheet, { BottomSheetRefProps } from "@/components/bottom-sheet";
-import ClientEvent from "@/components/client-event";
-import Sidebar from "@/components/sidebar/sidebar";
-import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import * as Location from "expo-location";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+// app/(tabs)/discover.tsx
+import { router } from "expo-router";
 import {
-  Alert,
-  Animated,
+  BedDouble,
+  ChevronRight,
+  Heart,
+  MapPin,
+  Maximize,
+  Search,
+  ShowerHead,
+  SlidersHorizontal,
+} from "lucide-react-native";
+import React, { useState } from "react";
+import {
   Dimensions,
-  Easing,
+  Image,
   ScrollView,
+  Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import { auth } from "../../config/firebase";
-import { API } from "../../services/api";
-import { registerForPushNotificationsAsync } from "../../services/notification";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet"] as const;
-type PropertyType = (typeof PROPERTY_TYPES)[number];
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Agent = {
-  agentId: string;
-  name: string;
-  phone: string;
-  email: string;
-  agencyName: string;
-  rating: number;
-  distanceKm: number;
-};
-
-type LiveAgent = {
-  name: string;
-  phone: string;
-  lat: number;
-  lng: number;
-};
-
-type LiveData = {
-  requestStatus: string;
-  lat: number;
-  lng: number;
-  agent: LiveAgent | null;
-};
-
-type MatchRequest = {
-  requestId: string;
-  lat: number;
-  lng: number;
-  propertyType: PropertyType;
-  status: string;
-};
-
-type MatchData = {
-  request: MatchRequest;
-  agent: Agent;
-};
-
-type Coords = {
-  lat: number;
-  lng: number;
-};
-
-type ApiError = {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-  message: string;
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getRealAddress = async (lat: number, lng: number): Promise<string> => {
-  try {
-    const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
-    );
-    const data = await res.json();
-    return data.results?.[0]?.formatted_address ?? "Address not found";
-  } catch {
-    return "Address unavailable";
-  }
-};
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
-export default function RequestMatchScreen() {
-  const [loading, setLoading] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(true);
-  const [lat, setLat] = useState<number | null>(null);
-  const [lng, setLng] = useState<number | null>(null);
-  const [address, setAddress] = useState("");
-  const [selectedType, setSelectedType] = useState<PropertyType>("Hotel");
-  const [matchData, setMatchData] = useState<MatchData | null>(null);
-  const [liveData, setLiveData] = useState<LiveData | null>(null);
-  const [agentLocation, setAgentLocation] = useState<Coords | null>(null);
-  const [requestStatus, setRequestStatus] = useState<string | null>(null);
-  const [lastKnownLocation, setLastKnownLocation] = useState<Coords | null>(
-    null,
-  );
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-
-  const ref = useRef<BottomSheetRefProps | null>(null);
-  const mapRef = useRef<MapView | null>(null);
-  const router = useRouter();
-  const { colors } = useTheme();
-  const { height: SCREEN_HEIGHT, width } = Dimensions.get("window");
-  const sidebarX = useRef(new Animated.Value(-width)).current;
-
-  const SNAP_50 = -SCREEN_HEIGHT * 0.59;
-  const SNAP_80 = -SCREEN_HEIGHT * 0.8;
-
-  // ─── Preserve last known agent location ───────────────────────────────────
-
-  useEffect(() => {
-    if (agentLocation?.lat != null && agentLocation?.lng != null) {
-      setLastKnownLocation(agentLocation);
-    }
-  }, [agentLocation]);
-
-  // ─── Sidebar ──────────────────────────────────────────────────────────────
-
-  const toggleSidebar = () => {
-    const toOpen = !isSidebarVisible;
-    if (toOpen) setIsSidebarVisible(true);
-
-    Animated.timing(sidebarX, {
-      toValue: toOpen ? 0 : -width,
-      duration: 250,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
-      if (!toOpen) setIsSidebarVisible(false);
-    });
-  };
-
-  const sidebarItems = [
-    {
-      label: "Home",
-      icon: "House" as const,
-      onPress: () => {
-        toggleSidebar();
-        router.push("/(client)/client-dashboard");
-      },
-      isActive: true,
-    },
-    {
-      label: "History",
-      icon: "ClockCounterClockwise" as const,
-      onPress: () => {
-        toggleSidebar();
-        router.push("/(client)/history");
-      },
-    },
-    {
-      label: "Profile",
-      icon: "UserCircle" as const,
-      onPress: () => {
-        toggleSidebar();
-        router.push("/(client)/profile");
-      },
-    },
-  ];
-
-  // ─── Push Token Sync ──────────────────────────────────────────────────────
-
-  const syncPushToken = async (): Promise<void> => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        console.log("[Push Sync]: Deferred — no authenticated user context");
-        return;
-      }
-
-      const pushData = await registerForPushNotificationsAsync();
-      if (!pushData) return;
-
-      const payload =
-        pushData.platform === "ios"
-          ? { platform: pushData.platform, expoPushToken: pushData.token }
-          : { platform: pushData.platform, fcmToken: pushData.token };
-
-      const token = await user.getIdToken();
-      await API.post("/notifications/client", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log("✅ Client device registered and token synced");
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      console.log(
-        "❌ Push token sync failed:",
-        error?.response?.data ?? error.message,
-      );
-    }
-  };
-
-  // ─── Location ─────────────────────────────────────────────────────────────
-
-  const getLocation = async (): Promise<void> => {
-    try {
-      setLocationLoading(true);
-
-      let { status } = await Location.getForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        const res = await Location.requestForegroundPermissionsAsync();
-        status = res.status;
-      }
-
-      if (status !== "granted") {
-        Alert.alert("Permission required", "Enable location to continue");
-        return;
-      }
-
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = loc.coords;
-      setLat(latitude);
-      setLng(longitude);
-
-      mapRef.current?.animateToRegion(
-        { latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 },
-        800,
-      );
-
-      const realAddress = await getRealAddress(latitude, longitude);
-      setAddress(realAddress);
-    } catch (error: unknown) {
-      Alert.alert("Error", "Failed to get location");
-      console.error(error);
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
-  // ─── Map fit helper ───────────────────────────────────────────────────────
-
-  const fitMapToMarkers = (
-    clientLat: number,
-    clientLng: number,
-    agentLat: number,
-    agentLng: number,
-  ): void => {
-    mapRef.current?.fitToCoordinates(
-      [
-        { latitude: clientLat, longitude: clientLng },
-        { latitude: agentLat, longitude: agentLng },
-      ],
-      {
-        edgePadding: { top: 100, right: 100, bottom: 300, left: 100 },
-        animated: true,
-      },
-    );
-  };
-
-  // ─── Polling ──────────────────────────────────────────────────────────────
-
-  // Wrapped in useCallback so the interval effect doesn't get a stale closure
-  const getLiveData = useCallback(async (): Promise<void> => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const token = await user.getIdToken();
-      const res = await API.get<LiveData>("/client/live", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = res.data;
-      setLiveData(data);
-      setRequestStatus(data.requestStatus);
-
-      if (data.agent) {
-        setAgentLocation({ lat: data.agent.lat, lng: data.agent.lng });
-        // liveData carries client coords at top-level lat/lng
-        fitMapToMarkers(data.lat, data.lng, data.agent.lat, data.agent.lng);
-      }
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      console.log("Polling error:", error?.response?.data ?? error.message);
-    }
-  }, []);
-
-  // ─── Effects ──────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    getLocation();
-    syncPushToken();
-
-    const timer = setTimeout(() => {
-      ref.current?.scrollTo(SNAP_50);
-    }, 100);
-
-    return () => clearTimeout(timer);
-    // SNAP_50 derives from SCREEN_HEIGHT which never changes at runtime
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(getLiveData, 5000);
-    return () => clearInterval(interval);
-  }, [getLiveData]);
-
-  // ─── Match Request ────────────────────────────────────────────────────────
-
-  const handleRequest = async (): Promise<void> => {
-    if (lat == null || lng == null) {
-      Alert.alert("Error", "Location not available");
-      return;
-    }
-
-    const user = auth.currentUser;
-    if (!user) {
-      Alert.alert("Authentication Error", "Please sign in again");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setMatchData(null);
-      setLiveData(null); // clear stale polling data alongside
-
-      const token = await user.getIdToken();
-      const authHeader = { headers: { Authorization: `Bearer ${token}` } };
-
-      const createRes = await API.post<{ requestId: string }>(
-        "/match/request",
-        { lat, lng, propertyType: selectedType },
-        authHeader,
-      );
-
-      const { requestId } = createRes.data;
-      if (!requestId) throw new Error("No requestId returned from server");
-
-      console.log("REQUEST ID:", requestId);
-
-      const matchRes = await API.post<{ request: MatchRequest; agent: Agent }>(
-        `/match/match/${requestId}`,
-        {},
-        authHeader,
-      );
-
-      const { request, agent } = matchRes.data;
-
-      if (!agent) {
-        Alert.alert("No Agent", "No agents available — try again later");
-        return;
-      }
-
-      setMatchData({ request, agent });
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message ??
-          "No agents are currently available for this property type. Please try again later.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ─── Derived marker state ─────────────────────────────────────────────────
-
-  // Prefer live location; fall back to last known; null if neither is available
-  const resolvedAgentLat = agentLocation?.lat ?? lastKnownLocation?.lat ?? null;
-  const resolvedAgentLng = agentLocation?.lng ?? lastKnownLocation?.lng ?? null;
-  const agentIsLive = agentLocation != null;
-
-  // ─── Render ───────────────────────────────────────────────────────────────
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const { width } = Dimensions.get("window");
+const RECOMMENDED_CARD_WIDTH = width * 0.78;
+
+const recommendedProperties = [
+  {
+    id: "1",
+    title: "The Glass Pavilion",
+    location: "Hollywood Hills, CA",
+    price: "$4,250,000",
+    beds: 4,
+    baths: 5,
+    size: "4,390 sqft",
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+  },
+  {
+    id: "2",
+    title: "Azure Horizon Estate",
+    location: "Malibu, CA",
+    price: "$6,180,000",
+    beds: 5,
+    baths: 6,
+    size: "5,500 sqft",
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+  },
+];
+
+const featuredListings = [
+  {
+    id: "1",
+    title: "Hamptons Haven",
+    location: "Southampton, NY",
+    price: "$2,850,000",
+    beds: 5,
+    baths: 4,
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+  },
+  {
+    id: "2",
+    title: "Mirage Desert Oasis",
+    location: "Joshua Tree, CA",
+    price: "$1,920,000",
+    beds: 3,
+    baths: 2,
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+  },
+  {
+    id: "3",
+    title: "Cobble Hill Brownstone",
+    location: "Brooklyn, NY",
+    price: "$5,400,000",
+    beds: 4,
+    baths: 3.5,
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+  },
+];
+
+export default function DiscoverMarketplaceScreen() {
+  const [activeCategory, setActiveCategory] = useState("All");
+  const isDark = false;
+  const categories = ["All", "Villa", "Apartment", "Penthouse"];
+
+  // Enforcing strict hardware level pure theme variables mapping
+  const screenBg = isDark ? "#000000" : "#F1F5F9";
+  const elementBg = isDark ? "#000000" : "#FFFFFF";
+  const innerCardBg = isDark ? "#111111" : "#F8FAFC";
+  const textColor = isDark ? "#FFFFFF" : "#0F172A";
+  const subTextColor = isDark ? "#94A3B8" : "#64748B";
+  const borderColor = isDark ? "#222222" : "#E2E8F0";
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Sidebar toggle */}
-      <TouchableOpacity
-        onPress={toggleSidebar}
-        activeOpacity={0.8}
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: screenBg }}
+      edges={["top"]}
+    >
+      {/* 1. App Bar Header */}
+      <View
         style={{
-          position: "absolute",
-          top: 16,
-          left: 16,
-          zIndex: 30,
-          padding: 10,
-          marginVertical: 30,
-          marginHorizontal: 12,
-          borderRadius: 12,
-          backgroundColor: "rgba(0, 0, 0, 0.7)",
-          borderWidth: 1,
-          borderColor: colors.border,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 20,
+          paddingVertical: 12,
+          backgroundColor: elementBg,
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
         }}
       >
-        {[22, 16, 22].map((w, i) => (
-          <View
-            key={i}
-            style={{
-              width: w,
-              height: 2.5,
-              backgroundColor: colors.text,
-              marginBottom: i < 2 ? 4 : 0,
-              borderRadius: 2,
-            }}
-          />
-        ))}
-      </TouchableOpacity>
-
-      {/* Map */}
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-        showsUserLocation={false}
-        showsCompass={false}
-        showsMyLocationButton={false}
-        loadingEnabled
-        mapPadding={{ top: 0, right: 0, left: 0, bottom: 320 }}
-        initialRegion={{
-          latitude: lat ?? 4.8156,
-          longitude: lng ?? 7.0498,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-      >
-        {lat != null && lng != null && (
-          <Marker
-            coordinate={{ latitude: lat, longitude: lng }}
-            title="You"
-            description="Your Location"
-          />
-        )}
-
-        {liveData?.agent != null &&
-          resolvedAgentLat != null &&
-          resolvedAgentLng != null && (
-            <Marker
-              coordinate={{
-                latitude: resolvedAgentLat,
-                longitude: resolvedAgentLng,
-              }}
-              title={liveData.agent.name}
-              description={
-                agentIsLive
-                  ? liveData.agent.phone
-                  : `${liveData.agent.phone} (Offline — Last Known Location)`
-              }
-              pinColor={agentIsLive ? "green" : "orange"}
-            />
-          )}
-      </MapView>
-
-      {/* Bottom sheet */}
-      <BottomSheet ref={ref}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          bounces={false}
-          overScrollMode="never"
-          contentContainerStyle={{ paddingBottom: 120 }}
+        <Text
+          style={{
+            fontSize: 20,
+            fontWeight: "900",
+            color: "#2563EB",
+            letterSpacing: -0.5,
+          }}
         >
-          <ClientEvent
-            locationLoading={locationLoading}
-            address={address}
-            getLocation={getLocation}
-            PROPERTY_TYPES={PROPERTY_TYPES}
-            selectedType={selectedType}
-            setSelectedType={setSelectedType}
-            handleRequest={handleRequest}
-            loading={loading}
-            setMatchData={setMatchData}
-            matchData={matchData ?? liveData}
-            requestStatus={requestStatus}
-          />
-        </ScrollView>
-      </BottomSheet>
+          Dwellify
+        </Text>
+        <Image
+          source={{
+            uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
+          }}
+          className="w-9 h-9 rounded-full"
+        />
+      </View>
 
-      {/* Sidebar */}
-      <Sidebar
-        visible={isSidebarVisible}
-        name={auth.currentUser?.displayName ?? "Client"}
-        rating={5}
-        translateX={sidebarX}
-        onOverlayPress={toggleSidebar}
-        items={sidebarItems}
-      />
-    </View>
+      {/* Main Scrollable Canvas */}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* 2. Search Input Bar */}
+        <View className="px-5 mt-4 mb-4">
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: innerCardBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+              borderRadius: 16,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}
+          >
+            <Search
+              size={18}
+              color={subTextColor}
+              style={{ marginRight: 10 }}
+            />
+            <TextInput
+              placeholder="Search Location"
+              placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
+              style={{
+                flex: 1,
+                fontSize: 14,
+                color: textColor,
+                fontWeight: "500",
+                padding: 0,
+              }}
+            />
+            <TouchableOpacity
+              style={{
+                paddingLeft: 12,
+                borderLeftWidth: 1,
+                borderLeftColor: borderColor,
+              }}
+            >
+              <SlidersHorizontal size={18} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 3. Category Pill Selector Row */}
+        <View className="mb-5">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="flex-row px-5"
+          >
+            {categories.map((cat) => {
+              const isSelected = activeCategory === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => setActiveCategory(cat)}
+                  style={{
+                    paddingHorizontal: 24,
+                    paddingVertical: 10,
+                    borderRadius: 99,
+                    marginRight: 12,
+                    borderWidth: 1,
+                    borderColor: isSelected ? "#2563EB" : borderColor,
+                    backgroundColor: isSelected ? "#2563EB" : innerCardBg,
+                  }}
+                  className="shadow-none"
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "700",
+                      color: isSelected ? "#FFFFFF" : subTextColor,
+                    }}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* 4. Recommended Large Carousel Cards Section */}
+        <View className="mb-6">
+          <View className="flex-row justify-between items-center px-5 mb-4">
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "900",
+                color: textColor,
+                letterSpacing: -0.5,
+              }}
+            >
+              Saved Properties
+            </Text>
+            <TouchableOpacity
+              className="flex-row items-center"
+              onPress={() => router.push("/(client)/saved")}
+            >
+              <Text
+                style={{ fontSize: 12, color: "#2563EB", fontWeight: "700" }}
+              >
+                View all
+              </Text>
+              <ChevronRight size={14} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={RECOMMENDED_CARD_WIDTH + 16}
+            decelerationRate="fast"
+            className="flex-row px-5"
+          >
+            {recommendedProperties.map((item) => (
+              <View
+                key={item.id}
+                style={{
+                  width: RECOMMENDED_CARD_WIDTH,
+                  backgroundColor: elementBg,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  borderRadius: 28,
+                  overflow: "hidden",
+                  marginRight: 16,
+                  marginBottom: 8,
+                }}
+              >
+                {/* Showcase Media Aspect Box */}
+                <View className="relative h-48 w-full bg-slate-100 dark:bg-neutral-900">
+                  <Image
+                    source={{ uri: item.image }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+
+                  {/* Floating Top-Left Price Badge */}
+                  <View className="absolute top-4 left-4 bg-blue-600 px-3 py-1.5 rounded-xl">
+                    <Text className="text-xs font-black text-white">
+                      {item.price}
+                    </Text>
+                  </View>
+
+                  {/* Top-Right Favorite Circle Toggle */}
+                  <TouchableOpacity
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      width: 36,
+                      height: 36,
+                      backgroundColor: "rgba(255,255,255,0.9)",
+                      borderRadius: 18,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Heart size={16} color="#EF4444" fill="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Info Segment */}
+                <View className="p-4">
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: "900",
+                      color: textColor,
+                      lineHeight: 20,
+                    }}
+                  >
+                    {item.title}
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 6,
+                    }}
+                  >
+                    <MapPin size={12} color={subTextColor} />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: subTextColor,
+                        marginLeft: 4,
+                      }}
+                    >
+                      {item.location}
+                    </Text>
+                  </View>
+
+                  {/* Horizontal Meta Specifications Line */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 12,
+                      paddingTop: 12,
+                      borderTopWidth: 1,
+                      borderTopColor: borderColor,
+                      gap: 16,
+                    }}
+                  >
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <BedDouble size={14} color={subTextColor} />
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: subTextColor,
+                          marginLeft: 4,
+                        }}
+                      >
+                        {item.beds} Beds
+                      </Text>
+                    </View>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <ShowerHead size={14} color={subTextColor} />
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: subTextColor,
+                          marginLeft: 4,
+                        }}
+                      >
+                        {item.baths} Baths
+                      </Text>
+                    </View>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <Maximize size={14} color={subTextColor} />
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: subTextColor,
+                          marginLeft: 4,
+                        }}
+                      >
+                        {item.size}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* 5. Vertical Featured Listings Section */}
+        <View className="px-5 mb-28">
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: "900",
+              color: textColor,
+              letterSpacing: -0.5,
+              marginBottom: 16,
+            }}
+          >
+            Recommended for you
+          </Text>
+
+          {featuredListings.map((list) => (
+            <TouchableOpacity
+              key={list.id}
+              style={{
+                backgroundColor: innerCardBg,
+                borderWidth: 1,
+                borderColor: borderColor,
+                borderRadius: 16,
+                padding: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 14,
+              }}
+            >
+              <Image
+                source={{ uri: list.image }}
+                className="w-20 h-20 rounded-xl"
+              />
+
+              <View className="flex-1 ml-4 justify-between py-0.5">
+                <View>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "900",
+                      color: textColor,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {list.title}
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 4,
+                    }}
+                  >
+                    <MapPin size={10} color={subTextColor} />
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: subTextColor,
+                        marginLeft: 4,
+                      }}
+                    >
+                      {list.location}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="flex-row items-center justify-between mt-3">
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "900",
+                      color: "#2563EB",
+                    }}
+                  >
+                    {list.price}
+                  </Text>
+                  <View className="flex-row items-center space-x-3">
+                    <View className="flex-row items-center">
+                      <BedDouble size={12} color={subTextColor} />
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          color: subTextColor,
+                          marginLeft: 3,
+                        }}
+                      >
+                        {list.beds}
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center">
+                      <ShowerHead size={12} color={subTextColor} />
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          color: subTextColor,
+                          marginLeft: 3,
+                        }}
+                      >
+                        {list.baths}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

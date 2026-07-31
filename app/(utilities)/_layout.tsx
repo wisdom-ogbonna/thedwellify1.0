@@ -8,6 +8,7 @@ export default function UtilitiesLayout() {
     >
       <Stack.Screen name="requests" />
       <Stack.Screen name="inspection" />
+      <Stack.Screen name="chats" />
       <Stack.Screen name="agent-available-properties" />
       <Stack.Screen name="agent-tracking" />
       <Stack.Screen name="client-payment-start-inspection" />
