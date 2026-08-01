@@ -231,7 +231,7 @@ export default function MapScreen() {
       await fetchAgentStatus();
     } catch (err: any) {
       console.log("Decline error:", err.response?.data || err.message);
-      Alert.alert("Error", "Failed to decline the request.");
+      Alert.alert("Error", "Failed to decline the request");
     } finally {
       setLoading(false);
     }
@@ -550,6 +550,34 @@ export default function MapScreen() {
                     : "Not matched yet"}
                 </Text>
               </TouchableOpacity>
+              <View className="flex-row gap-4">
+                <TouchableOpacity
+                  onPress={declineRequest}
+                  style={styles.infoCard}
+                >
+                  <Text style={styles.infoLabel}>Decline Request</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={startInspection}
+                  style={styles.infoCard}
+                >
+                  <Text style={styles.infoLabel}>Start Inspection</Text>
+                </TouchableOpacity>
+              </View>
+              <View className="flex-row gap-4">
+                <TouchableOpacity
+                  onPress={endInspection}
+                  style={styles.infoCard}
+                >
+                  <Text style={styles.infoLabel}>End Inspection</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={triggerPayment}
+                  style={styles.infoCard}
+                >
+                  <Text style={styles.infoLabel}>Pay now</Text>
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           </View>
         </BottomSheet>
@@ -616,7 +644,6 @@ const styles = StyleSheet.create({
 
   cardHeaderRow: {
     flexDirection: "row",
-    justifyContent: "between",
     alignItems: "center",
     marginBottom: 4,
   },

@@ -4,9 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
-  TouchableOpacity,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +15,7 @@ import CategoryFilter from "../../components/client-ui/agent-view-category-filte
 import AgentHeader from "../../components/client-ui/agent-view-header";
 import PropertyCard from "../../components/client-ui/agent-view-property-card";
 import { API } from "../../services/api";
+import { ConfirmBookingModal } from "../modal";
 
 const CATEGORIES = ["All", "Apartment", "Hotel", "Shortlet"];
 
@@ -269,72 +269,5 @@ const AvailableProperties: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-type ModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  price: number;
-  propertyType: string;
-  onConfirm: () => void;
-};
-
-function ConfirmBookingModal({
-  isOpen,
-  onClose,
-  propertyType,
-  price,
-  onConfirm,
-}: ModalProps) {
-  return (
-    <Modal
-      visible={isOpen}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "rgba(0,0,0,0.5)",
-          padding: 20,
-        }}
-      >
-        <View className="bg-white rounded-3xl p-6 w-full max-w-md">
-          <Text className="text-2xl font-bold mb-3">Confirm Booking</Text>
-
-          <Text className="mb-2 text-lg">
-            Are you sure you want to book this agent for an inspection?
-          </Text>
-
-          <Text className="mb-4 text-lg font-semibold">
-            Property Type: {propertyType}
-          </Text>
-
-          <Text className="mb-4 text-lg font-semibold">
-            Price: ₦{price.toLocaleString()}
-          </Text>
-
-          <View className="flex-row justify-between">
-            <TouchableOpacity
-              onPress={onClose}
-              className="px-7 py-3 rounded-xl border border-gray-300"
-            >
-              <Text className="text-lg font-semibold">Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={onConfirm}
-              className="px-7 py-3 rounded-xl bg-green-500"
-            >
-              <Text className="text-white text-lg font-semibold">Confirm</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 export default AvailableProperties;
