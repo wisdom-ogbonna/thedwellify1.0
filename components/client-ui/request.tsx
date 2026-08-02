@@ -75,7 +75,7 @@ export default function Request({
             style={{ color: colors.text }}
             className="text-[34px] font-black tracking-tight leading-[40px] mb-3"
           >
-            Find Your Next {"\n"}Premium Stay
+            Find Your Next Premium Stay
           </Text>
           <Text
             style={{ color: secondaryText }}
@@ -86,12 +86,6 @@ export default function Request({
         </View>
 
         <View className="px-6 mb-12">
-          <Text
-            style={{ color: colors.text }}
-            className="text-lg font-bold mb-4"
-          >
-            Where are you looking?
-          </Text>
           <TouchableOpacity
             onPress={getLocation}
             activeOpacity={0.7}
@@ -149,7 +143,7 @@ export default function Request({
         <View className="mb-8">
           <View className="px-6 mb-5 flex-row justify-between items-end">
             <Text style={{ color: colors.text }} className="text-xl font-bold">
-              Property Categories
+              What are you looking for?
             </Text>
 
             <View className="flex-row items-center opacity-70 bg-black/5 dark:bg-white/10 px-3 py-1.5 rounded-full">
