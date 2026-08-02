@@ -38,7 +38,8 @@ const savedProperties = [
     beds: 3,
     baths: 3,
     size: "180 sqm",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    image:
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=600",
     isFeatured: true,
   },
   {
@@ -50,7 +51,8 @@ const savedProperties = [
     beds: 4,
     baths: 4,
     size: "250 sqm",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    image:
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600",
     isFeatured: false,
   },
 ];
@@ -64,7 +66,8 @@ const recommendedListings = [
     period: " / year",
     beds: 3,
     baths: 3,
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    image:
+      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=300",
   },
   {
     id: "2",
@@ -74,7 +77,8 @@ const recommendedListings = [
     period: " / year",
     beds: 2,
     baths: 2,
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    image:
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=300",
   },
   {
     id: "3",
@@ -83,7 +87,8 @@ const recommendedListings = [
     price: "₦15,000,000",
     period: "",
     size: "600 sqm",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    image:
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=300",
   },
 ];
 
@@ -102,26 +107,26 @@ export default function DiscoverMarketplaceScreen() {
         className="flex-row items-center justify-between px-5 py-4"
         style={{ backgroundColor: colors.background }}
       >
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-1.5">
           <MapPin weight="fill" size={20} color={colors.primary} />
           <Text
-            className="text-[15px] font-medium"
+            className="text-[15px] font-semibold"
             style={{ color: colors.text }}
           >
             Lagos, Nigeria
           </Text>
-          <CaretDown color={colors.placeholder} weight="bold" size={14} />
+          <CaretDown color={colors.text} weight="bold" size={13} />
         </View>
-        <View className="flex-row gap-4 items-center">
+        <View className="flex-row gap-3 items-center">
           <TouchableOpacity
             className="w-10 h-10 rounded-full border items-center justify-center"
-            style={{ borderColor: `${colors.border}50` }}
+            style={{ borderColor: `${colors.border}80` }}
           >
-            <Bell color={colors.placeholder} size={20} />
+            <Bell color={colors.text} size={20} weight="regular" />
           </TouchableOpacity>
           <Image
             source={{
-              uri: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150",
+              uri: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150",
             }}
             className="w-10 h-10 rounded-full"
           />
@@ -135,15 +140,19 @@ export default function DiscoverMarketplaceScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* 2. Search Input Bar */}
-        <View className="px-5 mt-4 mb-6">
+        <View className="px-5 mt-2 mb-6">
           <View
-            className="flex-row items-center border rounded-full px-4 py-3 shadow-sm shadow-black/5"
+            className="flex-row items-center border rounded-full px-4 py-2.5 shadow-sm shadow-black/5"
             style={{
               backgroundColor: colors.background,
-              borderColor: `${colors.border}50`,
+              borderColor: `${colors.border}80`,
             }}
           >
-            <MagnifyingGlass size={22} color={colors.placeholder} />
+            <MagnifyingGlass
+              size={20}
+              color={colors.placeholder}
+              weight="regular"
+            />
             <TextInput
               placeholder="Search location, property..."
               placeholderTextColor={colors.placeholder}
@@ -152,19 +161,20 @@ export default function DiscoverMarketplaceScreen() {
             />
             <TouchableOpacity
               className="pl-3 border-l"
-              style={{ borderColor: `${colors.border}50` }}
+              style={{ borderColor: `${colors.border}80` }}
             >
-              <Faders size={22} color={colors.primary} />
+              <Faders size={20} color={colors.primary} weight="regular" />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* 3. Category Pill Selector Row */}
-        <View className="mb-8">
+        <View className="mb-7">
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            className="flex-row px-5"
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10 }}
+            className="flex-row"
           >
             {categories.map((cat) => {
               const isSelected = activeCategory === cat;
@@ -172,24 +182,24 @@ export default function DiscoverMarketplaceScreen() {
                 <TouchableOpacity
                   key={cat}
                   onPress={() => setActiveCategory(cat)}
-                  className="flex-row items-center px-5 py-2.5 rounded-full mr-3"
+                  className={`flex-row items-center px-6 py-3.5 rounded-full mr-3 ${
+                    isSelected ? "shadow-md shadow-blue-500/30" : ""
+                  }`}
                   style={{
                     backgroundColor: isSelected
                       ? colors.primary
-                      : colors.lighterPrimary,
+                      : colors.disabled,
                   }}
                 >
                   {cat === "All" && (
                     <SquaresFour
                       size={18}
-                      color={
-                        isSelected ? colors.background : colors.placeholder
-                      }
+                      color={"#FFFFFF"}
                       weight={isSelected ? "fill" : "regular"}
-                      style={{ marginRight: 6 }}
+                      style={{ marginRight: 8 }}
                     />
                   )}
-                  <Text className="text-[14px] font-medium text-white">
+                  <Text className="text-[15px] font-semibold text-white">
                     {cat}
                   </Text>
                 </TouchableOpacity>
@@ -231,12 +241,12 @@ export default function DiscoverMarketplaceScreen() {
                   width: SAVED_CARD_WIDTH,
                   marginRight: 16,
                   backgroundColor: colors.background,
-                  borderColor: `${colors.border}50`,
+                  borderColor: `${colors.border}80`,
                 }}
                 className="border rounded-3xl overflow-hidden shadow-sm shadow-black/5"
               >
                 {/* Showcase Media */}
-                <View className="relative h-44 w-full">
+                <View className="relative h-48 w-full">
                   <Image
                     source={{ uri: item.image }}
                     className="w-full h-full"
@@ -244,7 +254,7 @@ export default function DiscoverMarketplaceScreen() {
                   />
                   {item.isFeatured && (
                     <View
-                      className="absolute top-4 left-4 px-3 py-1.5 rounded-full"
+                      className="absolute top-4 left-4 px-3 py-1 rounded-full"
                       style={{ backgroundColor: colors.primary }}
                     >
                       <Text
@@ -263,13 +273,13 @@ export default function DiscoverMarketplaceScreen() {
                 {/* Info Segment */}
                 <View className="p-4">
                   <Text
-                    className="text-[16px] font-semibold mb-1.5"
+                    className="text-[16px] font-semibold mb-1"
                     style={{ color: colors.text }}
                     numberOfLines={1}
                   >
                     {item.title}
                   </Text>
-                  <View className="flex-row items-center mb-3">
+                  <View className="flex-row items-center mb-2.5">
                     <MapPin
                       size={14}
                       color={colors.placeholder}
@@ -283,7 +293,7 @@ export default function DiscoverMarketplaceScreen() {
                     </Text>
                   </View>
 
-                  <View className="flex-row items-baseline mb-4">
+                  <View className="flex-row items-baseline mb-3.5">
                     <Text
                       className="text-[16px] font-bold"
                       style={{ color: colors.primary }}
@@ -299,11 +309,14 @@ export default function DiscoverMarketplaceScreen() {
                   </View>
 
                   {/* Horizontal Meta */}
-                  <View className="flex-row items-center gap-4">
+                  <View
+                    className="flex-row items-center gap-4 pt-2 border-t"
+                    style={{ borderColor: `${colors.border}40` }}
+                  >
                     {item.beds && (
                       <View className="flex-row items-center">
                         <Bed
-                          size={16}
+                          size={15}
                           color={colors.placeholder}
                           weight="regular"
                         />
@@ -318,7 +331,7 @@ export default function DiscoverMarketplaceScreen() {
                     {item.baths && (
                       <View className="flex-row items-center">
                         <Bathtub
-                          size={16}
+                          size={15}
                           color={colors.placeholder}
                           weight="regular"
                         />
@@ -333,7 +346,7 @@ export default function DiscoverMarketplaceScreen() {
                     {item.size && (
                       <View className="flex-row items-center">
                         <Triangle
-                          size={16}
+                          size={15}
                           color={colors.placeholder}
                           weight="regular"
                         />
@@ -374,10 +387,10 @@ export default function DiscoverMarketplaceScreen() {
           {recommendedListings.map((list) => (
             <TouchableOpacity
               key={list.id}
-              className="border rounded-3xl p-3 flex-row mb-4 shadow-sm shadow-black/5"
+              className="border rounded-3xl p-3 flex-row mb-4 items-center shadow-sm shadow-black/5"
               style={{
                 backgroundColor: colors.background,
-                borderColor: `${colors.border}50`,
+                borderColor: `${colors.border}80`,
               }}
             >
               <Image
@@ -385,7 +398,7 @@ export default function DiscoverMarketplaceScreen() {
                 className="w-24 h-24 rounded-2xl"
               />
 
-              <View className="flex-1 ml-4 justify-between py-1">
+              <View className="flex-1 ml-3.5 justify-between py-0.5">
                 <View>
                   <Text
                     className="text-[15px] font-semibold mb-1"
@@ -396,7 +409,7 @@ export default function DiscoverMarketplaceScreen() {
                   </Text>
                   <View className="flex-row items-center">
                     <MapPin
-                      size={12}
+                      size={13}
                       color={colors.placeholder}
                       weight="regular"
                     />
@@ -409,7 +422,7 @@ export default function DiscoverMarketplaceScreen() {
                   </View>
                 </View>
 
-                <View className="flex-row items-end justify-between">
+                <View className="flex-row items-end justify-between mt-3">
                   <View className="flex-row items-baseline">
                     <Text
                       className="text-[15px] font-bold"
@@ -427,7 +440,7 @@ export default function DiscoverMarketplaceScreen() {
                     )}
                   </View>
 
-                  <View className="flex-row items-center gap-3">
+                  <View className="flex-row items-center gap-2.5">
                     {list.beds && (
                       <View className="flex-row items-center">
                         <Bed
