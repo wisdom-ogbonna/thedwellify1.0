@@ -256,8 +256,7 @@ export default function Otp() {
               }}
             >
               <Text
-                className="text-xl font-bold font-['Poppins']"
-                style={{ color: "#ffffff" }}
+                className="text-xl font-bold font-['Poppins'] text-white"
               >
                 Verify & Proceed
               </Text>

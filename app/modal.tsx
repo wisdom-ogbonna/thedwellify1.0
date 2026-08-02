@@ -118,4 +118,4 @@ function ConfirmBookingModal({
   );
 }
 
-export { ConfirmBookingModal };
+export default ConfirmBookingModal;

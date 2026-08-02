@@ -135,7 +135,7 @@ function AppContent() {
     }
 
     /* ✅ FULLY READY */
-    const target = role === "agent" ? "agent-dashboard" : "client-dashboard";
+    const target = role === "agent" ? "agent-dashboard" : "client-map";
 
     const isInsideApp = inAgent || inClient || inUtilities || inProduct;
 

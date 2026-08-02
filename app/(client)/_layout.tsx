@@ -4,10 +4,11 @@ import { Tabs } from "expo-router";
 import {
   ChatIcon,
   ShoppingCartIcon,
-  SquaresFourIcon,
+  HouseIcon,
   UserCircleIcon,
 } from "phosphor-react-native";
 import React from "react";
+import { Platform } from "react-native";
 
 export default function ClientLayout() {
   const { colors } = useTheme();
@@ -27,18 +28,19 @@ export default function ClientLayout() {
         tabBarInactiveTintColor: colors.text,
         tabBarStyle: {
           backgroundColor: colors.background,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 80,
-          paddingBottom: 20,
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
+          height: Platform.OS === "ios" ? 85 : 65,
+          paddingBottom: Platform.OS === "ios" ? 30 : 10,
           paddingTop: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 14,
+          fontSize: 10,
           fontWeight: "500",
-          letterSpacing: 0.1,
+          letterSpacing: 0,
           fontFamily: "Inter_500Medium",
-          marginTop: 5,
+          marginTop: 2,
         },
       }}
     >
@@ -47,8 +49,8 @@ export default function ClientLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <SquaresFourIcon
-              size={30}
+            <HouseIcon
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />
@@ -62,7 +64,7 @@ export default function ClientLayout() {
           title: "Recommended",
           tabBarIcon: ({ color, focused }) => (
             <ShoppingCartIcon
-              size={30}
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />
@@ -76,20 +78,21 @@ export default function ClientLayout() {
           title: "Messages",
           tabBarIcon: ({ color, focused }) => (
             <ChatIcon
-              size={30}
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />
           ),
         }}
       />
+
       <Tabs.Screen
         name="client-profile"
         options={{
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
             <UserCircleIcon
-              size={30}
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />

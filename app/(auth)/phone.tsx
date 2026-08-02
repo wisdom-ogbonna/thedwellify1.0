@@ -1,6 +1,6 @@
 import { useTheme } from "@/hooks/use-theme";
+import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
-import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -63,18 +63,17 @@ export default function PhoneScreen() {
 
   return (
     <SafeAreaView style={{ backgroundColor: colors.background, flex: 1 }}>
-
       {/* Back Button */}
       <View className="mt-6 px-6">
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-12 h-12 items-center justify-center rounded-2xl border"
           style={{
-            backgroundColor: "#F8FAFC",
-            borderColor: "#F1F5F9",
+            backgroundColor: colors.background,
+            borderColor: colors.border,
           }}
         >
-          <ArrowLeft size={20} color="#0F172A" />
+          <ArrowLeft size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -86,7 +85,10 @@ export default function PhoneScreen() {
         >
           Let&apos;s get you <Text style={{ color: colors.primary }}>in</Text>.
         </Text>
-        <Text className="text-slate-400 text-lg mt-4 leading-6 text-center font-normal px-2">
+        <Text
+          className=" text-lg mt-4 leading-6 text-center font-normal px-2"
+          style={{ color: colors.text }}
+        >
           Enter your phone number to receive a one-time verification code.
         </Text>
       </View>
@@ -97,7 +99,10 @@ export default function PhoneScreen() {
       >
         <View className="px-6 mt-12">
           {/* Input Label */}
-          <Text style={{ color: colors.text }} className="font-bold text-xl mb-2 px-1">
+          <Text
+            style={{ color: colors.text }}
+            className="font-bold text-xl mb-2 px-1"
+          >
             Phone Number
           </Text>
 
@@ -105,17 +110,20 @@ export default function PhoneScreen() {
           <View
             className="flex-row items-center h-16 px-4 rounded-2xl border"
             style={{
-              borderColor: "#E2E8F0",
-              backgroundColor: "#FFFFFF",
+              borderColor: colors.border,
+              backgroundColor: colors.background,
             }}
           >
             {/* Country Badge */}
             <View
               className="flex-row items-center h-10 px-3 rounded-xl mr-3"
-              style={{ backgroundColor: "#F8FAFC" }}
+              style={{ backgroundColor: colors.background }}
             >
               <Text className="text-xl mr-1.5">🇳🇬</Text>
-              <Text className="text-xl font-semibold text-slate-800">
+              <Text
+                className="text-xl font-semibold"
+                style={{ color: colors.text }}
+              >
                 +234
               </Text>
             </View>
@@ -128,33 +136,31 @@ export default function PhoneScreen() {
               maxLength={11}
               autoFocus
               placeholder="801 234 5678"
-              placeholderTextColor="#94A3B8"
-              className="flex-1 text-xl font-medium text-slate-800"
-              style={{ letterSpacing: 0.5 }}
+              placeholderTextColor={colors.placeholder}
+              className="flex-1 text-xl font-medium"
+              style={{ letterSpacing: 0.5, color: colors.text }}
             />
           </View>
         </View>
 
         {/* Primary Action Button */}
         <View className="px-6 mt-10">
-          {loading ? (
-            <View className="h-14 items-center justify-center">
-              <ActivityIndicator size="small" color={colors.primary} />
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={sendOTP}
-              disabled={!isValid}
-              className="h-14 rounded-2xl items-center justify-center"
-              style={{
-                backgroundColor: !isValid
-                  ? `${colors.disabled}`
-                  : colors.primary,
-              }}
-            >
+          <TouchableOpacity
+            onPress={sendOTP}
+            disabled={!isValid && loading}
+            className="h-14 rounded-2xl items-center justify-center"
+            style={{
+              backgroundColor: !isValid ? `${colors.disabled}` : colors.primary,
+            }}
+          >
+            {loading ? (
+              <View className="h-14 items-center justify-center text-white">
+                <ActivityIndicator size="small" />
+              </View>
+            ) : (
               <Text className="text-white font-bold text-xl">Send Code</Text>
-            </TouchableOpacity>
-          )}
+            )}
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
