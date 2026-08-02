@@ -37,7 +37,7 @@ const BottomModal = ({
     if (isTablet) {
       return [72 + bottomInset, screenHeight * 0.92];
     }
-    return [64 + bottomInset, // screenHeight * 0.85
+    return [50 + bottomInset, // screenHeight * 0.85
 
     ];
   }, [isTablet, screenHeight, bottomInset]);
@@ -82,7 +82,6 @@ const BottomModal = ({
         backgroundColor: colors.card,
         borderRadius: 24,
       }}
-      // REMOVED backdropComponent completely
     >
       <BottomSheetScrollView
         showsVerticalScrollIndicator={false}
@@ -90,10 +89,10 @@ const BottomModal = ({
         keyboardDismissMode="interactive"
         bounces={false}
         overScrollMode="never"
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 16) },
-        ]}
+        // contentContainerStyle={[
+        //   styles.scrollContent,
+        //   { paddingBottom: Math.max(insets.bottom, 16) },
+        // ]}
       >
         {children}
       </BottomSheetScrollView>

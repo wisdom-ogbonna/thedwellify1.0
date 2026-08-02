@@ -69,17 +69,17 @@ export default function Request({
       className="flex-1 relative"
       style={{ backgroundColor: colors.background }}
     >
-      <View className="pb-[140px] pt-5">
-        <View className="px-6 mb-8 mt-4">
+      <View className="pb-25 pt-3">
+        <View className="px-6 mb-6 mt-4">
           <Text
             style={{ color: colors.text }}
-            className="text-[34px] font-black tracking-tight leading-[40px] mb-3"
+            className="text-3xl font-black tracking-tight  leading-[40px] mb-3"
           >
             Find Your Next Premium Stay
           </Text>
           <Text
             style={{ color: secondaryText }}
-            className="text-lg font-medium"
+            className="text-md font-medium"
           >
             Discover tailored properties designed for your lifestyle.
           </Text>
@@ -140,7 +140,7 @@ export default function Request({
           </TouchableOpacity>
         </View>
 
-        <View className="mb-8">
+        <View>
           <View className="px-6 mb-5 flex-row justify-between items-end">
             <Text style={{ color: colors.text }} className="text-xl font-bold">
               What are you looking for?
@@ -178,9 +178,9 @@ export default function Request({
                     borderColor: active ? primaryColor : borderColor,
                     borderWidth: active ? 2 : 1,
                   }}
-                  className="rounded-[28px] p-3 flex-col justify-between shadow-sm shadow-black/5 min-h-55"
+                  className="rounded-[28px] p-3 flex-col justify-between shadow-sm shadow-black/5 min-h-48"
                 >
-                  <View className="w-full h-30 rounded-[20px] overflow-hidden bg-gray-200 mb-4 relative">
+                  <View className="w-full h-24 rounded-[20px] overflow-hidden bg-gray-200 mb-4 relative">
                     <Image
                       source={{ uri: getPremiumImage(type) }}
                       className="w-full h-full"
@@ -205,7 +205,7 @@ export default function Request({
                       style={{
                         color: active ? "#FFFFFF" : colors.text,
                       }}
-                      className="text-[17px] font-bold tracking-tight mb-1 capitalize"
+                      className="text-[15px] font-bold tracking-tight mb-1 capitalize"
                     >
                       {type}
                     </Text>
@@ -226,24 +226,22 @@ export default function Request({
       </View>
 
       <View
-        className="absolute bottom-0 w-full px-6 pt-4 pb-8"
+        className="absolute bottom-0 w-full px-6 pt-4 pb-4"
         style={{
           backgroundColor: colors.background,
-          borderTopWidth: 1,
-          borderTopColor: borderColor,
         }}
       >
         <TouchableOpacity
           onPress={handleRequest}
           disabled={loading}
           style={{ backgroundColor: primaryColor }}
-          className="w-full h-15 rounded-[20px] items-center justify-center flex-row shadow-lg active:scale-[0.98]"
+          className="w-full h-12 rounded-[20px] items-center justify-center flex-row shadow-lg active:scale-[0.98]"
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="large" />
           ) : (
             <>
-              <Text className="text-white font-bold text-[17px] mr-2">
+              <Text className="text-white font-bold text-[16px] mr-2">
                 Request Match
               </Text>
               <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
