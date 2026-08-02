@@ -31,10 +31,12 @@ import { Switch } from "react-native-gesture-handler";
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
+import { useModal } from "@/components/dialogs/popup-modal";
 
 export default function PremiumProfileScreen() {
   const { isDark } = useTheme();
   const { logout } = useAuth();
+  const { showModal } = useModal();
 
   const  [isThemeSwitchOn, setIsThemeSwitchOn] = useState<boolean>(isDark);
 
@@ -84,24 +86,17 @@ export default function PremiumProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Confirm Sign out",
-      "This action will log you out of your account. You will need to sign in again to access your account.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Sign out",
-          style: "destructive",
-          onPress: async () => await logout(),
-        },
-      ],
-      {
-        cancelable: true,
-      },
-    );
+    const triggerLogout = () => {
+      showModal({
+        title: "Log Out?",
+        text: "Are you sure you want to log out?",
+        type: "logout",
+        ctaText1: "Log Out",
+        ctaText2: "Cancel",
+        onCta1: async () => await logout(),
+      });
+    };
+    triggerLogout();
   };
 
   /**
@@ -146,24 +141,17 @@ export default function PremiumProfileScreen() {
    * =========================
    */
   const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "This action permanently removes your account and all associated data. This cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete Account",
-          style: "destructive",
-          onPress: deleteAccount,
-        },
-      ],
-      {
-        cancelable: true,
-      },
-    );
+    const triggerDelete = () => {
+      showModal({
+        title: "Delete Account?",
+        text: "Are you sure you want to delete your account? This action cannot be undone.",
+        type: "delete",
+        ctaText1: "Delete",
+        ctaText2: "Cancel",
+        onCta1: deleteAccount,
+      });
+    };
+    triggerDelete();
   };
 
   /**

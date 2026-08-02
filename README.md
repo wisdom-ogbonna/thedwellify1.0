@@ -48,6 +48,75 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+
+import React from "react";
+import { View, Button } from "react-native";
+import { useModal } from "@/components/CustomModal";
+
+export default function HomeScreen() {
+  const { showModal } = useModal();
+
+  // 1. Error Modal Example
+  const triggerError = () => {
+    showModal({
+      title: "Something went wrong",
+      text: "We couldn't complete your request. Please try again later.",
+      type: "error",
+      ctaText1: "Okay",
+      onCta1: () => console.log("Error acknowledged"),
+    });
+  };
+
+  // 2. Delete Listing Modal Example
+  const triggerDelete = () => {
+    showModal({
+      title: "Delete Listing?",
+      text: "Are you sure you want to delete this listing? This action cannot be undone.",
+      type: "delete",
+      ctaText1: "Delete",
+      ctaText2: "Cancel",
+      onCta1: () => console.log("Deleted!"),
+      onCta2: () => console.log("Cancelled deletion"),
+    });
+  };
+
+  // 3. Logout Modal Example
+  const triggerLogout = () => {
+    showModal({
+      title: "Log Out?",
+      text: "Are you sure you want to log out?",
+      type: "logout",
+      ctaText1: "Log Out",
+      ctaText2: "Cancel",
+      onCta1: () => console.log("Logged out"),
+    });
+  };
+
+  // 4. Success Modal Example
+  const triggerSuccess = () => {
+    showModal({
+      title: "Successful",
+      text: "Your listing has been successfully updated. You can now view it in your listings tab.",
+      type: "success",
+      ctaText1: "Return Home",
+      onCta1: () => console.log("Returned home"),
+    });
+  };
+
+  return (
+    <View className="flex-1 justify-center items-center gap-4">
+      <Button title="Trigger Error" onPress={triggerError} />
+      <Button title="Trigger Delete" onPress={triggerDelete} />
+      <Button title="Trigger Logout" onPress={triggerLogout} />
+      <Button title="Trigger Success" onPress={triggerSuccess} />
+    </View>
+  );
+}
+
+
+
 ios build id
 0cc23b1e-3b4d-44bf-8c76-c4a6819056b3
 

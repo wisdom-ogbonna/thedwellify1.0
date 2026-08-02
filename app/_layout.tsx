@@ -6,12 +6,13 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 // import * as NavigationBar from "expo-navigation-bar";
+import { CustomModalProvider } from "@/components/dialogs/popup-modal";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { useColorScheme, AppState } from "react-native";
+import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
@@ -37,7 +38,7 @@ Notifications.setNotificationHandler({
    APP CONTENT
 ========================= */
 function AppContent() {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { user, role, isVerified, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
@@ -230,13 +231,15 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={theme}>
-        <AuthProvider>
-          <OfflineModal
-            visible={!isConnected}
-            onRetry={() => NetInfo.refresh()}
-          />
-          <AppContent />
-        </AuthProvider>
+        <CustomModalProvider>
+          <AuthProvider>
+            <OfflineModal
+              visible={!isConnected}
+              onRetry={() => NetInfo.refresh()}
+            />
+            <AppContent />
+          </AuthProvider>
+        </CustomModalProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );
