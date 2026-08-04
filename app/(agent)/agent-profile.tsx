@@ -270,15 +270,14 @@ export default function ProfileScreen() {
         <View className="px-5 mt-6">
           <View
             style={{
-              backgroundColor: `${colors.text}60`,
-              borderColor: colors.border,
+              backgroundColor: isDark ? "#123" : "#FAF8FF",
             }}
-            className="border rounded-3xl p-5 shadow-sm"
+            className="rounded-3xl p-5 shadow-md"
           >
             <View className="flex-row items-center justify-between mb-4">
               <View>
                 <Text
-                  style={{ color: colors.placeholder }}
+                  style={{ color: colors.text }}
                   className="text-[10px] font-bold font-['Inter'] uppercase tracking-wider"
                 >
                   Account Type
@@ -291,7 +290,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <View
-                style={{ backgroundColor: colors.background }}
+                style={{ backgroundColor: "#0A6CFF10" }}
                 className="p-2.5 flex-row gap-3 justify-center items-center rounded-xl"
               >
                 <Text
@@ -315,28 +314,24 @@ export default function ProfileScreen() {
               onPress={() => setAccountType("agent")}
               style={{
                 borderColor:
-                  accountType === "agent" ? colors.placeholder : colors.border,
-                backgroundColor:
-                  accountType === "agent" ? colors.text : colors.background,
+                  accountType === "agent" ? colors.primary : colors.placeholder,
+                backgroundColor: colors.background,
               }}
-              className="flex-row items-center justify-between p-4 rounded-2xl border mb-3"
+              className="flex-row items-center justify-between p-4 rounded-2xl border-2 mb-3"
             >
               <View className="flex-row items-center flex-1 pr-4">
                 <User
                   size={20}
                   color={
                     accountType === "agent"
-                      ? colors.background
+                      ? colors.primary
                       : colors.placeholder
                   }
                 />
                 <View className="ml-3">
                   <Text
                     style={{
-                      color:
-                        accountType === "agent"
-                          ? colors.background
-                          : colors.text,
+                      color: colors.text,
                     }}
                     className="text-lg font-bold font-['Inter']"
                   >
@@ -371,28 +366,26 @@ export default function ProfileScreen() {
               onPress={() => setAccountType("client")}
               style={{
                 borderColor:
-                  accountType === "client" ? colors.border : colors.border,
-                backgroundColor:
-                  accountType === "client" ? colors.text : colors.background,
+                  accountType === "client"
+                    ? colors.primary
+                    : colors.placeholder,
+                backgroundColor: colors.background,
               }}
-              className="flex-row items-center justify-between p-4 rounded-2xl border mb-4"
+              className="flex-row items-center justify-between p-4 rounded-2xl border-2 mb-4"
             >
               <View className="flex-row items-center flex-1 pr-4">
                 <Briefcase
                   size={20}
                   color={
                     accountType === "client"
-                      ? colors.background
+                      ? colors.primary
                       : colors.placeholder
                   }
                 />
                 <View className="ml-3">
                   <Text
                     style={{
-                      color:
-                        accountType === "client"
-                          ? colors.background
-                          : colors.text,
+                      color: colors.text,
                     }}
                     className="text-lg font-bold font-['Inter']"
                   >
@@ -426,8 +419,8 @@ export default function ProfileScreen() {
               style={{ backgroundColor: colors.primary }}
               className="h-14 rounded-2xl items-center justify-center shadow-sm"
             >
-              <Text className="text-white font-semibold font-['Inter'] text-base">
-                Switch Account
+              <Text className="text-white text-lg font-bold font-['Inter']">
+                Save Account Changes
               </Text>
             </Pressable>
           </View>
@@ -466,15 +459,20 @@ export default function ProfileScreen() {
                       : "System Default"}
                 </Text>
               </View>
-              <Switch
-                value={isThemeSwitchOn}
-                trackColor={{
-                  false: colors.border,
-                  true: colors.primary,
-                }}
-                thumbColor={isThemeSwitchOn ? colors.text : colors.primary}
-                onValueChange={handleThemeChange}
-              />
+              <View
+                style={{ backgroundColor: "#0A6CFF10" }}
+                className="p-2.5 flex-row gap-3 justify-center items-center rounded-xl"
+              >
+                <Switch
+                  value={isThemeSwitchOn}
+                  trackColor={{
+                    false: colors.border,
+                    true: colors.primary,
+                  }}
+                  thumbColor={isThemeSwitchOn ? colors.text : colors.primary}
+                  onValueChange={handleThemeChange}
+                />
+              </View>
             </View>
           </View>
         </View>
