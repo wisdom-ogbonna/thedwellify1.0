@@ -1,15 +1,18 @@
 // app/(tabs)/discover.tsx
+import { useTheme } from "@/hooks/use-theme";
 import { router } from "expo-router";
 import {
-  BedDouble,
-  ChevronRight,
+  Bathtub,
+  Bed,
+  Bell,
+  CaretDown,
+  Faders,
   Heart,
+  MagnifyingGlass,
   MapPin,
-  Maximize,
-  Search,
-  ShowerHead,
-  SlidersHorizontal,
-} from "lucide-react-native";
+  SquaresFour,
+  Triangle,
+} from "phosphor-react-native";
 import React, { useState } from "react";
 import {
   Dimensions,
@@ -23,160 +26,155 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
-const RECOMMENDED_CARD_WIDTH = width * 0.78;
+const SAVED_CARD_WIDTH = width * 0.72;
 
-const recommendedProperties = [
+const savedProperties = [
   {
     id: "1",
-    title: "The Glass Pavilion",
-    location: "Hollywood Hills, CA",
-    price: "$4,250,000",
-    beds: 4,
-    baths: 5,
-    size: "4,390 sqft",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    title: "Victoria Island Apartment",
+    location: "Victoria Island, Lagos",
+    price: "₦4,500,000",
+    period: " / year",
+    beds: 3,
+    baths: 3,
+    size: "180 sqm",
+    image:
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=600",
+    isFeatured: true,
   },
   {
     id: "2",
-    title: "Azure Horizon Estate",
-    location: "Malibu, CA",
-    price: "$6,180,000",
-    beds: 5,
-    baths: 6,
-    size: "5,500 sqft",
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    title: "Luxury Duplex",
+    location: "Lekki Phase 1, Lagos",
+    price: "₦8,000,000",
+    period: " / year",
+    beds: 4,
+    baths: 4,
+    size: "250 sqm",
+    image:
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=600",
+    isFeatured: false,
   },
 ];
 
-const featuredListings = [
+const recommendedListings = [
   {
     id: "1",
-    title: "Hamptons Haven",
-    location: "Southampton, NY",
-    price: "$2,850,000",
-    beds: 5,
-    baths: 4,
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    title: "3 Bedroom Apartment",
+    location: "Ikoyi, Lagos",
+    price: "₦12,000,000",
+    period: " / year",
+    beds: 3,
+    baths: 3,
+    image:
+      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=300",
   },
   {
     id: "2",
-    title: "Mirage Desert Oasis",
-    location: "Joshua Tree, CA",
-    price: "$1,920,000",
-    beds: 3,
+    title: "Terraced Duplex",
+    location: "Ajah, Lagos",
+    price: "₦3,200,000",
+    period: " / year",
+    beds: 2,
     baths: 2,
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    image:
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=300",
   },
   {
     id: "3",
-    title: "Cobble Hill Brownstone",
-    location: "Brooklyn, NY",
-    price: "$5,400,000",
-    beds: 4,
-    baths: 3.5,
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914",
+    title: "Prime Land Plot",
+    location: "Epe, Lagos",
+    price: "₦15,000,000",
+    period: "",
+    size: "600 sqm",
+    image:
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=300",
   },
 ];
 
 export default function DiscoverMarketplaceScreen() {
+  const { colors } = useTheme();
   const [activeCategory, setActiveCategory] = useState("All");
-  const isDark = false;
-  const categories = ["All", "Villa", "Apartment", "Penthouse"];
-
-  // Enforcing strict hardware level pure theme variables mapping
-  const screenBg = isDark ? "#000000" : "#F1F5F9";
-  const elementBg = isDark ? "#000000" : "#FFFFFF";
-  const innerCardBg = isDark ? "#111111" : "#F8FAFC";
-  const textColor = isDark ? "#FFFFFF" : "#0F172A";
-  const subTextColor = isDark ? "#94A3B8" : "#64748B";
-  const borderColor = isDark ? "#222222" : "#E2E8F0";
+  const categories = ["All", "Apartment", "Rent", "Land"];
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: screenBg }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       edges={["top"]}
     >
       {/* 1. App Bar Header */}
       <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-          backgroundColor: elementBg,
-          borderBottomWidth: 1,
-          borderBottomColor: borderColor,
-        }}
+        className="flex-row items-center justify-between px-5 py-4"
+        style={{ backgroundColor: colors.background }}
       >
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "900",
-            color: "#2563EB",
-            letterSpacing: -0.5,
-          }}
-        >
-          Dwellify
-        </Text>
-        <Image
-          source={{
-            uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
-          }}
-          className="w-9 h-9 rounded-full"
-        />
+        <View className="flex-row items-center gap-1.5">
+          <MapPin weight="fill" size={20} color={colors.primary} />
+          <Text
+            className="text-[15px] font-semibold"
+            style={{ color: colors.text }}
+          >
+            Lagos, Nigeria
+          </Text>
+          <CaretDown color={colors.text} weight="bold" size={13} />
+        </View>
+        <View className="flex-row gap-3 items-center">
+          <TouchableOpacity
+            className="w-10 h-10 rounded-full border items-center justify-center"
+            style={{ borderColor: `${colors.border}80` }}
+          >
+            <Bell color={colors.text} size={20} weight="regular" />
+          </TouchableOpacity>
+          <Image
+            source={{
+              uri: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150",
+            }}
+            className="w-10 h-10 rounded-full"
+          />
+        </View>
       </View>
 
       {/* Main Scrollable Canvas */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 2. Search Input Bar */}
-        <View className="px-5 mt-4 mb-4">
+        <View className="px-5 mt-2 mb-6">
           <View
+            className="flex-row items-center border rounded-full px-4 py-2.5 shadow-sm shadow-black/5"
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: innerCardBg,
-              borderWidth: 1,
-              borderColor: borderColor,
-              borderRadius: 16,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
+              backgroundColor: colors.background,
+              borderColor: `${colors.border}80`,
             }}
           >
-            <Search
-              size={18}
-              color={subTextColor}
-              style={{ marginRight: 10 }}
+            <MagnifyingGlass
+              size={20}
+              color={colors.placeholder}
+              weight="regular"
             />
             <TextInput
-              placeholder="Search Location"
-              placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
-              style={{
-                flex: 1,
-                fontSize: 14,
-                color: textColor,
-                fontWeight: "500",
-                padding: 0,
-              }}
+              placeholder="Search location, property..."
+              placeholderTextColor={colors.placeholder}
+              className="flex-1 text-[15px] font-normal ml-3 p-0"
+              style={{ color: colors.text }}
             />
             <TouchableOpacity
-              style={{
-                paddingLeft: 12,
-                borderLeftWidth: 1,
-                borderLeftColor: borderColor,
-              }}
+              className="pl-3 border-l"
+              style={{ borderColor: `${colors.border}80` }}
             >
-              <SlidersHorizontal size={18} color="#2563EB" />
+              <Faders size={20} color={colors.primary} weight="regular" />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* 3. Category Pill Selector Row */}
-        <View className="mb-5">
+        <View className="mb-7">
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            className="flex-row px-5"
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10 }}
+            className="flex-row"
           >
             {categories.map((cat) => {
               const isSelected = activeCategory === cat;
@@ -184,24 +182,24 @@ export default function DiscoverMarketplaceScreen() {
                 <TouchableOpacity
                   key={cat}
                   onPress={() => setActiveCategory(cat)}
+                  className={`flex-row items-center px-6 py-3.5 rounded-full mr-3 ${
+                    isSelected ? "shadow-md shadow-blue-500/30" : ""
+                  }`}
                   style={{
-                    paddingHorizontal: 24,
-                    paddingVertical: 10,
-                    borderRadius: 99,
-                    marginRight: 12,
-                    borderWidth: 1,
-                    borderColor: isSelected ? "#2563EB" : borderColor,
-                    backgroundColor: isSelected ? "#2563EB" : innerCardBg,
+                    backgroundColor: isSelected
+                      ? colors.primary
+                      : colors.disabled,
                   }}
-                  className="shadow-none"
                 >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: "700",
-                      color: isSelected ? "#FFFFFF" : subTextColor,
-                    }}
-                  >
+                  {cat === "All" && (
+                    <SquaresFour
+                      size={18}
+                      color={"#FFFFFF"}
+                      weight={isSelected ? "fill" : "regular"}
+                      style={{ marginRight: 8 }}
+                    />
+                  )}
+                  <Text className="text-[15px] font-semibold text-white">
                     {cat}
                   </Text>
                 </TouchableOpacity>
@@ -210,171 +208,156 @@ export default function DiscoverMarketplaceScreen() {
           </ScrollView>
         </View>
 
-        {/* 4. Recommended Large Carousel Cards Section */}
-        <View className="mb-6">
+        {/* 4. Saved Large Carousel Cards Section */}
+        <View className="mb-8">
           <View className="flex-row justify-between items-center px-5 mb-4">
             <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "900",
-                color: textColor,
-                letterSpacing: -0.5,
-              }}
+              className="text-[18px] font-bold tracking-tight"
+              style={{ color: colors.text }}
             >
-              Saved Properties
+              Saved
             </Text>
-            <TouchableOpacity
-              className="flex-row items-center"
-              onPress={() => router.push("/(client)/saved")}
-            >
+            <TouchableOpacity onPress={() => router.push("/(client)/saved")}>
               <Text
-                style={{ fontSize: 12, color: "#2563EB", fontWeight: "700" }}
+                className="text-[13px] font-semibold"
+                style={{ color: colors.primary }}
               >
-                View all
+                See all
               </Text>
-              <ChevronRight size={14} color="#2563EB" />
             </TouchableOpacity>
           </View>
 
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            snapToInterval={RECOMMENDED_CARD_WIDTH + 16}
+            snapToInterval={SAVED_CARD_WIDTH + 16}
             decelerationRate="fast"
-            className="flex-row px-5"
+            contentContainerStyle={{ paddingHorizontal: 20 }}
           >
-            {recommendedProperties.map((item) => (
+            {savedProperties.map((item) => (
               <View
                 key={item.id}
                 style={{
-                  width: RECOMMENDED_CARD_WIDTH,
-                  backgroundColor: elementBg,
-                  borderWidth: 1,
-                  borderColor: borderColor,
-                  borderRadius: 28,
-                  overflow: "hidden",
+                  width: SAVED_CARD_WIDTH,
                   marginRight: 16,
-                  marginBottom: 8,
+                  backgroundColor: colors.background,
+                  borderColor: `${colors.border}80`,
                 }}
+                className="border rounded-3xl overflow-hidden shadow-sm shadow-black/5"
               >
-                {/* Showcase Media Aspect Box */}
-                <View className="relative h-48 w-full bg-slate-100 dark:bg-neutral-900">
+                {/* Showcase Media */}
+                <View className="relative h-48 w-full">
                   <Image
                     source={{ uri: item.image }}
                     className="w-full h-full"
                     resizeMode="cover"
                   />
-
-                  {/* Floating Top-Left Price Badge */}
-                  <View className="absolute top-4 left-4 bg-blue-600 px-3 py-1.5 rounded-xl">
-                    <Text className="text-xs font-black text-white">
-                      {item.price}
-                    </Text>
-                  </View>
-
-                  {/* Top-Right Favorite Circle Toggle */}
-                  <TouchableOpacity
-                    style={{
-                      position: "absolute",
-                      top: 4,
-                      right: 4,
-                      width: 36,
-                      height: 36,
-                      backgroundColor: "rgba(255,255,255,0.9)",
-                      borderRadius: 18,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Heart size={16} color="#EF4444" fill="#EF4444" />
+                  {item.isFeatured && (
+                    <View
+                      className="absolute top-4 left-4 px-3 py-1 rounded-full"
+                      style={{ backgroundColor: colors.primary }}
+                    >
+                      <Text
+                        className="text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: colors.background }}
+                      >
+                        Featured
+                      </Text>
+                    </View>
+                  )}
+                  <TouchableOpacity className="absolute top-4 right-4 w-9 h-9 bg-black/20 backdrop-blur-md rounded-full items-center justify-center border border-white/30">
+                    <Heart size={18} color="#FFFFFF" weight="regular" />
                   </TouchableOpacity>
                 </View>
 
                 {/* Info Segment */}
                 <View className="p-4">
                   <Text
-                    style={{
-                      fontSize: 16,
-                      fontWeight: "900",
-                      color: textColor,
-                      lineHeight: 20,
-                    }}
+                    className="text-[16px] font-semibold mb-1"
+                    style={{ color: colors.text }}
+                    numberOfLines={1}
                   >
                     {item.title}
                   </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginTop: 6,
-                    }}
-                  >
-                    <MapPin size={12} color={subTextColor} />
+                  <View className="flex-row items-center mb-2.5">
+                    <MapPin
+                      size={14}
+                      color={colors.placeholder}
+                      weight="regular"
+                    />
                     <Text
-                      style={{
-                        fontSize: 12,
-                        color: subTextColor,
-                        marginLeft: 4,
-                      }}
+                      className="text-[13px] ml-1"
+                      style={{ color: colors.placeholder }}
                     >
                       {item.location}
                     </Text>
                   </View>
 
-                  {/* Horizontal Meta Specifications Line */}
+                  <View className="flex-row items-baseline mb-3.5">
+                    <Text
+                      className="text-[16px] font-bold"
+                      style={{ color: colors.primary }}
+                    >
+                      {item.price}
+                    </Text>
+                    <Text
+                      className="text-[13px] font-medium"
+                      style={{ color: colors.primary }}
+                    >
+                      {item.period}
+                    </Text>
+                  </View>
+
+                  {/* Horizontal Meta */}
                   <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginTop: 12,
-                      paddingTop: 12,
-                      borderTopWidth: 1,
-                      borderTopColor: borderColor,
-                      gap: 16,
-                    }}
+                    className="flex-row items-center gap-4 pt-2 border-t"
+                    style={{ borderColor: `${colors.border}40` }}
                   >
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <BedDouble size={14} color={subTextColor} />
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: subTextColor,
-                          marginLeft: 4,
-                        }}
-                      >
-                        {item.beds} Beds
-                      </Text>
-                    </View>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <ShowerHead size={14} color={subTextColor} />
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: subTextColor,
-                          marginLeft: 4,
-                        }}
-                      >
-                        {item.baths} Baths
-                      </Text>
-                    </View>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <Maximize size={14} color={subTextColor} />
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: subTextColor,
-                          marginLeft: 4,
-                        }}
-                      >
-                        {item.size}
-                      </Text>
-                    </View>
+                    {item.beds && (
+                      <View className="flex-row items-center">
+                        <Bed
+                          size={15}
+                          color={colors.placeholder}
+                          weight="regular"
+                        />
+                        <Text
+                          className="text-[13px] ml-1.5 font-medium"
+                          style={{ color: colors.placeholder }}
+                        >
+                          {item.beds}
+                        </Text>
+                      </View>
+                    )}
+                    {item.baths && (
+                      <View className="flex-row items-center">
+                        <Bathtub
+                          size={15}
+                          color={colors.placeholder}
+                          weight="regular"
+                        />
+                        <Text
+                          className="text-[13px] ml-1.5 font-medium"
+                          style={{ color: colors.placeholder }}
+                        >
+                          {item.baths}
+                        </Text>
+                      </View>
+                    )}
+                    {item.size && (
+                      <View className="flex-row items-center">
+                        <Triangle
+                          size={15}
+                          color={colors.placeholder}
+                          weight="regular"
+                        />
+                        <Text
+                          className="text-[13px] ml-1.5 font-medium"
+                          style={{ color: colors.placeholder }}
+                        >
+                          {item.size}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -382,106 +365,127 @@ export default function DiscoverMarketplaceScreen() {
           </ScrollView>
         </View>
 
-        {/* 5. Vertical Featured Listings Section */}
-        <View className="px-5 mb-28">
-          <Text
-            style={{
-              fontSize: 18,
-              fontWeight: "900",
-              color: textColor,
-              letterSpacing: -0.5,
-              marginBottom: 16,
-            }}
-          >
-            Recommended for you
-          </Text>
+        {/* 5. Vertical Recommended Listings Section */}
+        <View className="px-5 mb-10">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text
+              className="text-[18px] font-bold tracking-tight"
+              style={{ color: colors.text }}
+            >
+              Recommended for you
+            </Text>
+            <TouchableOpacity>
+              <Text
+                className="text-[13px] font-semibold"
+                style={{ color: colors.primary }}
+              >
+                See all
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          {featuredListings.map((list) => (
+          {recommendedListings.map((list) => (
             <TouchableOpacity
               key={list.id}
+              className="border rounded-3xl p-3 flex-row mb-4 items-center shadow-sm shadow-black/5"
               style={{
-                backgroundColor: innerCardBg,
-                borderWidth: 1,
-                borderColor: borderColor,
-                borderRadius: 16,
-                padding: 12,
-                flexDirection: "row",
-                alignItems: "center",
-                marginBottom: 14,
+                backgroundColor: colors.background,
+                borderColor: `${colors.border}80`,
               }}
             >
               <Image
                 source={{ uri: list.image }}
-                className="w-20 h-20 rounded-xl"
+                className="w-24 h-24 rounded-2xl"
               />
 
-              <View className="flex-1 ml-4 justify-between py-0.5">
+              <View className="flex-1 ml-3.5 justify-between py-0.5">
                 <View>
                   <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "900",
-                      color: textColor,
-                    }}
+                    className="text-[15px] font-semibold mb-1"
+                    style={{ color: colors.text }}
                     numberOfLines={1}
                   >
                     {list.title}
                   </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginTop: 4,
-                    }}
-                  >
-                    <MapPin size={10} color={subTextColor} />
+                  <View className="flex-row items-center">
+                    <MapPin
+                      size={13}
+                      color={colors.placeholder}
+                      weight="regular"
+                    />
                     <Text
-                      style={{
-                        fontSize: 11,
-                        color: subTextColor,
-                        marginLeft: 4,
-                      }}
+                      className="text-[12px] ml-1"
+                      style={{ color: colors.placeholder }}
                     >
                       {list.location}
                     </Text>
                   </View>
                 </View>
 
-                <View className="flex-row items-center justify-between mt-3">
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "900",
-                      color: "#2563EB",
-                    }}
-                  >
-                    {list.price}
-                  </Text>
-                  <View className="flex-row items-center space-x-3">
-                    <View className="flex-row items-center">
-                      <BedDouble size={12} color={subTextColor} />
+                <View className="flex-row items-end justify-between mt-3">
+                  <View className="flex-row items-baseline">
+                    <Text
+                      className="text-[15px] font-bold"
+                      style={{ color: colors.primary }}
+                    >
+                      {list.price}
+                    </Text>
+                    {!!list.period && (
                       <Text
-                        style={{
-                          fontSize: 10,
-                          color: subTextColor,
-                          marginLeft: 3,
-                        }}
+                        className="text-[11px] font-medium"
+                        style={{ color: colors.primary }}
                       >
-                        {list.beds}
+                        {list.period}
                       </Text>
-                    </View>
-                    <View className="flex-row items-center">
-                      <ShowerHead size={12} color={subTextColor} />
-                      <Text
-                        style={{
-                          fontSize: 10,
-                          color: subTextColor,
-                          marginLeft: 3,
-                        }}
-                      >
-                        {list.baths}
-                      </Text>
-                    </View>
+                    )}
+                  </View>
+
+                  <View className="flex-row items-center gap-2.5">
+                    {list.beds && (
+                      <View className="flex-row items-center">
+                        <Bed
+                          size={14}
+                          color={colors.placeholder}
+                          weight="regular"
+                        />
+                        <Text
+                          className="text-[12px] ml-1 font-medium"
+                          style={{ color: colors.placeholder }}
+                        >
+                          {list.beds}
+                        </Text>
+                      </View>
+                    )}
+                    {list.baths && (
+                      <View className="flex-row items-center">
+                        <Bathtub
+                          size={14}
+                          color={colors.placeholder}
+                          weight="regular"
+                        />
+                        <Text
+                          className="text-[12px] ml-1 font-medium"
+                          style={{ color: colors.placeholder }}
+                        >
+                          {list.baths}
+                        </Text>
+                      </View>
+                    )}
+                    {list.size && (
+                      <View className="flex-row items-center">
+                        <Triangle
+                          size={14}
+                          color={colors.placeholder}
+                          weight="regular"
+                        />
+                        <Text
+                          className="text-[12px] ml-1 font-medium"
+                          style={{ color: colors.placeholder }}
+                        >
+                          {list.size}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>

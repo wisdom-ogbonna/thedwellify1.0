@@ -70,18 +70,17 @@ export default function RoleSelectionScreen() {
 
   return (
     <SafeAreaView style={{ backgroundColor: colors.background, flex: 1 }}>
-
       {/* Navigation Back Header */}
       <View className="mt-6 px-6">
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-12 h-12 items-center justify-center rounded-2xl border"
           style={{
-            backgroundColor: "#F8FAFC",
-            borderColor: "#F1F5F9",
+            backgroundColor: colors.background,
+            borderColor: colors.border,
           }}
         >
-          <ArrowLeft size={20} color="#0F172A" />
+          <ArrowLeft size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -91,12 +90,15 @@ export default function RoleSelectionScreen() {
           <View className="mb-10 items-center">
             <Text
               className="text-4xl font-black text-center tracking-tight"
-              style={{ color: "#0F172A" }}
+              style={{ color: colors.text }}
             >
               How will you <Text style={{ color: colors.primary }}>use</Text>{" "}
               Dwellify?
             </Text>
-            <Text className="text-slate-400 text-lg text-center mt-4 leading-6 font-normal max-w-sm">
+            <Text
+              className=" text-lg text-center mt-4 leading-6 font-normal max-w-sm"
+              style={{ color: colors.text }}
+            >
               Pick your role. You can switch anytime from settings.
             </Text>
           </View>
@@ -111,13 +113,18 @@ export default function RoleSelectionScreen() {
               className="p-6 py-10 rounded-3xl border-2 flex-row items-center justify-between mb-4"
               style={{
                 borderColor:
-                  selectedRole === "client" ? colors.primary : "#F8FAFC",
+                  selectedRole === "client" ? colors.primary : "transparent",
                 backgroundColor:
-                  selectedRole === "client" ? "transparent" : "#F8FAFC",
+                  selectedRole === "client" ? "transparent" : "transparent",
               }}
             >
               <View className="flex-1 pr-4">
-                <Text className="text-xl font-bold text-slate-900">
+                <Text
+                  className="text-xl font-bold text-slate-900"
+                  style={{
+                    color: colors.text,
+                  }}
+                >
                   I&apos;m a Client
                 </Text>
                 <Text className="text-lg text-slate-400 mt-2 leading-5">
@@ -149,13 +156,15 @@ export default function RoleSelectionScreen() {
               className="p-6 py-10 rounded-3xl border-2 flex-row items-center justify-between"
               style={{
                 borderColor:
-                  selectedRole === "agent" ? colors.primary : "#F8FAFC",
-                backgroundColor:
-                  selectedRole === "agent" ? "transparent" : "#F8FAFC",
+                  selectedRole === "agent" ? colors.primary : "transparent",
+                backgroundColor: "transparent",
               }}
             >
               <View className="flex-1 pr-4">
-                <Text className="text-xl font-bold text-slate-900">
+                <Text
+                  className="text-xl font-bold text-slate-900"
+                  style={{ color: colors.text }}
+                >
                   I&apos;m an Agent
                 </Text>
                 <Text className="text-lg text-slate-400 mt-2 leading-5">

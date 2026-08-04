@@ -5,16 +5,16 @@ import { useRouter } from "expo-router";
 import {
   Calendar,
   ChevronRight,
+  Clock,
   CreditCard,
   Heart,
   LifeBuoy,
   LogOut,
-  Monitor,
-  Moon,
   Settings,
-  Sun,
   Trash2Icon,
+  UserCheck2Icon,
 } from "lucide-react-native";
+import { StarIcon } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -27,23 +27,26 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { Switch } from "react-native-gesture-handler";
 import {
   SafeAreaView,
-  useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { useModal } from "@/components/dialogs/popup-modal";
 
 export default function PremiumProfileScreen() {
   const { isDark } = useTheme();
   const { logout } = useAuth();
+  const { showModal } = useModal();
+
+  const  [isThemeSwitchOn, setIsThemeSwitchOn] = useState<boolean>(isDark);
 
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
 
   const [profile, setProfile] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);
+  const [_, setDeleting] = useState(false);
   const router = useRouter();
 
   /**
@@ -77,50 +80,23 @@ export default function PremiumProfileScreen() {
    * =========================
    */
   const handleThemeChange = () => {
-    Alert.alert(
-      "Appearance Settings",
-      "Choose your preferred theme",
-      [
-        {
-          text: "Light Mode",
-          onPress: () => Appearance.setColorScheme("light"),
-        },
-        {
-          text: "Dark Mode",
-          onPress: () => Appearance.setColorScheme("dark"),
-        },
-        {
-          text: "System Default",
-          onPress: () => Appearance.setColorScheme(null),
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ],
-      { cancelable: true },
-    );
+    const nextTheme = isDark ? "light" : "dark";
+    Appearance.setColorScheme(nextTheme);
+    setIsThemeSwitchOn(!isDark);
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Confirm Sign out",
-      "This action will log you out of your account. You will need to sign in again to access your account.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Sign out",
-          style: "destructive",
-          onPress: async () => await logout(),
-        },
-      ],
-      {
-        cancelable: true,
-      },
-    );
+    const triggerLogout = () => {
+      showModal({
+        title: "Log Out?",
+        text: "Are you sure you want to log out?",
+        type: "logout",
+        ctaText1: "Log Out",
+        ctaText2: "Cancel",
+        onCta1: async () => await logout(),
+      });
+    };
+    triggerLogout();
   };
 
   /**
@@ -165,24 +141,17 @@ export default function PremiumProfileScreen() {
    * =========================
    */
   const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "This action permanently removes your account and all associated data. This cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete Account",
-          style: "destructive",
-          onPress: deleteAccount,
-        },
-      ],
-      {
-        cancelable: true,
-      },
-    );
+    const triggerDelete = () => {
+      showModal({
+        title: "Delete Account?",
+        text: "Are you sure you want to delete your account? This action cannot be undone.",
+        type: "delete",
+        ctaText1: "Delete",
+        ctaText2: "Cancel",
+        onCta1: deleteAccount,
+      });
+    };
+    triggerDelete();
   };
 
   /**
@@ -202,12 +171,6 @@ export default function PremiumProfileScreen() {
       </View>
     );
   }
-
-  const themeOptions = [
-    { id: "light", label: "Light", icon: Sun },
-    { id: "dark", label: "Dark", icon: Moon },
-    { id: "system", label: "System", icon: Monitor },
-  ] as const;
 
   const textColor = isDark ? "#FFFFFF" : "#0F172A";
   const subTextColor = isDark ? "#94A3B8" : "#64748B";
@@ -234,7 +197,7 @@ export default function PremiumProfileScreen() {
           <View className="relative">
             <Image
               source={{
-                uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
+                uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRiex10nhyzatAU0O2nOebIcdFLSolwIyMb1QY5IjZEgA&s=10",
               }}
               className="w-24 h-24 rounded-full border-2 border-blue-600"
             />
@@ -282,7 +245,7 @@ export default function PremiumProfileScreen() {
           </TouchableOpacity>
 
           {/* User Metrics Boxes */}
-          <View className="flex-row justify-center space-x-4 mt-6 w-full">
+          <View className="flex-row justify-center gap-4 mt-6 w-full">
             <View
               style={{
                 backgroundColor: cardBg,
@@ -344,20 +307,6 @@ export default function PremiumProfileScreen() {
 
         {/* System Theme Switcher Controls Menu */}
         <View className="px-5 pt-5 pb-2">
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: "900",
-              color: subTextColor,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              marginBottom: 12,
-              marginLeft: 5,
-            }}
-          >
-            Theme Configuration
-          </Text>
-
           <View
             style={{
               backgroundColor: cardBg,
@@ -398,23 +347,12 @@ export default function PremiumProfileScreen() {
                       : "System Default"}
                 </Text>
               </View>
-
-              <TouchableOpacity
-                onPress={handleThemeChange}
-                className="px-5 py-3 rounded-full"
-                style={{
-                  backgroundColor: colors.primary + "15",
-                }}
-              >
-                <Text
-                  className="text-xs font-bold uppercase tracking-widest"
-                  style={{
-                    color: colors.primary,
-                  }}
-                >
-                  Change
-                </Text>
-              </TouchableOpacity>
+              <Switch
+                value={isThemeSwitchOn}
+                trackColor={{ false: colors.placeholder, true: colors.placeholder }}
+                thumbColor={isThemeSwitchOn ? colors.text : colors.primary}
+                onValueChange={handleThemeChange}
+              />
             </View>
           </View>
         </View>
@@ -428,6 +366,12 @@ export default function PremiumProfileScreen() {
             iconColor="#3B82F6"
           />
           <ProfileMenuRow
+            Icon={Clock}
+            title="History"
+            iconColor="#A8422D"
+            onPress={() => router.push("/utilities/client-history-event")}
+          />
+          <ProfileMenuRow
             Icon={Calendar}
             title="Scheduled Visits"
             iconColor="#10B981"
@@ -438,10 +382,16 @@ export default function PremiumProfileScreen() {
             iconColor="#6366F1"
           />
           <ProfileMenuRow
+            Icon={UserCheck2Icon}
+            title="Become an Agent"
+            iconColor="#32CD32"
+          />
+          <ProfileMenuRow
             Icon={LifeBuoy}
             title="Support & Help"
             iconColor="#F59E0B"
           />
+          <ProfileMenuRow Icon={StarIcon} title="Rate Us" iconColor="#FFD700" />
           <ProfileMenuRow
             Icon={Settings}
             title="Settings"
@@ -491,12 +441,8 @@ function ProfileMenuRow({
 
   return (
     <TouchableOpacity
+    className="flex-row items-center justify-between py-4 border-b"
       style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "between",
-        paddingVertical: 16,
-        borderBottomWidth: 1,
         borderBottomColor: borderColor,
       }}
       onPress={onPress}

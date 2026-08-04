@@ -1,19 +1,11 @@
-import BottomSheet, { BottomSheetRefProps } from "@/components/bottom-sheet";
 import ClientEvent from "@/components/client-event";
+import BottomModal from "@/components/dialogs/bottom-modal";
 import Sidebar from "@/components/sidebar/sidebar";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Animated,
-  Dimensions,
-  Easing,
-  ScrollView,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Animated, Dimensions, Easing, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
@@ -21,7 +13,13 @@ import { registerForPushNotificationsAsync } from "../../services/notification";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet", "Land", "House"] as const;
+const PROPERTY_TYPES = [
+  "Hotel",
+  "Apartment",
+  "Shortlet",
+  "Land",
+  "House",
+] as const;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -109,8 +107,6 @@ export default function RequestMatchScreen() {
     null,
   );
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-
-  const ref = useRef<BottomSheetRefProps | null>(null);
   const mapRef = useRef<MapView | null>(null);
   const router = useRouter();
   const { colors } = useTheme();
@@ -300,13 +296,6 @@ export default function RequestMatchScreen() {
   useEffect(() => {
     getLocation();
     syncPushToken();
-
-    const timer = setTimeout(() => {
-      ref.current?.scrollTo(SNAP_50);
-    }, 100);
-
-    return () => clearTimeout(timer);
-    // SNAP_50 derives from SCREEN_HEIGHT which never changes at runtime
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -430,30 +419,21 @@ export default function RequestMatchScreen() {
       </MapView>
 
       {/* Bottom sheet */}
-      <BottomSheet ref={ref}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          bounces={false}
-          overScrollMode="never"
-          contentContainerStyle={{ paddingBottom: 120 }}
-        >
-          <ClientEvent
-            locationLoading={locationLoading}
-            address={address}
-            getLocation={getLocation}
-            PROPERTY_TYPES={PROPERTY_TYPES}
-            selectedType={selectedType}
-            setSelectedType={setSelectedType}
-            handleRequest={handleRequest}
-            loading={loading}
-            setMatchData={setMatchData}
-            matchData={matchData ?? liveData}
-            requestStatus={requestStatus}
-          />
-        </ScrollView>
-      </BottomSheet>
+      <BottomModal visible={true} onClose={() => {}} colors={colors}>
+        <ClientEvent
+          locationLoading={locationLoading}
+          address={address}
+          getLocation={getLocation}
+          PROPERTY_TYPES={PROPERTY_TYPES}
+          selectedType={selectedType}
+          setSelectedType={setSelectedType}
+          handleRequest={handleRequest}
+          loading={loading}
+          setMatchData={setMatchData}
+          matchData={matchData ?? liveData}
+          requestStatus={requestStatus}
+        />
+      </BottomModal>
 
       {/* Sidebar */}
       <Sidebar
