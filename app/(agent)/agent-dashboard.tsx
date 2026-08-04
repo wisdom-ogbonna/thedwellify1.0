@@ -1,6 +1,5 @@
-import BottomSheet, {
-  BottomSheetRefProps,
-} from "@/components/short-bottom-sheet";
+import BottomModal from "@/components/dialogs/bottom-modal";
+import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Location from "expo-location";
@@ -10,7 +9,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,33 +18,37 @@ import {
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth } from "../../config/firebase";
-import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notification";
+interface Agent {
+  status?: string;
+  isOnline?: boolean;
+  lat?: number;
+  lng?: number;
+  clientName?: string;
+  clientPhone?: string;
+  clientLng?: number;
+  clientLat?: number;
+}
 
-const { width, height } = Dimensions.get("screen");
+interface LocationObj {
+  latitude: number;
+  longitude: number;
+}
 
 export default function MapScreen() {
-  const mapRef = useRef(null);
+  const mapRef = useRef<MapView | null>(null);
+  const { colors } = useTheme();
 
-  const [location, setLocation] = useState(null);
-  const [agent, setAgent] = useState(null);
-
-  const ref = useRef<BottomSheetRefProps>(null);
-
-  const SNAP_25 = -height * 0.2;
-  const SNAP_50 = -height * 0.5;
-  const SNAP_80 = -height * 0.8;
+  const [location, setLocation] = useState<LocationObj | null>(null);
+  const [agent, setAgent] = useState<Agent | null>(null);
 
   const router = useRouter();
-  const { isOnline, goOnline, goOffline } = useAuth();
 
-  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [btnLoading, setBtnLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [paying, setPaying] = useState<boolean>(false);
-  const [toggling, setToggling] = useState<boolean>(false);
   const [agentName, setAgentName] = useState<string>("Agent");
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
@@ -155,18 +157,18 @@ export default function MapScreen() {
       setRefreshing(false);
     }
   };
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsSidebarVisible(false);
-      fetchAgentStatus();
-    }, []),
-  );
-
+  
   const onRefresh = () => {
     setRefreshing(true);
     fetchAgentStatus();
   };
+  
+  useFocusEffect(
+    useCallback(() => {
+      fetchAgentStatus();
+    }, []),
+  );
+
 
   const startInspection = async () => {
     setBtnLoading(true);
@@ -302,13 +304,9 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (ref.current) {
-        ref.current.scrollTo(SNAP_50);
-      }
-    }, 400);
+    const timer = setTimeout(() => {}, 400);
     return () => clearTimeout(timer);
-  }, [SNAP_50]);
+  }, []);
 
   /**
    * ✅ Fetch live agent data
@@ -317,7 +315,7 @@ export default function MapScreen() {
     try {
       const res = await API.get("/agent/live");
       setAgent(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.log("Agent fetch error:", err.response?.data || err.message);
     }
   };
@@ -458,11 +456,8 @@ export default function MapScreen() {
       </TouchableOpacity>
 
       <View pointerEvents="box-none" style={styles.sheetOverlayContainer}>
-        <BottomSheet ref={ref}>
-          <View
-            style={{ width: "100%", minHeight: 40 }}
-            onLayout={() => ref.current?.scrollTo(SNAP_50)}
-          >
+        <BottomModal visible={true} onClose={() => {}} colors={colors}>
+          <View style={{ width: "100%", minHeight: 40 }}>
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -512,7 +507,10 @@ export default function MapScreen() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() =>
-                  copyToClipboard(agent?.clientName, "Client Name")
+                  copyToClipboard(
+                    agent?.clientName || "Not matched yet",
+                    "Client Name",
+                  )
                 }
                 style={styles.infoCard}
               >
@@ -533,7 +531,10 @@ export default function MapScreen() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() =>
-                  copyToClipboard(agent?.clientPhone, "Phone number")
+                  copyToClipboard(
+                    agent?.clientPhone || "Not matched yet",
+                    "Phone number",
+                  )
                 }
                 style={styles.infoCard}
               >
@@ -580,7 +581,7 @@ export default function MapScreen() {
               </View>
             </ScrollView>
           </View>
-        </BottomSheet>
+        </BottomModal>
       </View>
     </SafeAreaView>
   );
@@ -589,7 +590,6 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B0F1A",
   },
 
   map: {

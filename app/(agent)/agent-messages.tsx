@@ -9,12 +9,9 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  SquarePen,
-  Search,
-  Plus,
-} from "lucide-react-native";
+import { SquarePen, Search, Plus } from "lucide-react-native";
 import { Stack, router } from "expo-router";
+import { useTheme } from "@/hooks/use-theme";
 
 interface StoryItem {
   id: string;
@@ -35,15 +32,8 @@ interface ChatItem {
 }
 
 export default function ChatsScreen() {
-  const isDark = false;
+  const { colors, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Dynamic Theme Styling Variables
-  const bgMain = isDark ? "#000000" : "#FFFFFF";
-  const textPrimary = isDark ? "#FFFFFF" : "#0F172A";
-  const textSecondary = isDark ? "#94A3B8" : "#64748B";
-  const searchBg = isDark ? "#111111" : "#F1F5F9";
-  const borderRegular = isDark ? "#222222" : "#F1F5F9";
 
   // Mock Data mimicking your provided reference image layout
   const stories: StoryItem[] = [
@@ -154,7 +144,10 @@ export default function ChatsScreen() {
   ];
 
   return (
-    <SafeAreaView style={{ backgroundColor: bgMain, flex: 1 }} edges={["top"]}>
+    <SafeAreaView
+      style={{ backgroundColor: colors.background, flex: 1 }}
+      edges={["top"]}
+    >
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* 1. Header Area Section */}
@@ -171,7 +164,7 @@ export default function ChatsScreen() {
           style={{
             fontSize: 28,
             fontWeight: "800",
-            color: textPrimary,
+            color: colors.text,
             fontFamily: "Poppins",
           }}
         >
@@ -186,29 +179,34 @@ export default function ChatsScreen() {
             alignItems: "center",
           }}
         >
-          <SquarePen size={22} color="#2563EB" />
+          <SquarePen size={22} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* 2. Search Input Input Bar */}
+      {/* 2. Search Input Bar */}
       <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: searchBg,
-            borderRadius: 12,
+            backgroundColor: `${colors.placeholder}70`,
+            borderRadius: 24,
             paddingHorizontal: 12,
-            height: 44,
+            height: 50,
           }}
         >
-          <Search size={18} color={textSecondary} />
+          <Search size={18} color={`${colors.text}90`} />
           <TextInput
             placeholder="Search"
-            placeholderTextColor={textSecondary}
+            placeholderTextColor={`${colors.text}90`}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={{ flex: 1, marginLeft: 8, color: textPrimary, fontSize: 15 }}
+            style={{
+              flex: 1,
+              marginLeft: 8,
+              color: colors.background,
+              fontSize: 16,
+            }}
           />
         </View>
       </View>
@@ -217,7 +215,7 @@ export default function ChatsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* 3. Horizontal Stories / Active Active Active Channel Rows */}
+        {/* 3. Horizontal Stories / Active Channel Rows */}
         <View style={{ marginBottom: 16 }}>
           <ScrollView
             horizontal
@@ -231,20 +229,20 @@ export default function ChatsScreen() {
                   width: 56,
                   height: 56,
                   borderRadius: 28,
-                  backgroundColor: isDark ? "#1E293B" : "#EFF6FF",
+                  backgroundColor: `${colors.placeholder}70`,
                   justifyContent: "center",
                   alignItems: "center",
                   marginBottom: 6,
                 }}
               >
-                <Plus size={22} color="#2563EB" />
+                <Plus size={22} color={colors.text} />
               </TouchableOpacity>
               <Text
                 numberOfLines={2}
                 style={{
                   fontSize: 11,
                   fontWeight: "600",
-                  color: textSecondary,
+                  color: `${colors.text}90`,
                   textAlign: "center",
                   lineHeight: 14,
                 }}
@@ -274,7 +272,7 @@ export default function ChatsScreen() {
                       height: 56,
                       borderRadius: 28,
                       borderWidth: 2,
-                      borderColor: "#2563EB",
+                      borderColor: colors.primary,
                     }}
                   />
                   {story.isOnline && (
@@ -286,9 +284,9 @@ export default function ChatsScreen() {
                         width: 12,
                         height: 12,
                         borderRadius: 6,
-                        backgroundColor: "#22C55E",
+                        backgroundColor: colors.success,
                         borderWidth: 2,
-                        borderColor: bgMain,
+                        borderColor: colors.background,
                       }}
                     />
                   )}
@@ -298,7 +296,7 @@ export default function ChatsScreen() {
                   style={{
                     fontSize: 11,
                     fontWeight: "600",
-                    color: textSecondary,
+                    color: colors.placeholder,
                     textAlign: "center",
                     lineHeight: 14,
                   }}
@@ -320,8 +318,6 @@ export default function ChatsScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 paddingVertical: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: borderRegular,
               }}
             >
               <View style={{ position: "relative", marginRight: 14 }}>
@@ -338,9 +334,9 @@ export default function ChatsScreen() {
                       width: 12,
                       height: 12,
                       borderRadius: 6,
-                      backgroundColor: "#22C55E",
+                      backgroundColor: colors.success,
                       borderWidth: 2,
-                      borderColor: bgMain,
+                      borderColor: colors.background,
                     }}
                   />
                 )}
@@ -360,7 +356,7 @@ export default function ChatsScreen() {
                     style={{
                       fontSize: 16,
                       fontWeight: "700",
-                      color: textPrimary,
+                      color: colors.text,
                     }}
                   >
                     {chat.name}
@@ -368,7 +364,10 @@ export default function ChatsScreen() {
                   <Text
                     style={{
                       fontSize: 12,
-                      color: chat.unreadCount > 0 ? "#2563EB" : textSecondary,
+                      color:
+                        chat.unreadCount > 0
+                          ? colors.primary
+                          : colors.placeholder,
                       fontWeight: chat.unreadCount > 0 ? "700" : "400",
                     }}
                   >
@@ -387,7 +386,8 @@ export default function ChatsScreen() {
                     numberOfLines={1}
                     style={{
                       fontSize: 14,
-                      color: chat.unreadCount > 0 ? textPrimary : textSecondary,
+                      color:
+                        chat.unreadCount > 0 ? colors.text : colors.placeholder,
                       fontWeight: chat.unreadCount > 0 ? "600" : "400",
                       flex: 1,
                       paddingRight: 8,
@@ -399,7 +399,7 @@ export default function ChatsScreen() {
                   {chat.unreadCount > 0 ? (
                     <View
                       style={{
-                        backgroundColor: "#2563EB",
+                        backgroundColor: colors.primary,
                         minWidth: 20,
                         height: 20,
                         borderRadius: 10,
@@ -410,7 +410,7 @@ export default function ChatsScreen() {
                     >
                       <Text
                         style={{
-                          color: "#FFFFFF",
+                          color: colors.background,
                           fontSize: 11,
                           fontWeight: "700",
                         }}
@@ -425,7 +425,7 @@ export default function ChatsScreen() {
                           width: 8,
                           height: 8,
                           borderRadius: 4,
-                          backgroundColor: "#2563EB",
+                          backgroundColor: colors.primary,
                         }}
                       />
                     )

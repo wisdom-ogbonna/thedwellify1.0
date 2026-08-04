@@ -31,7 +31,7 @@ export default function ClientLayout() {
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
-          height: Platform.OS === "ios" ? 85 : 65,
+          height: Platform.OS === "ios" ? 85 : 78,
           paddingBottom: Platform.OS === "ios" ? 30 : 10,
           paddingTop: 10,
         },
