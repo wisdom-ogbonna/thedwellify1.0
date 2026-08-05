@@ -79,7 +79,7 @@ const BottomModal = ({
       }}
       handleStyle={styles.handle}
       backgroundStyle={{
-        backgroundColor: colors.card,
+        backgroundColor: colors.background,
         borderRadius: 24,
       }}
     >

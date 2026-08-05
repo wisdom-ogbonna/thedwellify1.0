@@ -406,7 +406,7 @@ export default function MapScreen() {
         <TouchableOpacity activeOpacity={0.85} className="shadow-md">
           <Image
             source={{
-              uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRS5-RgT4xZUjOiQH-QQ2in2iq4hOTxlUyqhtaTmPOnLnskpdiPo6lifnQ&s=10",
+              uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5d-Q11KjCzqjJTsFyu52nPBtSBvIIyW1-Ew8mw8ENBw&s=10",
             }}
             className="w-15 h-15 rounded-full"
             style={{
