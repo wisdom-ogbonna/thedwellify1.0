@@ -1,3 +1,4 @@
+import { useModal } from "@/components/dialogs/popup-modal";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
 import { API } from "@/services/api";
@@ -28,17 +29,14 @@ import {
   View,
 } from "react-native";
 import { Switch } from "react-native-gesture-handler";
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-import { useModal } from "@/components/dialogs/popup-modal";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PremiumProfileScreen() {
   const { isDark } = useTheme();
   const { logout } = useAuth();
   const { showModal } = useModal();
 
-  const  [isThemeSwitchOn, setIsThemeSwitchOn] = useState<boolean>(isDark);
+  const [isThemeSwitchOn, setIsThemeSwitchOn] = useState<boolean>(isDark);
 
   const { colors } = useTheme();
   const scheme = useColorScheme();
@@ -190,8 +188,6 @@ export default function PremiumProfileScreen() {
             paddingHorizontal: 24,
             paddingTop: 24,
             paddingBottom: 24,
-            borderBottomWidth: 1,
-            borderBottomColor: borderColor,
           }}
         >
           <View className="relative">
@@ -307,17 +303,7 @@ export default function PremiumProfileScreen() {
 
         {/* System Theme Switcher Controls Menu */}
         <View className="px-5 pt-5 pb-2">
-          <View
-            style={{
-              backgroundColor: cardBg,
-              borderRadius: 16,
-              padding: 6,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              borderWidth: 1,
-              borderColor: borderColor,
-            }}
-          >
+          <View>
             <View
               className="border rounded-3xl w-full p-6 mb-8 flex-row items-center justify-between"
               style={{
@@ -349,7 +335,10 @@ export default function PremiumProfileScreen() {
               </View>
               <Switch
                 value={isThemeSwitchOn}
-                trackColor={{ false: colors.placeholder, true: colors.placeholder }}
+                trackColor={{
+                  false: colors.placeholder,
+                  true: colors.placeholder,
+                }}
                 thumbColor={isThemeSwitchOn ? colors.text : colors.primary}
                 onValueChange={handleThemeChange}
               />
@@ -441,10 +430,7 @@ function ProfileMenuRow({
 
   return (
     <TouchableOpacity
-    className="flex-row items-center justify-between py-4 border-b"
-      style={{
-        borderBottomColor: borderColor,
-      }}
+      className="flex-row items-center justify-between py-4"
       onPress={onPress}
     >
       <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>

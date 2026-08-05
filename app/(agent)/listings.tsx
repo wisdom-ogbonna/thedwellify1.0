@@ -1,17 +1,22 @@
 // app/(tabs)/listings.tsx
-import { Stack, router } from "expo-router";
+import { Colors } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
+import { router } from "expo-router";
 import {
   Bell,
   Building2,
   MapPin,
-  Menu,
   MoreHorizontal,
   Plus,
   Search,
   SlidersHorizontal,
+  Trash2,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
+  Image,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -19,165 +24,357 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API } from "../../services/api";
 
 interface ListingItem {
   id: string;
   title: string;
   location: string;
   price: string;
-  period?: string; // e.g., "/ Year", "/ Night"
+  period?: string;
   tag: "For Sale" | "For Rent" | "Shortlet";
   views: number;
   inquiries: number;
   status: "Active" | "Inactive";
+  images?: string[];
+  propertyType?: string;
 }
 
+// Skeleton Card for loading state
+const SkeletonCard = ({ colors }: { colors: typeof Colors.light }) => (
+  <View
+    className="rounded-3xl border p-3 flex-row animate-pulse shadow-sm"
+    style={{ borderColor: colors.border, backgroundColor: colors.background }}
+  >
+    <View className="w-24 h-24 rounded-2xl bg-gray-200 dark:bg-gray-800" />
+    <View className="flex-1 ml-3 justify-between">
+      <View>
+        <View className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-2/3 mb-2" />
+        <View className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/3" />
+      </View>
+      <View className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/2 mb-2" />
+      <View className="flex-row justify-between">
+        <View className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/4" />
+        <View className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/5" />
+      </View>
+    </View>
+  </View>
+);
+
+// Empty State Component
+const EmptyState = ({ colors }: { colors: typeof Colors.light }) => (
+  <View className="flex-1 justify-center items-center px-6 py-20">
+    <Building2 size={48} color={colors.text} style={{ opacity: 0.2 }} />
+    <Text
+      className="text-xl font-black tracking-tight mb-2"
+      style={{ color: colors.text }}
+    >
+      No listings yet
+    </Text>
+    <Text
+      className="text-sm text-center leading-5"
+      style={{ color: colors.text, opacity: 0.4 }}
+    >
+      Your properties will appear here once created.
+    </Text>
+  </View>
+);
+
+// Listing Card Component
+const ListingCard = React.memo(
+  ({
+    item,
+    onDelete,
+    colors,
+  }: {
+    item: ListingItem;
+    onDelete: (id: string) => void;
+    colors: typeof Colors.light;
+  }) => {
+    const getTagBg = (tag: string) => {
+      switch (tag) {
+        case "For Sale":
+          return "#2563EB";
+        case "For Rent":
+          return "#1E40AF";
+        case "Shortlet":
+          return "#0284C7";
+        default:
+          return "#475569";
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/(product)/[id]",
+            params: { id: item.id },
+          })
+        }
+        className="rounded-3xl border p-3 flex-row relative mb-4 shadow-sm"
+        style={{
+          backgroundColor: colors.background,
+          borderColor: colors.border,
+        }}
+      >
+        {/* Image / Placeholder */}
+        <View
+          className="w-24 h-24 rounded-2xl justify-center items-center relative overflow-hidden"
+          style={{ backgroundColor: colors.disabled }}
+        >
+          {item.images?.[0] ? (
+            <Image
+              source={{ uri: item.images[0] }}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          ) : (
+            <Building2 size={32} color={colors.text} style={{ opacity: 0.2 }} />
+          )}
+
+          {/* Tag Badge */}
+          <View
+            className="absolute top-2 left-2 px-2 py-1 rounded-lg"
+            style={{ backgroundColor: getTagBg(item.tag) }}
+          >
+            <Text className="text-white text-[9px] font-extrabold">
+              {item.tag}
+            </Text>
+          </View>
+        </View>
+
+        {/* Content */}
+        <View className="flex-1 ml-3 justify-between">
+          {/* Title & Menu */}
+          <View>
+            <View className="flex-row justify-between items-start">
+              <Text
+                numberOfLines={1}
+                className="text-[15px] font-extrabold flex-1 pr-2"
+                style={{ color: colors.text }}
+              >
+                {item.title}
+              </Text>
+              <View className="flex-row items-center gap-1 relative">
+                <TouchableOpacity
+                  onPress={() => onDelete(item.id)}
+                  className="p-1 rounded-full absolute right-2 top-1"
+                  style={{ backgroundColor: colors.error + "15" }}
+                >
+                  <Trash2 size={14} color={colors.error} />
+                </TouchableOpacity>
+                <TouchableOpacity className="p-1">
+                  <MoreHorizontal
+                    size={18}
+                    color={colors.text}
+                    style={{ opacity: 0.4 }}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Location */}
+            <View className="flex-row items-center mt-1">
+              <MapPin
+                size={12}
+                color={colors.text}
+                style={{ opacity: 0.8, marginRight: 4 }}
+              />
+              <Text
+                numberOfLines={1}
+                className="text-xs"
+                style={{ color: colors.text, opacity: 0.6 }}
+              >
+                {item.location}
+              </Text>
+            </View>
+          </View>
+
+          {/* Price */}
+          <View className="mt-1">
+            <Text
+              className="text-base font-extrabold"
+              style={{ color: colors.primary }}
+            >
+              {item.price}
+              {item.period && (
+                <Text
+                  className="text-[11px] font-medium"
+                  style={{ color: colors.text, opacity: 0.6 }}
+                >
+                  {" "}
+                  / {item.period}
+                </Text>
+              )}
+            </Text>
+          </View>
+
+          {/* Stats Footer */}
+          <View className="flex-row items-center justify-between mt-1">
+            <View className="flex-row gap-3">
+              <View className="flex-row items-center">
+                <Text
+                  className="text-[11px]"
+                  style={{ color: colors.text, opacity: 0.6 }}
+                >
+                  Views:{" "}
+                </Text>
+                <Text
+                  className="text-[11px] font-bold"
+                  style={{ color: colors.text }}
+                >
+                  {item.views}
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text
+                  className="text-[11px]"
+                  style={{ color: colors.text, opacity: 0.6 }}
+                >
+                  Inquiries:{" "}
+                </Text>
+                <Text
+                  className="text-[11px] font-bold"
+                  style={{ color: colors.text }}
+                >
+                  {item.inquiries}
+                </Text>
+              </View>
+            </View>
+
+            {/* Status Badge */}
+            <View
+              className="px-2 py-0.5 rounded-md"
+              style={{
+                backgroundColor:
+                  item.status === "Active"
+                    ? colors.success + "20"
+                    : colors.disabled,
+              }}
+            >
+              <Text
+                className="text-[10px] font-extrabold"
+                style={{
+                  color:
+                    item.status === "Active"
+                      ? colors.success
+                      : colors.placeholder,
+                }}
+              >
+                {item.status}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+);
+
+ListingCard.displayName = "ListingCard";
+
 export default function MyListingsScreen() {
-  const isDark = false;
+  const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState("All Listings");
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Theme Styling Rules
-  const bgMain = isDark ? "#000000" : "#F8FAFC";
-  const bgCard = isDark ? "#111111" : "#FFFFFF";
-  const textPrimary = isDark ? "#FFFFFF" : "#0F172A";
-  const textSecondary = isDark ? "#94A3B8" : "#64748B";
-  const borderRegular = isDark ? "#222222" : "#F1F5F9";
-  const searchBg = isDark ? "#111111" : "#F1F5F9";
-  const textMuted = isDark ? "#64748B" : "#94A3B8";
+  const [listings, setListings] = useState<ListingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const tabs = ["All Listings", "For Sale", "For Rent", "Sold"];
 
-  const listings: ListingItem[] = [
-    {
-      id: "1",
-      title: "4 Bedroom Duplex with BQ",
-      location: "Lekki Phase 1, Lagos",
-      price: "₦120,000,000",
-      tag: "For Sale",
-      views: 245,
-      inquiries: 18,
-      status: "Active",
-    },
-    {
-      id: "2",
-      title: "3 Bedroom Apartment",
-      location: "Victoria Island, Lagos",
-      price: "₦6,500,000",
-      period: "/ Year",
-      tag: "For Rent",
-      views: 132,
-      inquiries: 7,
-      status: "Active",
-    },
-    {
-      id: "3",
-      title: "1500 Sqm Residential Plot",
-      location: "Chevron Drive, Lekki",
-      price: "₦45,000,000",
-      tag: "For Sale",
-      views: 89,
-      inquiries: 3,
-      status: "Active",
-    },
-    {
-      id: "4",
-      title: "2 Bedroom Shortlet Apartment",
-      location: "Ikoyi, Lagos",
-      price: "₦120,000",
-      period: "/ Night",
-      tag: "Shortlet",
-      views: 58,
-      inquiries: 12,
-      status: "Active",
-    },
-    {
-      id: "5",
-      title: "5 Bedroom Detached House",
-      location: "Lekki County, Lagos",
-      price: "₦250,000,000",
-      tag: "For Sale",
-      views: 310,
-      inquiries: 25,
-      status: "Active",
-    },
-  ];
-
-  // Map active status categories for proper tag design styles
-  const getTagBg = (tag: string) => {
-    switch (tag) {
-      case "For Sale":
-        return "#2563EB";
-      case "For Rent":
-        return "#1E40AF";
-      case "Shortlet":
-        return "#0284C7";
-      default:
-        return "#475569";
+  const fetchListings = async () => {
+    try {
+      const res = await API.get("/products/get-rental-products");
+      const transformedData = (res.data?.products || []).map(
+        (product: any) => ({
+          id: product.id,
+          title: product.title,
+          location: product.location || "Location not specified",
+          price: `₦${Number(product.price).toLocaleString()}`,
+          period: product.period || undefined,
+          tag: product.tag || product.propertyType || "For Sale",
+          views: product.views || 0,
+          inquiries: product.inquiries || 0,
+          status: product.status || "Active",
+          images: product.images,
+          propertyType: product.propertyType,
+        }),
+      );
+      setListings(transformedData);
+    } catch (err) {
+      console.log("Error fetching listings:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  return (
-    <SafeAreaView style={{ backgroundColor: bgMain, flex: 1 }} edges={["top"]}>
-      <Stack.Screen options={{ headerShown: false }} />
+  useEffect(() => {
+    fetchListings();
+  }, []);
 
-      {/* 1. Top Navigation bar */}
+  const handleDelete = useCallback((id: string) => {
+    Alert.alert("Delete Listing", "This action cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await API.delete(`/products/delete-rental-product/${id}`);
+            setListings((prev) => prev.filter((item) => item.id !== id));
+          } catch (err) {
+            console.log("Error deleting listing:", err);
+            Alert.alert("Error", "Failed to delete listing. Please try again.");
+          }
+        },
+      },
+    ]);
+  }, []);
+
+  const filteredListings = listings.filter((item) => {
+    const matchesTab = activeTab === "All Listings" || item.tag === activeTab;
+    const matchesSearch =
+      searchQuery === "" ||
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.location.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  return (
+    <SafeAreaView
+      style={{ backgroundColor: colors.background }}
+      className="flex-1 relative"
+      edges={["top"]}
+    >
+
+      {/* Header */}
       <View
+        className="flex-row justify-between items-center px-4 py-3"
         style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          backgroundColor: bgCard,
-          borderBottomWidth: 1,
-          borderBottomColor: borderRegular,
+          backgroundColor: colors.background,
         }}
       >
-        <TouchableOpacity
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: isDark ? "#1E293B" : "#F1F5F9",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Menu size={20} color={textPrimary} />
-        </TouchableOpacity>
-
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: "800",
-            color: textPrimary,
-            fontFamily: "Poppins",
-          }}
-        >
+        <Text className="text-lg font-extrabold" style={{ color: colors.text }}>
           My Listings
         </Text>
 
         <TouchableOpacity
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: isDark ? "#1E293B" : "#EFF6FF",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+          className="w-10 h-10 rounded-full justify-center items-center"
+          style={{ backgroundColor: colors.lighterPrimary + "20" }}
         >
-          <Bell size={20} color="#2563EB" />
+          <Bell size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* 2. Top Navigation Tabs Row */}
+      {/* Tabs */}
       <View
+        className="border-b"
         style={{
-          backgroundColor: bgCard,
-          borderBottomWidth: 1,
-          borderBottomColor: borderRegular,
+          backgroundColor: colors.background,
+          borderColor: colors.border,
         }}
       >
         <ScrollView
@@ -196,19 +393,18 @@ export default function MyListingsScreen() {
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
+                className="h-full justify-center px-1"
                 style={{
-                  height: "100%",
-                  justifyContent: "center",
                   borderBottomWidth: isActive ? 3 : 0,
-                  borderBottomColor: "#2563EB",
-                  paddingHorizontal: 4,
+                  borderBottomColor: colors.primary,
                 }}
               >
                 <Text
+                  className="text-sm"
                   style={{
-                    fontSize: 14,
                     fontWeight: isActive ? "800" : "500",
-                    color: isActive ? "#2563EB" : textSecondary,
+                    color: isActive ? colors.primary : colors.text,
+                    opacity: isActive ? 1 : 0.6,
                   }}
                 >
                   {tab}
@@ -219,276 +415,89 @@ export default function MyListingsScreen() {
         </ScrollView>
       </View>
 
-      {/* 3. Search Field & Control Filter Trigger */}
-      <View
-        style={{
-          flexDirection: "row",
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          gap: 12,
-          alignItems: "center",
-        }}
-      >
+      {/* Search & Filter */}
+      <View className="flex-row px-4 py-3.5 items-center gap-3">
         <View
+          className="flex-1 flex-row items-center rounded-2xl px-3.5 h-12 border"
           style={{
-            flex: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: searchBg,
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            height: 44,
+            backgroundColor: colors.disabled + "15",
+            borderColor: colors.border,
           }}
         >
-          <Search size={18} color={textMuted} />
+          <Search size={18} color={colors.placeholder} />
           <TextInput
             placeholder="Search your listings..."
-            placeholderTextColor={textMuted}
+            placeholderTextColor={colors.placeholder}
+            className="flex-1 ml-2 text-sm font-medium"
+            style={{ color: colors.text }}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={{ flex: 1, marginLeft: 8, color: textPrimary, fontSize: 14 }}
           />
         </View>
 
         <TouchableOpacity
+          className="w-12 h-12 rounded-2xl justify-center items-center border"
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            backgroundColor: isDark ? "#1E293B" : "#EFF6FF",
-            justifyContent: "center",
-            alignItems: "center",
+            backgroundColor: colors.lighterPrimary + "15",
+            borderColor: colors.border,
           }}
         >
-          <SlidersHorizontal size={18} color="#2563EB" />
+          <SlidersHorizontal size={18} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* 4. Listings Stack Scroll Container */}
+      {/* Listings */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 110 }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingBottom: 110,
+          paddingTop: 4,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchListings();
+            }}
+            tintColor={colors.text}
+          />
+        }
       >
-        <View style={{ gap: 16 }}>
-          {listings.map((item) => (
-            <View
-              key={item.id}
-              style={{
-                backgroundColor: bgCard,
-                borderRadius: 20,
-                padding: 12,
-                flexDirection: "row",
-                borderWidth: 1,
-                borderColor: borderRegular,
-                position: "relative",
-              }}
-            >
-              {/* Dummy Image Placeholder with Tag badge */}
-              <View
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 16,
-                  backgroundColor: isDark ? "#1E293B" : "#EEF2F6",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  position: "relative",
-                }}
-              >
-                <Building2 size={32} color={isDark ? "#475569" : "#CBD5E1"} />
-
-                {/* Sale/Rent Label Tag */}
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    left: 6,
-                    backgroundColor: getTagBg(item.tag),
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 10,
-                  }}
-                >
-                  <Text
-                    style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "800" }}
-                  >
-                    {item.tag}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Text Layout Metadata Info */}
-              <View
-                style={{
-                  flex: 1,
-                  marginLeft: 12,
-                  justifyContent: "space-between",
-                }}
-              >
-                {/* Title and Settings row */}
-                <View>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 15,
-                        fontWeight: "800",
-                        color: textPrimary,
-                        flex: 1,
-                        paddingRight: 8,
-                      }}
-                    >
-                      {item.title}
-                    </Text>
-                    <TouchableOpacity style={{ padding: 2 }}>
-                      <MoreHorizontal size={18} color={textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Location Row */}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginTop: 4,
-                    }}
-                  >
-                    <MapPin
-                      size={12}
-                      color={textSecondary}
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text
-                      numberOfLines={1}
-                      style={{ fontSize: 12, color: textSecondary }}
-                    >
-                      {item.location}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Pricing Area */}
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "800",
-                    color: "#2563EB",
-                    marginTop: 4,
-                  }}
-                >
-                  {item.price}
-                  {item.period && (
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: "500",
-                        color: textSecondary,
-                      }}
-                    >
-                      {" "}
-                      {item.period}
-                    </Text>
-                  )}
-                </Text>
-
-                {/* Footer metadata metric tags (Views, Inquiries, and Active status) */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginTop: 6,
-                  }}
-                >
-                  <View style={{ flexDirection: "row", gap: 12 }}>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <Text style={{ fontSize: 11, color: textSecondary }}>
-                        Views:{" "}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "700",
-                          color: textPrimary,
-                        }}
-                      >
-                        {item.views}
-                      </Text>
-                    </View>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <Text style={{ fontSize: 11, color: textSecondary }}>
-                        Inquiries:{" "}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "700",
-                          color: textPrimary,
-                        }}
-                      >
-                        {item.inquiries}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={{
-                      backgroundColor: isDark
-                        ? "rgba(34, 197, 94, 0.15)"
-                        : "#DCFCE7",
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 6,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "#16A34A",
-                        fontSize: 10,
-                        fontWeight: "800",
-                      }}
-                    >
-                      {item.status}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          ))}
-        </View>
+        {loading ? (
+          <View className="gap-4">
+            {Array(6)
+              .fill({})
+              .map((_, i) => (
+                <SkeletonCard key={i} colors={colors} />
+              ))}
+          </View>
+        ) : filteredListings.length === 0 ? (
+          <EmptyState colors={colors} />
+        ) : (
+          <View className="gap-4">
+            {filteredListings.map((item) => (
+              <ListingCard
+                key={item.id}
+                item={item}
+                onDelete={handleDelete}
+                colors={colors}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
-      {/* 5. Persistent Bottom Layout Button */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 16,
-          left: 16,
-          right: 16,
-        }}
-      >
+      {/* FAB - Add New Listing */}
+      <View className="fixed z-10 bottom-0 mx-5 left-0">
         <TouchableOpacity
-          onPress={() => router.push("/(product)/creater")}
+          onPress={() => router.push("/(product)/create")}
           activeOpacity={0.9}
+          className="h-14 rounded-2xl flex-row justify-center items-center gap-2"
           style={{
-            height: 54,
-            borderRadius: 14,
-            backgroundColor: "#2563EB",
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 8,
-            shadowColor: "#2563EB",
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.2,
             shadowRadius: 8,
@@ -496,7 +505,7 @@ export default function MyListingsScreen() {
           }}
         >
           <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-          <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>
+          <Text className="text-white text-[15px] font-extrabold">
             Add New Listing
           </Text>
         </TouchableOpacity>

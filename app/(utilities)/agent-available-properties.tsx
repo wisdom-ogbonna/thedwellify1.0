@@ -10,12 +10,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CaretLeftIcon } from "phosphor-react-native";
+import { CaretLeft } from "phosphor-react-native";
 import CategoryFilter from "../../components/client-ui/agent-view-category-filter";
 import AgentHeader from "../../components/client-ui/agent-view-header";
 import PropertyCard from "../../components/client-ui/agent-view-property-card";
 import { API } from "../../services/api";
-import { ConfirmBookingModal } from "../modal";
+import ConfirmBookingModal from "../modal";
 
 const CATEGORIES = ["All", "Apartment", "Hotel", "Shortlet"];
 
@@ -62,7 +62,7 @@ const AvailableProperties: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeCategory, agentId]);
 
   useEffect(() => {
     fetchProperties();
@@ -87,7 +87,7 @@ const AvailableProperties: React.FC = () => {
         type: propertyType,
       })),
     ];
-  }, [filteredProperties]);
+  }, [filteredProperties, propertyType]);
 
   const handleBooking = () => {
     router.replace({
@@ -144,12 +144,15 @@ const AvailableProperties: React.FC = () => {
       ) : (
         <FlatList
           data={listData}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id || index.toString()}
           stickyHeaderIndices={[1]}
           renderItem={({ item }: any) => {
             if (item.type === "header") {
               return (
-                <View className="px-4 py-2">
+                <View
+                  className="px-4 py-2"
+                  style={{ backgroundColor: colors.background }}
+                >
                   <AgentHeader
                     name={name || "Professional Agent"}
                     agencyName={agency || "Dwellify Realty"}
@@ -229,7 +232,7 @@ const AvailableProperties: React.FC = () => {
           }}
           className="mr-3 items-center justify-center rounded-2xl border py-5"
         >
-          <CaretLeftIcon size={22} color={colors.text} />
+          <CaretLeft size={22} color={colors.text} />
         </TouchableOpacity>
 
         {/* Book Button - 70% */}

@@ -1,8 +1,14 @@
 import { useTheme } from "@/hooks/use-theme";
 import { Inter_500Medium, useFonts } from "@expo-google-fonts/inter";
 import { Tabs } from "expo-router";
-import { BriefcaseIcon, ChatIcon, SquaresFourIcon, UserCircleIcon } from "phosphor-react-native";
+import {
+  BriefcaseIcon,
+  ChatIcon,
+  HouseIcon,
+  UserCircleIcon,
+} from "phosphor-react-native";
 import React from "react";
+import { Platform } from "react-native";
 
 export default function AgentLayout() {
   const { colors } = useTheme();
@@ -22,18 +28,19 @@ export default function AgentLayout() {
         tabBarInactiveTintColor: colors.text,
         tabBarStyle: {
           backgroundColor: colors.background,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 80,
-          paddingBottom: 20,
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
+          height: Platform.OS === "ios" ? 85 : 78,
+          paddingBottom: Platform.OS === "ios" ? 30 : 10,
           paddingTop: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 14,
+          fontSize: 10,
           fontWeight: "500",
-          letterSpacing: 0.1,
+          letterSpacing: 0,
           fontFamily: "Inter_500Medium",
-          marginTop: 5,
+          marginTop: 2,
         },
       }}
     >
@@ -42,8 +49,8 @@ export default function AgentLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <SquaresFourIcon
-              size={30}
+            <HouseIcon
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />
@@ -57,7 +64,7 @@ export default function AgentLayout() {
           title: "Listings",
           tabBarIcon: ({ color, focused }) => (
             <BriefcaseIcon
-              size={30}
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />
@@ -66,12 +73,12 @@ export default function AgentLayout() {
       />
 
       <Tabs.Screen
-        name="map"
+        name="agent-messages"
         options={{
           title: "Messages",
           tabBarIcon: ({ color, focused }) => (
             <ChatIcon
-              size={30}
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />
@@ -84,7 +91,7 @@ export default function AgentLayout() {
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
             <UserCircleIcon
-              size={30}
+              size={26}
               color={color}
               weight={focused ? "fill" : "regular"}
             />

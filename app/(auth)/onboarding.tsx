@@ -77,7 +77,7 @@ const SLIDES: Slide[] = [
 function ProgressDashes({ activeIndex }: { activeIndex: number }) {
   const { colors } = useTheme();
   return (
-    <View className="flex-row items-center justify-center gap-x-2 w-full px-5 absolute top-14 z-20">
+    <View className="flex-row items-center justify-center gap-x-2 w-full px-5 absolute top-16 z-20">
       {SLIDES.map((_, i) => {
         const isActive = i === activeIndex;
         return (
@@ -216,7 +216,7 @@ export default function OnboardingScreen() {
       {/*activeIndex < SLIDES.length - 1 && (
         <TouchableOpacity
           onPress={() => router.push("/(auth)/phone")}
-          className="absolute top-14 right-6 z-20 bg-slate-50 px-4 py-2 rounded-full"
+          className="absolute top-24 right-6 z-20 bg-slate-50 px-4 py-2 rounded-full"
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
           <Text
