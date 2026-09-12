@@ -11,6 +11,9 @@ import {
   stopLocationTracking,
   bootstrapLocationTracker,
 } from "../services/locationTracker";
+import { clearAllChatCache } from "../services/chatCache";
+import { clearOutbox } from "../services/chatOutbox";
+import { disconnectSocket } from "../services/socket";
 
 /* =========================================================================
    TYPES & INTERFACES
@@ -39,7 +42,7 @@ type AuthContextType = {
   checkProfile: (roleParam?: RoleType) => Promise<void>;
   logout: () => Promise<void>;
 
-  goOnline: () => Promise<void>;
+  goOnline: () => Promise<{ success: boolean; message?: string }>;
   goOffline: () => Promise<void>;
 };
 
@@ -334,6 +337,17 @@ const goOnline = async () => {
   const logout = async () => {
     try {
       await goOffline();
+
+      // Chat teardown before signOut, while the token is still valid.
+      try {
+        await API.post("/chat/presence/heartbeat", { online: false });
+      } catch {
+        // offline or already invalid — presence expires on its own TTL
+      }
+      disconnectSocket();
+      await clearOutbox();
+      await clearAllChatCache();
+
       await signOut(auth);
 
       // Wipe structural disk profiles to ensure clean states on subsequent logins

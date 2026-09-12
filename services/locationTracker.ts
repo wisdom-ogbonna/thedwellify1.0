@@ -38,7 +38,7 @@ export interface TrackerResponse {
 
 // Memory States
 let foregroundSubscription: Location.LocationSubscription | null = null;
-let heartbeatTimer: NodeJS.Timeout | null = null;
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let netInfoUnsubscribe: (() => void) | null = null;
 let isConnected: boolean = true;
 let processingQueue: boolean = false;
@@ -300,7 +300,7 @@ export const startLocationTracking = async (): Promise<TrackerResponse> => {
         notificationBody: "Tracking your delivery location to assign orders.",
         notificationColor: "#000000",
       },
-      pausesLocationUpdatesAutomatically: false,
+      pausesUpdatesAutomatically: false,
     });
 
     // Start Heartbeat Watchdog

@@ -1,5 +1,5 @@
 import { useTheme } from "@/hooks/use-theme";
-import { ResizeMode, Video } from "expo-av";
+import { PropertyVideo } from "@/components/property-video";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import {
@@ -23,7 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { API } from "../../services/api";
 
 const TYPES = ["Apartment", "Hotel", "Shortlet"];
-const MAX_VIDEO_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
 export default function CreateProduct() {
   const router = useRouter();
@@ -45,69 +45,88 @@ export default function CreateProduct() {
    * 📸 PICK IMAGES
    */
   const pickImages = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!permission.granted) {
-      Alert.alert("Permission required");
-      return;
-    }
+      if (!permission.granted) {
+        Alert.alert("Permission required");
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.4,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        quality: 0.4,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      });
 
-    if (!result.canceled) {
-      setImages(result.assets);
+      if (!result.canceled) {
+        setImages(result.assets);
+      }
+    } catch (err) {
+      console.log("pickImages error:", err);
+      Alert.alert(
+        "Couldn't open photos",
+        "If the photo is iCloud-only, download it in Photos first, then try again."
+      );
     }
   };
 
   /**
-   * 🎥 PICK VIDEO (FIXED)
+   * 🎥 PICK VIDEO
    */
   const pickVideo = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!permission.granted) {
-      Alert.alert("Permission required");
-      return;
-    }
+      if (!permission.granted) {
+        Alert.alert("Permission required");
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos, // ✅ FIXED
-      allowsEditing: false,
-      quality: 1,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["videos"],
+        allowsEditing: false,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
+      });
 
-    if (result.canceled) return;
+      if (result.canceled) return;
 
-    const file = result.assets[0];
+      const file = result.assets[0];
+      const fileSize = (file as any).fileSize || (file as any).size;
 
-    // 🔥 Get file size safely
-    const fileSize = (file as any).fileSize || (file as any).size;
+      if (fileSize != null && fileSize > MAX_VIDEO_SIZE) {
+        Alert.alert(
+          "Video too large",
+          "Video must be 50MB or less. Please compress or choose another video."
+        );
+        return;
+      }
 
-    if (!fileSize) {
-      Alert.alert("Error", "Cannot read video size");
-      return;
-    }
+      const name = (file.fileName || file.uri || "").toLowerCase();
+      const mime = file.mimeType || "";
+      if (
+        !name.endsWith(".mp4") &&
+        !name.endsWith(".mov") &&
+        mime !== "video/mp4" &&
+        mime !== "video/quicktime" &&
+        !mime.startsWith("video/")
+      ) {
+        Alert.alert("Invalid format", "Only MP4 and MOV videos are allowed");
+        return;
+      }
 
-    // ❌ Validate size BEFORE upload
-    if (fileSize > MAX_VIDEO_SIZE) {
+      setVideo(file);
+    } catch (err: any) {
+      console.log("pickVideo error:", err);
       Alert.alert(
-        "Video too large",
-        "Video must be 15MB or less. Please compress or choose another video.",
+        "Couldn't load video",
+        "This video may be iCloud-only. Download it in Photos, then pick it again."
       );
-      return;
     }
-
-    // ❌ Validate format
-    if (!file.uri.endsWith(".mp4")) {
-      Alert.alert("Invalid format", "Only MP4 videos are allowed");
-      return;
-    }
-
-    setVideo(file);
   };
 
   const removeImage = (index: number) => {
@@ -278,7 +297,7 @@ export default function CreateProduct() {
           className="p-6 border-dashed border rounded-xl items-center mb-4"
         >
           <VideoCamera size={30} color={colors.text} />
-          <Text style={{ color: colors.text }}>Add Video (MP4, max 15MB)</Text>
+          <Text style={{ color: colors.text }}>Add Video (MP4/MOV, max 50MB)</Text>
         </TouchableOpacity>
 
         {/* IMAGE PREVIEW */}
@@ -302,11 +321,10 @@ export default function CreateProduct() {
         {/* VIDEO PREVIEW */}
         {video && (
           <View className="mb-4 relative">
-            <Video
-              source={{ uri: video.uri }}
+            <PropertyVideo
+              uri={video.uri}
               style={{ width: "100%", height: 200, borderRadius: 12 }}
-              useNativeControls
-              resizeMode={ResizeMode.COVER}
+              contentFit="cover"
             />
             <TouchableOpacity
               onPress={removeVideo}

@@ -12,12 +12,15 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
+import { AppState, useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import "../global.css";
 import { setupNotifications } from "../services/notification";
+import { sendHeartbeat } from "../services/chatApi";
+import { flushOutbox, startOutboxWatcher, stopOutboxWatcher } from "../services/chatOutbox";
+import { connectSocket, disconnectSocket } from "../services/socket";
 import OfflineModal from "./(utilities)/offlineModal";
 
 SplashScreen.preventAutoHideAsync();
@@ -79,6 +82,14 @@ function AppContent() {
             },
           });
         }
+
+        // Chat push (sent by utils/chatPush.js as type "chat_message").
+        if (data?.type === "chat_message" && data?.conversationId) {
+          router.push({
+            pathname: "/(utilities)/chats",
+            params: { id: String(data.conversationId) },
+          });
+        }
       },
     );
 
@@ -86,6 +97,38 @@ function AppContent() {
       responseSub.remove();
     };
   }, [router]);
+
+  /* =========================
+     CHAT LIFECYCLE
+     Socket is an optional accelerator; the outbox flushes queued sends on
+     reconnect; presence flips with foreground/background.
+  ========================= */
+  useEffect(() => {
+    if (!user?.uid) {
+      disconnectSocket();
+      return;
+    }
+
+    startOutboxWatcher();
+    void connectSocket();
+    void sendHeartbeat(null, true).catch(() => {});
+
+    const appStateSub = AppState.addEventListener("change", (next) => {
+      if (next === "active") {
+        void connectSocket();
+        void sendHeartbeat(null, true).catch(() => {});
+        void flushOutbox();
+      } else if (next === "background" || next === "inactive") {
+        void sendHeartbeat(null, false).catch(() => {});
+      }
+    });
+
+    return () => {
+      appStateSub.remove();
+      stopOutboxWatcher();
+      disconnectSocket();
+    };
+  }, [user?.uid]);
 
   /* =========================
      AUTH + ROLE ROUTING
@@ -104,8 +147,10 @@ function AppContent() {
 
     /* 🚫 NOT LOGGED IN */
     if (!user) {
+      // Stay inside auth flow (onboarding → phone → otp). Only force
+      // onboarding when the user is outside the auth group entirely.
       if (!inAuth) {
-        router.replace("/onboarding");
+        router.replace("/(auth)/onboarding");
       }
       return;
     }

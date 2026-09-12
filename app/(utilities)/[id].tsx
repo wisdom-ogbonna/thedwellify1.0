@@ -1,5 +1,5 @@
 import { useTheme } from "@/hooks/use-theme";
-import { ResizeMode, Video } from "expo-av";
+import { PropertyVideo } from "@/components/property-video";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -9,7 +9,7 @@ import {
   Record,
   PencilSimple,
 } from "phosphor-react-native";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -26,7 +26,6 @@ export default function ProductDetails() {
   const { id } = useLocalSearchParams();
   const { colors } = useTheme();
 
-  const videoRef = useRef<Video>(null);
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -153,14 +152,10 @@ export default function ProductDetails() {
                 }}
                 className="h-60 rounded-[35px] bg-black overflow-hidden"
               >
-                <Video
-                  ref={videoRef}
-                  source={{ uri: product.video }}
+                <PropertyVideo
+                  uri={product.video}
                   style={{ flex: 1 }}
-                  resizeMode={ResizeMode.COVER}
-                  shouldPlay={false}
-                  isLooping
-                  useNativeControls
+                  contentFit="cover"
                 />
               </View>
             </View>
@@ -214,7 +209,10 @@ export default function ProductDetails() {
         <TouchableOpacity
           onPress={() => {
             if (userRole === "agent") {
-              router.push(`/edit-product/${id}`);
+              router.push({
+                pathname: "/(product)/edit",
+                params: { id: String(id) },
+              });
             } else {
               console.log("Booking agent...");
             }

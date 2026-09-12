@@ -116,7 +116,7 @@ const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
           <TouchableOpacity
             onPress={() =>
               router.push({
-                pathname: "/(product)/[id]",
+                pathname: "/(product)/edit",
                 params: { id: item.id },
               })
             }

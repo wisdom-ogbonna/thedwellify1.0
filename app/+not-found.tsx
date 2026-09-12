@@ -32,7 +32,7 @@ export default function NotFound() {
         style={{ color: colors.text }}
       >
         It seems the property or page you are looking for has been moved or
-        doesn't exist.
+        doesn&apos;t exist.
       </Text>
 
       {/* Navigation Action */}

@@ -1,4 +1,5 @@
 import { useTheme } from "@/hooks/use-theme";
+import { useUnreadBadge } from "@/hooks/use-unread-badge";
 import { Inter_500Medium, useFonts } from "@expo-google-fonts/inter";
 import { Tabs } from "expo-router";
 import {
@@ -12,6 +13,7 @@ import { Platform } from "react-native";
 
 export default function ClientLayout() {
   const { colors } = useTheme();
+  const unreadBadge = useUnreadBadge();
   const [FontsLoaded] = useFonts({
     Inter_500Medium,
   });
@@ -50,7 +52,7 @@ export default function ClientLayout() {
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
             <HouseIcon
-              size={26}
+              size={26}         
               color={color}
               weight={focused ? "fill" : "regular"}
             />
@@ -76,6 +78,7 @@ export default function ClientLayout() {
         name="client-messages"
         options={{
           title: "Messages",
+          tabBarBadge: unreadBadge,
           tabBarIcon: ({ color, focused }) => (
             <ChatIcon
               size={26}

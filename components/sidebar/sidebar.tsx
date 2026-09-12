@@ -97,9 +97,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Primary Navigation */}
           <View style={{ gap: 6 }}>
             {primaryItems.map((item, index) => {
-              const IconComponent = Icons[
-                item.icon
-              ] as React.ComponentType<any>;
+              const IconComponent = (Icons as Record<string, React.ComponentType<any>>)[
+                item.icon as string
+              ];
               const isCurrent = item.isActive;
 
               return (
@@ -202,9 +202,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
               <View style={{ gap: 6 }}>
                 {utilityItems.map((item, index) => {
-                  const IconComponent = Icons[
-                    item.icon
-                  ] as React.ComponentType<any>;
+                  const IconComponent = (Icons as Record<string, React.ComponentType<any>>)[
+                    item.icon as string
+                  ];
                   const isCurrent = item.isActive;
 
                   return (

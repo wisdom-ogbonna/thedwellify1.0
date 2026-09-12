@@ -8,6 +8,7 @@ export default function ProductLayout() {
     >
       <Stack.Screen name="create" />
       <Stack.Screen name="creater" />
+      <Stack.Screen name="edit" />
       <Stack.Screen name="[id]" />
       <Stack.Screen name="products" />
     </Stack>

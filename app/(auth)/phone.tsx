@@ -1,24 +1,25 @@
 import { useTheme } from "@/hooks/use-theme";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { API } from "../../services/api";
 
 export default function PhoneScreen() {
-  const { role } = useLocalSearchParams();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const getFormattedNumber = (input: string) => {
     let clean = input.replace(/\D/g, "");
@@ -30,9 +31,10 @@ export default function PhoneScreen() {
 
   const processedPhone = getFormattedNumber(phone);
   const isValid = processedPhone.length === 10;
+  const canSubmit = isValid && !loading;
 
   const sendOTP = async () => {
-    if (!isValid) return;
+    if (!canSubmit) return;
     try {
       setLoading(true);
 
@@ -41,7 +43,6 @@ export default function PhoneScreen() {
       });
 
       const pinId = res.data?.pin_id;
-
       if (!pinId) {
         throw new Error("Server did not return a pin_id");
       }
@@ -50,85 +51,97 @@ export default function PhoneScreen() {
         pathname: "/(auth)/otp",
         params: {
           phone: `+234${processedPhone}`,
-          pinId: pinId,
-          role: role,
+          pinId: String(pinId),
         },
       });
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Connection failed");
+      Alert.alert(
+        "Couldn't send code",
+        err?.response?.data?.error || err?.message || "Connection failed"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={{ backgroundColor: colors.background, flex: 1 }}>
-      {/* Back Button */}
-      <View className="mt-6 px-6">
-        <TouchableOpacity
-          onPress={() => router.back()}
+    <SafeAreaView
+      style={{ backgroundColor: colors.background, flex: 1 }}
+      edges={["top", "bottom"]}
+    >
+      <View className="mt-2 px-6">
+        <Pressable
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/(auth)/onboarding");
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
           className="w-12 h-12 items-center justify-center rounded-2xl border"
           style={{
             backgroundColor: colors.background,
-            borderColor: colors.border,
+            borderColor: isDark ? `${colors.border}66` : colors.border,
           }}
         >
           <ArrowLeft size={20} color={colors.text} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      {/* Centered Typography Header */}
-      <View className="px-10 mt-6 items-center">
+      <Animated.View entering={FadeInDown.duration(420)} className="px-8 mt-8">
         <Text
-          className="text-5xl font-extrabold mb-4 tracking-tight text-center"
+          className="text-[40px] font-extrabold mb-3 tracking-tight text-center leading-[46px]"
           style={{ color: colors.text }}
         >
           Let&apos;s get you <Text style={{ color: colors.primary }}>in</Text>.
         </Text>
         <Text
-          className=" text-lg mt-4 leading-6 text-center font-normal px-2"
-          style={{ color: colors.text }}
+          className="text-[16px] leading-6 text-center px-2"
+          style={{ color: colors.placeholder }}
         >
-          Enter your phone number to receive a one-time verification code.
+          Enter your Nigerian phone number to receive a one-time verification
+          code.
         </Text>
-      </View>
+      </Animated.View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
         <View className="px-6 mt-12">
-          {/* Input Label */}
           <Text
             style={{ color: colors.text }}
-            className="font-bold text-xl mb-2 px-1"
+            className="font-semibold text-[15px] mb-2.5 px-1"
           >
             Phone Number
           </Text>
 
-          {/* Unified Styled Input Container */}
           <View
-            className="flex-row items-center h-16 px-4 rounded-2xl border"
+            className="flex-row items-center h-16 px-3 rounded-2xl border"
             style={{
-              borderColor: colors.border,
-              backgroundColor: colors.background,
+              borderColor: isValid ? colors.primary : `${colors.border}99`,
+              backgroundColor: isDark
+                ? "rgba(255,255,255,0.04)"
+                : "rgba(15,23,42,0.02)",
             }}
           >
-            {/* Country Badge */}
             <View
-              className="flex-row items-center h-10 px-3 rounded-xl mr-3"
-              style={{ backgroundColor: colors.background }}
+              className="flex-row items-center h-10 px-3 rounded-xl mr-2"
+              style={{
+                backgroundColor: isDark
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(15,23,42,0.04)",
+              }}
             >
-              <Text className="text-xl mr-1.5">🇳🇬</Text>
+              <Text className="text-lg mr-1.5">🇳🇬</Text>
               <Text
-                className="text-xl font-semibold"
+                className="text-[16px] font-semibold"
                 style={{ color: colors.text }}
               >
                 +234
               </Text>
             </View>
 
-            {/* Core Text Input */}
             <TextInput
               value={phone}
               onChangeText={(t) => setPhone(t.replace(/\D/g, "").slice(0, 11))}
@@ -137,30 +150,34 @@ export default function PhoneScreen() {
               autoFocus
               placeholder="801 234 5678"
               placeholderTextColor={colors.placeholder}
-              className="flex-1 text-xl font-medium"
-              style={{ letterSpacing: 0.5, color: colors.text }}
+              className="flex-1 text-[18px] font-medium"
+              style={{ letterSpacing: 0.4, color: colors.text }}
+              returnKeyType="done"
+              onSubmitEditing={sendOTP}
             />
           </View>
         </View>
 
-        {/* Primary Action Button */}
-        <View className="px-6 mt-10">
-          <TouchableOpacity
+        <View className="px-6 mt-8 mb-6">
+          <Pressable
             onPress={sendOTP}
-            disabled={!isValid && loading}
-            className="h-14 rounded-2xl items-center justify-center"
-            style={{
-              backgroundColor: !isValid ? `${colors.disabled}` : colors.primary,
-            }}
+            disabled={!canSubmit}
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              height: 56,
+              borderRadius: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: canSubmit ? colors.primary : colors.disabled,
+              opacity: pressed && canSubmit ? 0.92 : 1,
+            })}
           >
             {loading ? (
-              <View className="h-14 items-center justify-center text-white">
-                <ActivityIndicator size="small" />
-              </View>
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text className="text-white font-bold text-xl">Send Code</Text>
+              <Text className="text-white font-bold text-[17px]">Send Code</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

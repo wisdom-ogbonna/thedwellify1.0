@@ -1,4 +1,5 @@
 import { useTheme } from "@/hooks/use-theme";
+import { useUnreadBadge } from "@/hooks/use-unread-badge";
 import { Inter_500Medium, useFonts } from "@expo-google-fonts/inter";
 import { Tabs } from "expo-router";
 import {
@@ -12,6 +13,7 @@ import { Platform } from "react-native";
 
 export default function AgentLayout() {
   const { colors } = useTheme();
+  const unreadBadge = useUnreadBadge();
   const [FontsLoaded] = useFonts({
     Inter_500Medium,
   });
@@ -76,6 +78,7 @@ export default function AgentLayout() {
         name="agent-messages"
         options={{
           title: "Messages",
+          tabBarBadge: unreadBadge,
           tabBarIcon: ({ color, focused }) => (
             <ChatIcon
               size={26}
@@ -96,6 +99,13 @@ export default function AgentLayout() {
               weight={focused ? "fill" : "regular"}
             />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="create-property"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
