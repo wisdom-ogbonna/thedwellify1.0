@@ -13,13 +13,7 @@ import { registerForPushNotificationsAsync } from "../../services/notification";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PROPERTY_TYPES = [
-  "Hotel",
-  "Apartment",
-  "Shortlet",
-  "Land",
-  "House",
-] as const;
+const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet"] as const;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,7 +36,9 @@ type LiveAgent = {
 };
 
 type LiveData = {
+  requestId?: string | null;
   requestStatus: string;
+  message?: string | null;
   lat: number;
   lng: number;
   agent: LiveAgent | null;
@@ -70,6 +66,7 @@ type ApiError = {
   response?: {
     data?: {
       message?: string;
+      error?: string;
     };
   };
   message: string;
@@ -103,6 +100,7 @@ export default function RequestMatchScreen() {
   const [liveData, setLiveData] = useState<LiveData | null>(null);
   const [agentLocation, setAgentLocation] = useState<Coords | null>(null);
   const [requestStatus, setRequestStatus] = useState<string | null>(null);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [lastKnownLocation, setLastKnownLocation] = useState<Coords | null>(
     null,
   );
@@ -182,10 +180,10 @@ export default function RequestMatchScreen() {
       const pushData = await registerForPushNotificationsAsync();
       if (!pushData) return;
 
-      const payload =
-        pushData.platform === "ios"
-          ? { platform: pushData.platform, expoPushToken: pushData.token }
-          : { platform: pushData.platform, fcmToken: pushData.token };
+      const payload = {
+        platform: pushData.platform,
+        expoPushToken: pushData.token,
+      };
 
       const token = await user.getIdToken();
       await API.post("/notifications/client", payload, {
@@ -278,7 +276,12 @@ export default function RequestMatchScreen() {
 
       const data = res.data;
       setLiveData(data);
-      setRequestStatus(data.requestStatus);
+      if (data.requestStatus) {
+        setRequestStatus(data.requestStatus);
+      }
+      if (data.requestId) {
+        setActiveRequestId(data.requestId);
+      }
 
       if (data.agent) {
         setAgentLocation({ lat: data.agent.lat, lng: data.agent.lng });
@@ -321,7 +324,9 @@ export default function RequestMatchScreen() {
     try {
       setLoading(true);
       setMatchData(null);
-      setLiveData(null); // clear stale polling data alongside
+      setLiveData(null);
+      setRequestStatus("pending");
+      setActiveRequestId(null);
 
       const token = await user.getIdToken();
       const authHeader = { headers: { Authorization: `Bearer ${token}` } };
@@ -335,27 +340,40 @@ export default function RequestMatchScreen() {
       const { requestId } = createRes.data;
       if (!requestId) throw new Error("No requestId returned from server");
 
-      console.log("REQUEST ID:", requestId);
+      setActiveRequestId(requestId);
 
-      const matchRes = await API.post<{ request: MatchRequest; agent: Agent }>(
-        `/match/match/${requestId}`,
-        {},
-        authHeader,
-      );
+      const matchRes = await API.post<{
+        request: MatchRequest;
+        agent: Agent;
+        error?: string;
+      }>(`/match/match/${requestId}`, {}, authHeader);
 
       const { request, agent } = matchRes.data;
 
       if (!agent) {
+        setRequestStatus("no_agents");
         Alert.alert("No Agent", "No agents available — try again later");
         return;
       }
 
       setMatchData({ request, agent });
+      setRequestStatus(request?.status || "offered");
+      getLiveData();
     } catch (err: unknown) {
       const error = err as ApiError;
+      const serverError =
+        (error?.response?.data as { error?: string; message?: string } | undefined)
+          ?.error || error?.response?.data?.message;
+
+      if (serverError === "No available agents nearby") {
+        setRequestStatus("no_agents");
+      } else {
+        setRequestStatus(null);
+      }
+
       Alert.alert(
         "Error",
-        error?.response?.data?.message ??
+        serverError ||
           "No agents are currently available for this property type. Please try again later.",
       );
     } finally {
@@ -429,9 +447,31 @@ export default function RequestMatchScreen() {
           setSelectedType={setSelectedType}
           handleRequest={handleRequest}
           loading={loading}
-          setMatchData={setMatchData}
-          matchData={matchData ?? liveData}
+          setMatchData={(data: MatchData | null) => {
+            setMatchData(data);
+            if (!data) {
+              setRequestStatus(null);
+              setActiveRequestId(null);
+            }
+          }}
+          matchData={
+            matchData ||
+            (liveData
+              ? {
+                  request: {
+                    requestId: liveData.requestId || activeRequestId || "",
+                    lat: liveData.lat,
+                    lng: liveData.lng,
+                    propertyType: selectedType,
+                    status: liveData.requestStatus,
+                  },
+                  agent: liveData.agent as any,
+                  message: liveData.message,
+                }
+              : null)
+          }
           requestStatus={requestStatus}
+          requestId={activeRequestId || liveData?.requestId}
         />
       </BottomModal>
 

@@ -236,7 +236,7 @@ const AvailableProperties: React.FC = () => {
         </TouchableOpacity>
 
         {/* Book Button - 70% */}
-        {status === "inspection_started" || status === "matched" ? null : (
+        {requestId || status === "inspection_started" || status === "matched" || status === "offered" ? null : (
           <TouchableOpacity
             onPress={() => setBookingModalOpen(true)}
             style={{

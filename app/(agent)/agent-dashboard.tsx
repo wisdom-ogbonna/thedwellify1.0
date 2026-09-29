@@ -57,6 +57,7 @@ export default function MapScreen() {
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
   const [requestId, setRequestId] = useState<string | null>(null);
+  const openedRequestRef = useRef<string | null>(null);
 
   const syncPushToken = async () => {
     try {
@@ -65,9 +66,7 @@ export default function MapScreen() {
 
       const payload = {
         platform: pushData.platform,
-        ...(pushData.platform === "ios"
-          ? { expoPushToken: pushData.token }
-          : { fcmToken: pushData.token }),
+        expoPushToken: pushData.token,
       };
 
       await API.post("/notifications/agent", payload);
@@ -122,9 +121,12 @@ export default function MapScreen() {
 
           if (
             latestItem &&
-            latestItem.status === "pending" &&
-            latestItem.requestId
+            (latestItem.status === "offered" ||
+              latestItem.redisStatus === "offered") &&
+            latestItem.requestId &&
+            openedRequestRef.current !== String(latestItem.requestId)
           ) {
+            openedRequestRef.current = String(latestItem.requestId);
             router.push({
               pathname: "/(utilities)/requests",
               params: {
