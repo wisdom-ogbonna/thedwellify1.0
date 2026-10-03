@@ -1,24 +1,45 @@
+import { useTheme } from "@/hooks/use-theme";
+import { router } from "expo-router";
+import { ArrowLeft, Check } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { API } from "../../services/api";
-import { auth } from "../../config/firebase";
-import { useTheme } from "@/hooks/use-theme";
 
-export default function RoleScreen() {
-  const { setUserRole, checkProfile } = useAuth();
+type UserRole = "client" | "agent";
+
+export default function RoleSelectionScreen() {
+  const { login } = useAuth();
   const { colors } = useTheme();
-  const [loading, setLoading] = useState<"agent" | "client" | null>(null);
 
-  const selectRole = async (role: "agent" | "client") => {
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [loading, setLoading] = useState<UserRole | null>(null);
+
+  /* =======================================
+     ROLE ASSIGNMENT LOGIC (From Commented Code)
+     ======================================= */
+  const handleProceed = async () => {
+    if (!selectedRole || loading) return;
+
     try {
-      setLoading(role);
-      const res = await API.post("/role/assign", { role });
+      setLoading(selectedRole);
+
+      // 1. Assign role metadata via custom Backend API endpoint
+      const res = await API.post("/role/assign", { role: selectedRole });
       if (!res?.data?.success) throw new Error("Role assignment failed");
 
       const firebaseUser = auth.currentUser;
       if (!firebaseUser) throw new Error("Session lost.");
 
+      // 2. Force token structural update refresh to pull down fresh custom claims
       await firebaseUser.getIdToken(true);
       const tokenResult = await firebaseUser.getIdTokenResult();
       const roleFromClaims = tokenResult.claims.role as
@@ -26,84 +47,171 @@ export default function RoleScreen() {
         | "client"
         | undefined;
 
-      if (!roleFromClaims) throw new Error("Role not found in token.");
+      if (!roleFromClaims) {
+        throw new Error("Role validation mapping not found in token.");
+      }
 
-      await setUserRole(roleFromClaims);
-      await checkProfile(roleFromClaims);
+      // 3. Hand off control to the updated context engine
+      await login({
+        uid: firebaseUser.uid,
+        phone: firebaseUser.phoneNumber || "",
+        role: roleFromClaims,
+      });
     } catch (err: any) {
-      Alert.alert("Error", err?.response?.data?.error || "Assignment failed");
+      console.log("Role Selection Error Debug:", err);
+      Alert.alert(
+        "Error",
+        err?.response?.data?.error || err.message || "Assignment failed",
+      );
     } finally {
       setLoading(null);
     }
   };
 
   return (
-    <View
-      className="flex-1 px-8 justify-center"
-      style={{ backgroundColor: colors.background }}
-    >
-      <View className="mb-12">
-        <Text
-          className="text-4xl font-black tracking-tighter"
-          style={{ color: colors.text }}
+    <SafeAreaView style={{ backgroundColor: colors.background, flex: 1 }}>
+      {/* Navigation Back Header */}
+      <View className="mt-6 px-6">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="w-12 h-12 items-center justify-center rounded-2xl border"
+          style={{
+            backgroundColor: colors.background,
+            borderColor: colors.border,
+          }}
         >
-          Choose your path.
-        </Text>
-        <Text
-          className="text-lg mt-2 opacity-60"
-          style={{ color: colors.text }}
-        >
-          Are you looking to list properties or find your dream home?
-        </Text>
+          <ArrowLeft size={20} color={colors.text} />
+        </TouchableOpacity>
       </View>
 
-      {/* Agent Card */}
-      <Pressable
-        onPress={() => selectRole("agent")}
-        disabled={!!loading}
-        className="h-32 rounded-3xl mb-4 p-6 justify-center border-2"
-        style={{
-          borderColor: colors.primary,
-          backgroundColor: loading === "agent" ? colors.border : "transparent",
-        }}
-      >
-        {loading === "agent" ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : (
-          <>
-            <Text className="text-2xl font-bold" style={{ color: colors.text }}>
-              Agent
+      {/* Main Centered Typography */}
+      <View className="flex-1 px-6 mt-6 justify-between pb-8">
+        <View>
+          <View className="mb-10 items-center">
+            <Text
+              className="text-4xl font-black text-center tracking-tight"
+              style={{ color: colors.text }}
+            >
+              How will you <Text style={{ color: colors.primary }}>use</Text>{" "}
+              Dwellify?
             </Text>
-            <Text className="opacity-50" style={{ color: colors.text }}>
-              Manage and list properties
+            <Text
+              className=" text-lg text-center mt-4 leading-6 font-normal max-w-sm"
+              style={{ color: colors.text }}
+            >
+              Pick your role. You can switch anytime from settings.
             </Text>
-          </>
-        )}
-      </Pressable>
+          </View>
 
-      {/* Client Card */}
-      <Pressable
-        onPress={() => selectRole("client")}
-        disabled={!!loading}
-        className="h-32 rounded-3xl p-6 justify-center border-2"
-        style={{
-          borderColor: colors.primary,
-          backgroundColor: loading === "client" ? colors.border : "transparent",
-        }}
-      >
-        {loading === "client" ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : (
-          <>
-            <Text className="text-2xl font-bold" style={{ color: colors.text }}>
-              Client
-            </Text>
-            <Text className="opacity-50" style={{ color: colors.text }}>
-              Find your next home
-            </Text>
-          </>
-        )}
-      </Pressable>
-    </View>
+          {/* Cards Selection Container */}
+          <View className="space-y-4">
+            {/* Client Option */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setSelectedRole("client")}
+              disabled={loading !== null}
+              className="p-6 py-10 rounded-3xl border-2 flex-row items-center justify-between mb-4"
+              style={{
+                borderColor:
+                  selectedRole === "client" ? colors.primary : "transparent",
+                backgroundColor:
+                  selectedRole === "client" ? "transparent" : "transparent",
+              }}
+            >
+              <View className="flex-1 pr-4">
+                <Text
+                  className="text-xl font-bold text-slate-900"
+                  style={{
+                    color: colors.text,
+                  }}
+                >
+                  I&apos;m a Client
+                </Text>
+                <Text className="text-lg text-slate-400 mt-2 leading-5">
+                  Browse, rent, or buy properties across Nigeria
+                </Text>
+              </View>
+
+              {/* Selection Check Circle */}
+              <View
+                className="w-8 h-8 rounded-full border items-center justify-center"
+                style={{
+                  backgroundColor:
+                    selectedRole === "client" ? colors.primary : "transparent",
+                  borderColor:
+                    selectedRole === "client" ? colors.primary : "#E2E8F0",
+                }}
+              >
+                {selectedRole === "client" && (
+                  <Check size={16} color="#FFFFFF" strokeWidth={3} />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {/* Agent Option */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setSelectedRole("agent")}
+              disabled={loading !== null}
+              className="p-6 py-10 rounded-3xl border-2 flex-row items-center justify-between"
+              style={{
+                borderColor:
+                  selectedRole === "agent" ? colors.primary : "transparent",
+                backgroundColor: "transparent",
+              }}
+            >
+              <View className="flex-1 pr-4">
+                <Text
+                  className="text-xl font-bold text-slate-900"
+                  style={{ color: colors.text }}
+                >
+                  I&apos;m an Agent
+                </Text>
+                <Text className="text-lg text-slate-400 mt-2 leading-5">
+                  List properties, connect with buyers & renters
+                </Text>
+              </View>
+
+              {/* Selection Check Circle */}
+              <View
+                className="w-8 h-8 rounded-full border items-center justify-center"
+                style={{
+                  backgroundColor:
+                    selectedRole === "agent" ? colors.primary : "transparent",
+                  borderColor:
+                    selectedRole === "agent" ? colors.primary : "#E2E8F0",
+                }}
+              >
+                {selectedRole === "agent" && (
+                  <Check size={16} color="#FFFFFF" strokeWidth={3} />
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Action Continue Button */}
+        <View className="w-full">
+          {loading ? (
+            <View className="h-14 items-center justify-center">
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : (
+            <TouchableOpacity
+              disabled={!selectedRole}
+              onPress={handleProceed}
+              className="h-14 rounded-2xl justify-center items-center"
+              style={{
+                backgroundColor: !selectedRole
+                  ? `${colors.primary}40`
+                  : colors.primary,
+              }}
+            >
+              <Text className="text-white text-lg font-bold">Continue</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }

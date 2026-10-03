@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Image, Pressable } from "react-native";
+import { View, Text, Image, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/hooks/use-theme";
 import {
@@ -30,12 +30,12 @@ const AgentTracking = () => {
 
       {/* TOP HEADER OVERLAY */}
       <View className="absolute top-12 left-0 right-0 px-6 flex-row justify-between items-center">
-        <Pressable
+        <TouchableOpacity
           onPress={() => router.back()}
           className="bg-white/90 p-4 rounded-3xl shadow-xl border-[0.5px] border-black/5"
         >
           <CaretLeft size={20} color="#000" weight="bold" />
-        </Pressable>
+        </TouchableOpacity>
 
         <View className="bg-white/90 px-6 py-3 rounded-full shadow-xl border-[0.5px] border-black/5 flex-row items-center">
           <View className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2" />
@@ -71,16 +71,16 @@ const AgentTracking = () => {
       <View className="absolute bottom-10 left-6 right-6">
         {/* SAFETY QUICK ACTIONS */}
         <View className="flex-row justify-center gap-x-4 mb-4">
-          <Pressable className="bg-white/90 px-5 py-3 rounded-2xl flex-row items-center shadow-lg">
+          <TouchableOpacity className="bg-white/90 px-5 py-3 rounded-2xl flex-row items-center shadow-lg">
             <ShieldCheck size={18} color="#10b981" weight="fill" />
             <Text className="text-black font-bold text-xs ml-2">
               Secure Meeting
             </Text>
-          </Pressable>
-          <Pressable className="bg-red-500 px-5 py-3 rounded-2xl flex-row items-center shadow-lg">
+          </TouchableOpacity>
+          <TouchableOpacity className="bg-red-500 px-5 py-3 rounded-2xl flex-row items-center shadow-lg">
             <WarningCircle size={18} color="#FFF" weight="fill" />
             <Text className="text-white font-bold text-xs ml-2">SOS</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* MAIN AGENT CARD */}
@@ -117,18 +117,18 @@ const AgentTracking = () => {
             </View>
 
             <View className="flex-row gap-x-2">
-              <Pressable
+              <TouchableOpacity
                 style={{ backgroundColor: colors.primary }}
                 className="p-4 rounded-2xl shadow-md"
               >
                 <Phone size={20} color="white" weight="fill" />
-              </Pressable>
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* ACTION BUTTONS */}
           <View className="flex-row gap-x-3">
-            <Pressable
+            <TouchableOpacity
               style={{
                 backgroundColor: colors.background,
                 borderColor: colors.border,
@@ -139,14 +139,14 @@ const AgentTracking = () => {
               <Text style={{ color: colors.text }} className="font-bold ml-2">
                 Message
               </Text>
-            </Pressable>
+            </TouchableOpacity>
 
-            <Pressable
+            <TouchableOpacity
               onPress={() => router.push("/(client)/dashboard")}
               className="flex-1 py-4 bg-red-50 rounded-2xl items-center justify-center border border-red-100"
             >
               <Text className="text-red-500 font-bold">Cancel</Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
       </View>

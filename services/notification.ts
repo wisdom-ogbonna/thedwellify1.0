@@ -3,18 +3,48 @@ import * as Device from "expo-device";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
+/**
+ * ✅ SETUP NOTIFICATION CHANNELS
+ */
+export const REQUEST_CHANNEL_ID = "requests_v4";
+
+export const setupNotifications = async () => {
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync(REQUEST_CHANNEL_ID, {
+      name: "Incoming Requests",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "ringtone.wav",
+      vibrationPattern: [0, 500, 500, 500],
+      enableVibrate: true,
+      lockscreenVisibility:
+        Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
+  }
+};
+
+/**
+ * ✅ REGISTER PUSH TOKEN
+ */
 export const registerForPushNotificationsAsync = async () => {
   if (!Device.isDevice) {
     alert("Must use physical device for Push Notifications");
     return null;
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  const { status: existingStatus } =
+    await Notifications.getPermissionsAsync();
 
   let finalStatus = existingStatus;
 
   if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
+    const { status } = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
+
     finalStatus = status;
   }
 
@@ -23,7 +53,6 @@ export const registerForPushNotificationsAsync = async () => {
     return null;
   }
 
-  // 🔥 THIS IS THE FIX
   const projectId =
     Constants?.expoConfig?.extra?.eas?.projectId ||
     Constants?.easConfig?.projectId;

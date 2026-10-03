@@ -4,20 +4,20 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
-  Pressable,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CaretLeft } from "phosphor-react-native";
 import CategoryFilter from "../../components/client-ui/agent-view-category-filter";
 import AgentHeader from "../../components/client-ui/agent-view-header";
 import PropertyCard from "../../components/client-ui/agent-view-property-card";
 import { API } from "../../services/api";
-import { CaretLeftIcon } from "phosphor-react-native";
+import ConfirmBookingModal from "../modal";
 
-const CATEGORIES = ["All", "Apartment", "Hotel", "Shortlet"];
+const CATEGORIES = ["All", "Land", "House", "Apartment", "Hotel", "Shortlet", "Other"];
 
 const AvailableProperties: React.FC = () => {
   const { colors } = useTheme();
@@ -25,6 +25,8 @@ const AvailableProperties: React.FC = () => {
   const {
     agentId,
     name,
+    phone,
+    rating,
     agency,
     clientId,
     clientName,
@@ -32,6 +34,7 @@ const AvailableProperties: React.FC = () => {
     lat,
     lng,
     requestId,
+    status,
   } = useLocalSearchParams<any>();
 
   const [activeCategory, setActiveCategory] = useState("All");
@@ -59,7 +62,7 @@ const AvailableProperties: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeCategory, agentId]);
 
   useEffect(() => {
     fetchProperties();
@@ -77,23 +80,27 @@ const AvailableProperties: React.FC = () => {
 
   const listData = useMemo(() => {
     return [
-      { id: "header", type: "header" },
-      { id: "filter", type: "filter" },
+      { id: "header", rowType: "header" },
+      { id: "filter", rowType: "filter" },
       ...filteredProperties.map((p) => ({
         ...p,
-        type: "property",
+        rowType: "property",
       })),
     ];
   }, [filteredProperties]);
 
   const handleBooking = () => {
-    router.push({
+    router.replace({
       pathname: "/(utilities)/client-payment-start-inspection",
       params: {
         agentId,
         clientId,
         clientName,
         propertyType,
+        name,
+        phone,
+        rating,
+        agency,
         lat,
         lng,
         requestId,
@@ -109,7 +116,6 @@ const AvailableProperties: React.FC = () => {
         backgroundColor: colors.background,
       }}
     >
-
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.primary} />
@@ -125,7 +131,7 @@ const AvailableProperties: React.FC = () => {
             {error}
           </Text>
 
-          <Pressable
+          <TouchableOpacity
             onPress={fetchProperties}
             className="mt-4 px-4 py-3 rounded-xl"
             style={{
@@ -133,17 +139,20 @@ const AvailableProperties: React.FC = () => {
             }}
           >
             <Text style={{ color: "#fff" }}>Retry</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={listData}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id || index.toString()}
           stickyHeaderIndices={[1]}
           renderItem={({ item }: any) => {
-            if (item.type === "header") {
+            if (item.rowType === "header") {
               return (
-                <View className="px-4 py-2">
+                <View
+                  className="px-4 py-2"
+                  style={{ backgroundColor: colors.background }}
+                >
                   <AgentHeader
                     name={name || "Professional Agent"}
                     agencyName={agency || "Dwellify Realty"}
@@ -154,7 +163,7 @@ const AvailableProperties: React.FC = () => {
               );
             }
 
-            if (item.type === "filter") {
+            if (item.rowType === "filter") {
               return (
                 <View
                   style={{
@@ -214,36 +223,47 @@ const AvailableProperties: React.FC = () => {
         }}
       >
         {/* Back Button - 30% */}
-        <Pressable
+        <TouchableOpacity
           onPress={() => router.back()}
           style={{
             flex: 0.3,
-            borderColor: colors.border,
-            backgroundColor: colors.card,
+            borderColor: colors.text,
+            backgroundColor: "transparent",
           }}
-          className="mr-3 items-center justify-center rounded-2xl border-2 py-5"
+          className="mr-3 items-center justify-center rounded-2xl border py-5"
         >
-          <CaretLeftIcon size={22} color={colors.text} />
-        </Pressable>
+          <CaretLeft size={22} color={colors.text} />
+        </TouchableOpacity>
 
         {/* Book Button - 70% */}
-        <Pressable
-          onPress={() => setBookingModalOpen(true)}
-          style={{
-            flex: 0.7,
-            backgroundColor: colors.primary,
-          }}
-          className="items-center justify-center rounded-2xl py-5"
-        >
-          <Text className="text-lg font-bold text-white">Book Agent Now</Text>
-        </Pressable>
+        {requestId || status === "inspection_started" || status === "matched" || status === "offered" ? null : (
+          <TouchableOpacity
+            onPress={() => setBookingModalOpen(true)}
+            style={{
+              flex: 0.7,
+              backgroundColor: colors.primary,
+            }}
+            className="items-center justify-center rounded-2xl py-5"
+          >
+            <Text className="text-lg font-bold text-white">Book Agent Now</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Modal */}
       <ConfirmBookingModal
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
-        price={7000}
+        propertyType={propertyType}
+        price={
+          propertyType === "Apartment"
+            ? 5000
+            : propertyType === "Hotel"
+              ? 3000
+              : propertyType === "Shortlet"
+                ? 7000
+                : 5000
+        }
         onConfirm={() => {
           handleBooking();
           setBookingModalOpen(false);
@@ -252,66 +272,5 @@ const AvailableProperties: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-type ModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  price: number;
-  onConfirm: () => void;
-};
-
-function ConfirmBookingModal({
-  isOpen,
-  onClose,
-  price,
-  onConfirm,
-}: ModalProps) {
-  return (
-    <Modal
-      visible={isOpen}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "rgba(0,0,0,0.5)",
-          padding: 20,
-        }}
-      >
-        <View className="bg-white rounded-3xl p-6 w-full max-w-md">
-          <Text className="text-2xl font-bold mb-3">Confirm Booking</Text>
-
-          <Text className="mb-2 text-lg">
-            Are you sure you want to book this agent for an inspection?
-          </Text>
-
-          <Text className="mb-4 text-lg font-semibold">
-            Price: ₦{price.toLocaleString()}
-          </Text>
-
-          <View className="flex-row justify-between">
-            <Pressable
-              onPress={onClose}
-              className="px-7 py-3 rounded-xl border border-gray-300"
-            >
-              <Text className="text-lg font-semibold">Cancel</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={onConfirm}
-              className="px-7 py-3 rounded-xl bg-green-500"
-            >
-              <Text className="text-white text-lg font-semibold">Confirm</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 export default AvailableProperties;

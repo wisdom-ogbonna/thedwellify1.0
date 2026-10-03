@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API } from "../services/api";
 
@@ -8,11 +9,12 @@ import * as Location from "expo-location";
 import {
   startLocationTracking,
   stopLocationTracking,
+  bootstrapLocationTracker,
 } from "../services/locationTracker";
 
-/* =========================
-   TYPES
-========================= */
+/* =========================================================================
+   TYPES & INTERFACES
+   ========================================================================= */
 type UserType = {
   uid: string;
   phone?: string;
@@ -27,7 +29,12 @@ type AuthContextType = {
   loading: boolean;
   isOnline: boolean;
 
-  login: (data: { uid: string; phone?: string }) => Promise<void>;
+  // 🔽 UPDATE THIS LINE to accept the role argument
+  login: (data: {
+    uid: string;
+    phone?: string;
+    role: RoleType | null;
+  }) => Promise<void>;
   setUserRole: (role: RoleType) => Promise<void>;
   checkProfile: (roleParam?: RoleType) => Promise<void>;
   logout: () => Promise<void>;
@@ -36,14 +43,22 @@ type AuthContextType = {
   goOffline: () => Promise<void>;
 };
 
-/* =========================
-   CONTEXT
-========================= */
+// Internal keys mirroring the locationTracker definitions
+const KEYS = {
+  TRACKING_STATUS: "@tracker_is_online",
+  LAST_LOCATION: "@tracker_last_location",
+  SECURE_TOKEN: "@secure_auth_token",
+  ROLE: "role",
+};
+
+/* =========================================================================
+   CONTEXT CREATION
+   ========================================================================= */
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-/* =========================
-   PROVIDER
-========================= */
+/* =========================================================================
+   PROVIDER COMPONENT
+   ========================================================================= */
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [role, setRole] = useState<RoleType | null>(null);
@@ -51,9 +66,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
 
-  /* =========================
-     AUTH STATE LISTENER
-  ========================= */
+  /* =========================================================================
+     AUTH STATE LISTENER & RECOVERY ENGINE
+     ========================================================================= */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -62,43 +77,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setLoading(true);
 
           if (firebaseUser) {
-            // 🔐 Firebase user (source of truth)
+            // 🚀 CRITICAL FIX: Fetch fresh idToken & write to disk for the headless background thread
+            const token = await firebaseUser.getIdToken(true);
+            await AsyncStorage.setItem(KEYS.SECURE_TOKEN, token);
+
             const userData: UserType = {
               uid: firebaseUser.uid,
               phone: firebaseUser.phoneNumber || "",
             };
-
             setUser(userData);
 
-            const storedStatus = await AsyncStorage.getItem("isOnline");
+            // Fetch structural storage tracking rules
+            const storedStatus = await AsyncStorage.getItem(
+              KEYS.TRACKING_STATUS
+            );
+            const userWantsOnline = storedStatus === "true";
 
-            if (storedStatus === "true") {
-              setIsOnline(true);
-            } else {
-              setIsOnline(false);
-            }
+            const storedRole = await AsyncStorage.getItem(KEYS.ROLE);
+            const roleValue = storedRole as RoleType;
 
-            // 📦 Load stored role
-            const storedRole = await AsyncStorage.getItem("role");
-
-            if (storedRole) {
-              const roleValue = storedRole as RoleType;
+            if (roleValue) {
               setRole(roleValue);
-
-              // ✅ IMPORTANT: pass role directly (avoid race condition)
               await checkProfile(roleValue);
+
+              // 🔄 AUTOMATED BACKGROUND AGENT RESTART RECOVERY STATE HANDSHAKE
+              if (roleValue === "agent" && userWantsOnline) {
+                try {
+                  console.log(
+                    "🔄 Recovery engine starting tracker module setup..."
+                  );
+                  await bootstrapLocationTracker();
+                  setIsOnline(true);
+                } catch (bootstrapErr: any) {
+                  // ✅ FIX: Catch the backend rejection safely here so it doesn't throw globally!
+                  console.log(
+                    "⚠️ Background recovery blocked by backend status checks:",
+                    bootstrapErr?.response?.data || bootstrapErr.message
+                  );
+                  setIsOnline(false);
+                  await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
+                }
+              }
             } else {
               setRole(null);
               setIsVerified(false);
             }
           } else {
-            // 🚪 No user
+            // No authenticated session found -> Flush all volatile states immediately
             setUser(null);
             setRole(null);
             setIsVerified(false);
+            setIsOnline(false);
+            await AsyncStorage.removeItem(KEYS.SECURE_TOKEN);
           }
         } catch (error) {
-          console.log("Auth state error:", error);
+          console.error("Auth global layout state listener error:", error);
         } finally {
           setLoading(false);
         }
@@ -108,31 +141,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return unsubscribe;
   }, []);
 
-  /* =========================
-     LOGIN (AFTER FIREBASE AUTH)
-  ========================= */
-  const login = async ({ uid, phone }: { uid: string; phone?: string }) => {
-    // ⚠️ No need to store user in AsyncStorage anymore
-    setUser({ uid, phone });
-    setRole(null);
-    setIsVerified(false);
+  /* =========================================================================
+     LOGIN PROXY HANDLER
+     ========================================================================= */
+  const login = async ({
+    uid,
+    phone,
+    role: initialRole,
+  }: {
+    uid: string;
+    phone?: string;
+    role: RoleType | null;
+  }) => {
+    try {
+      setLoading(true); // 🔒 Lock navigation logic matching while updating
+      setUser({ uid, phone });
+
+      if (initialRole) {
+        await AsyncStorage.setItem(KEYS.ROLE, initialRole);
+        setRole(initialRole);
+        // Wait for backend validation to complete entirely while still loading
+        await checkProfile(initialRole);
+      } else {
+        await AsyncStorage.removeItem(KEYS.ROLE);
+        setRole(null);
+        setIsVerified(false);
+      }
+    } catch (error) {
+      console.error("Login initialization update failed:", error);
+    } finally {
+      setLoading(false); // 🔓 Release navigation safely once all states match perfectly
+    }
   };
 
-  /* =========================
-     SET ROLE
-  ========================= */
-  const setUserRole = async (role: RoleType) => {
-    await AsyncStorage.setItem("role", role);
-    setRole(role);
+  /* =========================================================================
+     ROLE CONFIGURATION MUTATION
+     ========================================================================= */
+  const setUserRole = async (selectedRole: RoleType) => {
+    await AsyncStorage.setItem(KEYS.ROLE, selectedRole);
+    setRole(selectedRole);
   };
 
-  /* =========================
-     CHECK PROFILE (SECURE)
-  ========================= */
+  /* =========================================================================
+     REMOTE PROFILE SANITY SYNC
+     ========================================================================= */
   const checkProfile = async (roleParam?: RoleType) => {
     try {
       const roleToUse = roleParam || role;
-
       if (!roleToUse) return;
 
       if (roleToUse === "agent") {
@@ -144,136 +199,180 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsVerified(true);
     } catch (error: any) {
       const status = error?.response?.status;
+      const errorMessage = error?.response?.data?.error;
 
-      // 🔐 Token invalid / expired
       if (status === 401) {
         await logout();
         return;
       }
 
-      // 👤 Profile not created yet
-      if (status === 404) {
+      // ✅ FIX: If the profile is missing (404) OR they haven't completed setup (400),
+      // mark them cleanly as unverified so the router sends them to the setup screen.
+      if (
+        status === 404 ||
+        (status === 400 && errorMessage === "User is not an agent")
+      ) {
         setIsVerified(false);
         return;
       }
 
-      console.log("Profile check error:", error?.response || error);
+      console.log(
+        "Profile verification handle error:",
+        error?.response || error
+      );
       setIsVerified(false);
     }
   };
 
-  /* =========================
-   ONLINE / OFFLINE
-========================= */
+  /* =========================================================================
+     ONLINE DISPATCH PIPELINE (GEOLOCATION PRIMING ENTRYWAY)
+     ========================================================================= */
+/* =========================================================================
+     ONLINE DISPATCH PIPELINE (GEOLOCATION PRIMING ENTRYWAY)
+     ========================================================================= */
 const goOnline = async () => {
-  try {
-    // ✅ STEP 0: CHECK / REQUEST PERMISSION FIRST
-    let { status } = await Location.getForegroundPermissionsAsync();
+    try {
+      // 1. Hardware Availability Pipeline Validations
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        Alert.alert("GPS Disabled", "Please activate device hardware location features before connecting.");
+        return { success: false, message: "GPS is disabled." };
+      }
 
-    if (status !== "granted") {
-      const res = await Location.requestForegroundPermissionsAsync();
-      status = res.status;
+      // 2. Foreground Permissions Guard
+      let { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const res = await Location.requestForegroundPermissionsAsync();
+        status = res.status;
+      }
+
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Foreground location configurations are missing.");
+        return { success: false, message: "Foreground permission denied." };
+      }
+
+      // 3. Background Isolation Verification Guard
+      const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+      if (bgStatus !== "granted") {
+        const bgRes = await Location.requestBackgroundPermissionsAsync();
+        if (bgRes.status !== "granted") {
+          Alert.alert(
+            "Background Location Required",
+            "Change location settings selection to 'Allow all the time' to continue working when backgrounded."
+          );
+          return { success: false, message: "Background permission denied." };
+        }
+      }
+
+      // 4. Fetch seed positioning data
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const lat = loc.coords.latitude;
+      const lng = loc.coords.longitude;
+      await AsyncStorage.setItem(KEYS.LAST_LOCATION, JSON.stringify({ lat, lng }));
+
+      // 5. Connect Status Signals with Remote Datastore Endpoint API Routes
+      await API.post("/location/online");
+      await API.post("/location/update", { lat, lng, load: 0, rating: 5 });
+
+      // 6. Spin Up Native Core Tracking Loop Machinery 
+      await startLocationTracking();
+
+      setIsOnline(true);
+      await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "true");
+      console.log("✅ Agent registration online pipeline validated cleanly.");
+      
+      return { success: true };
+    } catch (error: any) {
+      console.log("❌ Error setting state online:", error?.response?.data || error);
+      
+      setIsOnline(false);
+      await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
+      
+      // ✅ FIX: Extract the backend message if available to return to the component
+      const backendError = error?.response?.data?.error || "Your account is pending approval or suspended";
+      
+      return { 
+        success: false, 
+        message: backendError 
+      };
+      
+      // 🚫 REMOVED: throw error;  <--- This was causing the unhandled crash
     }
+  };
 
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission required",
-        "Enable location access to go online"
-      );
-      return; // ⛔ STOP execution here
+  /* =========================================================================
+     OFFLINE TEARDOWN DISPATCH PIPELINE
+     ========================================================================= */
+  const goOffline = async () => {
+    try {
+      // Unsubscribe listeners and stop background engines cleanly to avoid leaks
+      await stopLocationTracking();
+
+      try {
+        await API.post("/location/offline");
+      } catch (apiErr) {
+        console.warn(
+          "⚠️ Remote logout update offline alert skipped (likely offline):",
+          apiErr
+        );
+      }
+
+      setIsOnline(false);
+      await AsyncStorage.setItem(KEYS.TRACKING_STATUS, "false");
+      console.log("🔴 Agent successfully turned offline.");
+    } catch (error) {
+      console.error("Critical issue shifting system profile offline:", error);
     }
+  };
 
-    // ✅ STEP 1: GET LOCATION (now safe)
-    const loc = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
+  /* =========================================================================
+     LOGOUT LIFECYCLE ROUTINE
+     ========================================================================= */
+  const logout = async () => {
+    try {
+      await goOffline();
+      await signOut(auth);
 
-    const lat = loc.coords.latitude;
-    const lng = loc.coords.longitude;
+      // Wipe structural disk profiles to ensure clean states on subsequent logins
+      await AsyncStorage.removeItem(KEYS.ROLE);
+      await AsyncStorage.removeItem(KEYS.TRACKING_STATUS);
+      await AsyncStorage.removeItem(KEYS.LAST_LOCATION);
+      await AsyncStorage.removeItem(KEYS.SECURE_TOKEN);
+    } catch (error) {
+      console.error("Logout execution layer crash trace:", error);
+    } finally {
+      setUser(null);
+      setRole(null);
+      setIsVerified(false);
+      setIsOnline(false);
+    }
+  };
 
-    console.log("📍 Initial location:", lat, lng);
-
-    // ✅ STEP 2: GO ONLINE FIRST
-    await API.post("/location/online");
-
-    // ✅ STEP 3: SEND FIRST LOCATION
-    await API.post("/location/update", {
-      lat,
-      lng,
-      load: 0,
-      rating: 5,
-    });
-
-    // ✅ STEP 4: START TRACKING
-    await startLocationTracking();
-
-    setIsOnline(true);
-    await AsyncStorage.setItem("isOnline", "true");
-
-    console.log("✅ Agent is now online");
-  } catch (error: any) {
-    console.log("❌ Go online error:", error?.response?.data || error);
-  }
-};
-
-const goOffline = async () => {
-  try {
-    // ✅ stop tracking FIRST
-    stopLocationTracking();
-
-    await API.post("/location/offline");
-
-    setIsOnline(false);
-    await AsyncStorage.setItem("isOnline", "false");
-
-  } catch (error) {
-    console.log("Go offline error:", error);
-  }
-};
-  /* =========================
-     LOGOUT
-  ========================= */
-const logout = async () => {
-  try {
-    await API.post("/location/offline"); // 🔴 force offline
-    await signOut(auth);
-    await AsyncStorage.removeItem("role");
-    await AsyncStorage.removeItem("isOnline");
-  } catch (error) {
-    console.log("Logout error:", error);
-  } finally {
-    setUser(null);
-    setRole(null);
-    setIsVerified(false);
-    setIsOnline(false);
-  }
-};
-
-  /* =========================
-     PROVIDER VALUE
-  ========================= */
   return (
-<AuthContext.Provider
-  value={{
-    user,
-    role,
-    isVerified,
-    loading,
-    isOnline,
-    login,
-    setUserRole,
-    checkProfile,
-    logout,
-    goOnline,
-    goOffline,
-  }}
->
+    <AuthContext.Provider
+      value={{
+        user,
+        role,
+        isVerified,
+        loading,
+        isOnline,
+        login,
+        setUserRole,
+        checkProfile,
+        logout,
+        goOnline,
+        goOffline,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-/* =========================
-   HOOK
-========================= */
+/* =========================================================================
+   CONSUMER HOOK
+   ========================================================================= */
 export const useAuth = () => useContext(AuthContext);

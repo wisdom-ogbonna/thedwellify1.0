@@ -5,17 +5,23 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
+// import * as NavigationBar from "expo-navigation-bar";
+import { CustomModalProvider } from "@/components/dialogs/popup-modal";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, useColorScheme, View } from "react-native";
+import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import "../global.css";
 import { setupNotifications } from "../services/notification";
+import { playRingtone } from "../services/ringtone";
 import OfflineModal from "./(utilities)/offlineModal";
+
+SplashScreen.preventAutoHideAsync();
 
 /* =========================
    NOTIFICATIONS CONFIG
@@ -33,7 +39,7 @@ Notifications.setNotificationHandler({
    APP CONTENT
 ========================= */
 function AppContent() {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { user, role, isVerified, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
@@ -42,19 +48,53 @@ function AppContent() {
      HANDLE NOTIFICATIONS
   ========================= */
   useEffect(() => {
+    const receivedSub = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        const data = notification.request.content.data;
+
+        if (data?.type === "incoming_request") {
+          playRingtone();
+        }
+      },
+    );
+
     const responseSub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
 
-        if (data?.requestId) {
+        if (data?.type === "incoming_request") {
+          playRingtone();
           router.push({
-            pathname: "/requests",
+            pathname: "/(utilities)/requests",
             params: {
               requestId: String(data.requestId),
-              agentId: String(data.agentId),
+              agentId: String(data.agentId || ""),
+              propertyType: String(data.propertyType || ""),
+              lat: String(data.lat || ""),
+              lng: String(data.lng || ""),
+            },
+          });
+        }
+
+        if (
+          data?.type === "request_accepted" ||
+          data?.type === "request_unavailable" ||
+          data?.type === "request_cancelled" ||
+          data?.type === "request_rematch"
+        ) {
+          router.push("/(client)/client-map");
+        }
+
+        if (data?.type === "NEW_PROPERTY") {
+          router.push({
+            pathname: "/",
+
+            params: {
+              productId: String(data.productId),
+              title: String(data.title),
               propertyType: String(data.propertyType),
-              lat: String(data.lat),
-              lng: String(data.lng),
+              location: String(data.location),
+              price: String(data.price),
             },
           });
         }
@@ -62,6 +102,7 @@ function AppContent() {
     );
 
     return () => {
+      receivedSub.remove();
       responseSub.remove();
     };
   }, [router]);
@@ -84,14 +125,16 @@ function AppContent() {
     /* 🚫 NOT LOGGED IN */
     if (!user) {
       if (!inAuth) {
-        router.replace("/phone");
+        router.replace("/onboarding");
       }
       return;
     }
 
     /* 🧩 ROLE NOT SELECTED */
     if (!role) {
-      if (!inAuth) {
+      // ✅ FIX: Check if the screen is specifically NOT the selection screen,
+      // instead of checking the whole group folder.
+      if (screen !== "role") {
         router.replace("/role");
       }
       return;
@@ -113,7 +156,7 @@ function AppContent() {
     }
 
     /* ✅ FULLY READY */
-    const target = role === "agent" ? "agent-dashboard" : "client-dashboard";
+    const target = role === "agent" ? "agent-dashboard" : "client-map";
 
     const isInsideApp = inAgent || inClient || inUtilities || inProduct;
 
@@ -123,28 +166,53 @@ function AppContent() {
     }
   }, [user, role, isVerified, loading, segments, router]);
 
+  /* Hide android navigation buttons and auto-fade them out */
+  // useEffect(() => {
+  //   const configureNavBar = async () => {
+  //     try {
+  //       await NavigationBar.setPositionAsync("absolute");
+
+  //       await NavigationBar.setBehaviorAsync("inset-swipe");
+
+  //       await NavigationBar.setVisibilityAsync("hidden");
+  //     } catch (error) {
+  //       console.warn("NavigationBar layout configuration failed:", error);
+  //     }
+  //   };
+
+  //   configureNavBar();
+
+  //   const subscription = AppState.addEventListener("change", (nextAppState) => {
+  //     if (nextAppState === "active") {
+  //       configureNavBar();
+  //     }
+  //   });
+
+  //   return () => {
+  //     subscription.remove();
+  //   };
+  // }, [segments]);
+
   /* =========================
-     LOADING SCREEN
-  ========================= */
+   SPLASH SCREEN MANAGEMENT
+========================= */
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync().catch((err) => {
+        console.warn("Splash screen hide error:", err);
+      });
+    }
+  }, [loading]);
+
   if (loading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: colors.background,
-        }}
-      >
-        <ActivityIndicator size="large" color={colors.text} />
-      </View>
-    );
+    return null;
   }
 
   return (
     <>
       <StatusBar style={isDark ? "light" : "dark"} animated={true} />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false, animation: "fade" }} />
     </>
   );
 }
@@ -183,13 +251,15 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={theme}>
-        <AuthProvider>
-          <OfflineModal
-            visible={!isConnected}
-            onRetry={() => NetInfo.refresh()}
-          />
-          <AppContent />
-        </AuthProvider>
+        <CustomModalProvider>
+          <AuthProvider>
+            <OfflineModal
+              visible={!isConnected}
+              onRetry={() => NetInfo.refresh()}
+            />
+            <AppContent />
+          </AuthProvider>
+        </CustomModalProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

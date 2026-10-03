@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Pressable,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
   ScrollView,
@@ -12,7 +12,8 @@ import { useTheme } from "@/hooks/use-theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "phosphor-react-native";
 import { API } from "../../services/api";
-// import { stopRingtone } from "../../services/ringtone";
+import * as Location from "expo-location";
+import { playRingtone, stopRingtone } from "../../services/ringtone";
 
 export default function RequestDetailsScreen() {
   const { colors } = useTheme();
@@ -21,6 +22,11 @@ export default function RequestDetailsScreen() {
   const { requestId, propertyType, lat, lng, clientName } =
     useLocalSearchParams();
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(true);
+  const [stale, setStale] = useState(false);
+  const [staleMessage, setStaleMessage] = useState("");
+  const [address, setAddress] = useState("");
+  const AGENT_HOME = "/(agent)/agent-dashboard";
 
   const handleAction = async (
     endpoint: string,
@@ -30,11 +36,10 @@ export default function RequestDetailsScreen() {
     if (!requestId) return;
     setLoading(true);
     try {
-      // ✅ STOP SOUND
-      // await stopRingtone();
+      await stopRingtone();
       await API.post(endpoint, { requestId });
       Alert.alert("Success", successMsg);
-      router.replace(nav as any);
+      router.replace((nav || AGENT_HOME) as any);
     } catch (error: any) {
       Alert.alert("Error", error?.response?.data?.error || "Action failed");
     } finally {
@@ -42,12 +47,80 @@ export default function RequestDetailsScreen() {
     }
   };
 
+  useEffect(() => {
+    const verifyRequest = async () => {
+      if (!requestId) {
+        setStale(true);
+        setStaleMessage("Missing request ID");
+        setVerifying(false);
+        return;
+      }
 
-//   useEffect(() => {
-//   return () => {
-//     stopRingtone();
-//   };
-// }, []);`
+      try {
+        const res = await API.get(`/match/request/${requestId}`);
+        const data = res.data;
+
+        if (!data?.actionable) {
+          await stopRingtone();
+          setStale(true);
+          setStaleMessage(
+            data?.error ||
+              `This request is no longer available (${data?.status || "unknown"}).`,
+          );
+        } else {
+          playRingtone();
+        }
+      } catch (error: any) {
+        await stopRingtone();
+        setStale(true);
+        setStaleMessage(
+          error?.response?.data?.error || "This request is no longer available.",
+        );
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    verifyRequest();
+    return () => {
+      stopRingtone();
+    };
+  }, [requestId]);
+
+  useEffect(() => {
+    const getAddress = async () => {
+      try {
+        if (!lat || !lng) return;
+
+        const result = await Location.reverseGeocodeAsync({
+          latitude: Number(lat),
+          longitude: Number(lng),
+        });
+
+        if (result.length > 0) {
+          const place = result[0];
+
+          const formattedAddress = [
+            place.name,
+            place.street,
+            place.district,
+            place.city,
+            place.region,
+            place.country,
+          ]
+            .filter(Boolean)
+            .join(", ");
+
+          setAddress(formattedAddress);
+        }
+      } catch (error) {
+        console.log("Reverse geocode error:", error);
+        setAddress("Address unavailable");
+      }
+    };
+
+    getAddress();
+  }, [lat, lng]);
 
   return (
     <View
@@ -56,15 +129,48 @@ export default function RequestDetailsScreen() {
     >
       {/* Close Header */}
       <View className="px-8 py-4 flex-row justify-end">
-        <Pressable
-          onPress={() => router.replace("/(agent)/dashboard")}
+        <TouchableOpacity
+          onPress={async () => {
+            await stopRingtone();
+            router.replace("/(agent)/agent-dashboard");
+          }}
           className="p-2 rounded-full"
         >
           <X size={30} color={colors.text} weight="bold" />
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 32 }}>
+        {verifying ? (
+          <View className="items-center py-20">
+            <ActivityIndicator color={colors.primary} />
+            <Text style={{ color: colors.text }} className="mt-4">
+              Checking request...
+            </Text>
+          </View>
+        ) : stale ? (
+          <View className="py-10">
+            <Text
+              className="text-3xl font-black mb-4"
+              style={{ color: colors.text }}
+            >
+              Request unavailable
+            </Text>
+            <Text style={{ color: colors.text, opacity: 0.6 }} className="mb-8">
+              {staleMessage}
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.replace(AGENT_HOME)}
+              className="py-5 rounded-full items-center"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <Text className="text-white font-bold">Back to dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {!verifying && !stale ? (
+          <>
         <Text
           className="text-sm font-bold uppercase tracking-widest opacity-40 mb-2"
           style={{ color: colors.text }}
@@ -85,18 +191,20 @@ export default function RequestDetailsScreen() {
         >
           <DetailRow label="Client" value={clientName as string} />
           <DetailRow label="Property Type" value={propertyType as string} />
-          <DetailRow label="Coordinates" value={`${lat}, ${lng}`} />
-          <DetailRow label="Request ID" value={requestId as string} isLast />
+          <DetailRow
+            label="Property Address"
+            value={address || "Loading address..."}
+          />
         </View>
 
         {/* Action Buttons */}
         <View className="flex-row gap-4">
-          <Pressable
+          <TouchableOpacity
             onPress={() =>
               handleAction(
                 "/client/request/decline",
                 "Request declined",
-                "/(agent)/dashboard"
+                AGENT_HOME
               )
             }
             className="flex-1 py-5 rounded-full border-2 items-center"
@@ -108,14 +216,15 @@ export default function RequestDetailsScreen() {
             >
               Decline
             </Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             onPress={() =>
               handleAction(
                 "/client/request/accept",
                 "Request accepted",
-                "/(utilities)/inspection?requestId=" + requestId
+                // "/(utilities)/inspection?requestId=" + requestId
+                AGENT_HOME
               )
             }
             className="flex-1 py-5 rounded-full items-center justify-center"
@@ -128,8 +237,10 @@ export default function RequestDetailsScreen() {
                 Accept
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
         </View>
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );

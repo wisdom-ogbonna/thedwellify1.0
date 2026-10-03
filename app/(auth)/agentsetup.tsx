@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Pressable,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -59,6 +59,7 @@ export default function AgentSetupScreen() {
             flexGrow: 1,
             paddingHorizontal: 32,
             paddingVertical: 60,
+            paddingBottom: 300,
           }}
         >
           <View className="mb-12">
@@ -109,7 +110,7 @@ export default function AgentSetupScreen() {
             onChangeText={(t: string) => setForm({ ...form, address: t })}
           />
 
-          <Pressable
+          <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading}
             className="h-16 rounded-full items-center justify-center shadow-lg"
@@ -122,7 +123,7 @@ export default function AgentSetupScreen() {
                 Submit Verification
               </Text>
             )}
-          </Pressable>
+          </TouchableOpacity>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

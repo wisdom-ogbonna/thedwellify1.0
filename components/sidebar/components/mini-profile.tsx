@@ -1,12 +1,11 @@
 import { useTheme } from "@/hooks/use-theme";
-import { useRouter } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 import { CaretRight, Star } from "phosphor-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const profileImage = require("../../../assets/images/icon.png");
 
-// PROFILE TEMPLATE (Fallback / Local asset reference)
 const profile = {
   ImageSrc: profileImage,
 };
@@ -20,26 +19,33 @@ const MAX_RATING = 5;
 
 export default function MiniProfile({ name, rating }: MiniProfileProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { colors } = useTheme();
   const currentRating = rating ?? 5;
 
   const filledStars = Array(Math.min(currentRating, MAX_RATING)).fill(0);
   const outlineStars = Array(Math.max(0, MAX_RATING - currentRating)).fill(0);
 
-  // Helper to safely append alpha values to hex color tokens if needed
   const getAlphaColor = (hex: string, alphaHex: string) => {
     return hex.startsWith("#") && hex.length === 7 ? `${hex}${alphaHex}` : hex;
   };
 
+  // Handle dynamic routing based on the current screen path
+  const handlePress = () => {
+    if (pathname.includes("agent-dashboard")) {
+      router.push("/(agent)/agent-profile");
+    } else {
+      router.push("/(client)/profile");
+    }
+  };
+
   return (
     <TouchableOpacity
-      onPress={() => router.push("/(agent)/agent-profile")}
+      onPress={handlePress} // Updated handler
       activeOpacity={0.85}
       className="flex-row items-center p-4 rounded-2xl w-full"
       style={{
         minHeight: 76,
-        // Uses a subtle ~6% opacity layout plate driven by your text color
-        // to handle dark/light contrast perfectly without manual overrides
         backgroundColor: getAlphaColor(colors.text, "0F"),
         borderWidth: 1,
         borderColor: colors.border,

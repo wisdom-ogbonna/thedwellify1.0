@@ -1,16 +1,15 @@
+import { useTheme } from "@/hooks/use-theme";
 import * as Icons from "phosphor-react-native";
 import React from "react";
 import {
   Animated,
   Dimensions,
-  Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import MiniProfile from "./components/mini-profile";
-import { useTheme } from "@/hooks/use-theme";
 
 const { width } = Dimensions.get("window");
 
@@ -55,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <View className="absolute inset-0 z-50 h-screen">
-      <Pressable
+      <TouchableOpacity
         className="absolute inset-0 bg-black/60"
         onPress={onOverlayPress}
       />
@@ -266,49 +265,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   );
                 })}
               </View>
-
-              {/* Legal Section */}
-              <Text
-                style={{
-                  fontSize: 11,
-                  fontWeight: "800",
-                  color: colors.placeholder,
-                  letterSpacing: 2.5,
-                  textTransform: "uppercase",
-                  marginTop: 28,
-                  marginBottom: 8,
-                  paddingHorizontal: 6,
-                }}
-              >
-                Legal
-              </Text>
-
-              {["Privacy Policy", "Terms of Service", "Copyright"].map(
-                (label) => (
-                  <TouchableOpacity
-                    key={label}
-                    activeOpacity={0.75}
-                    className="flex-row items-center"
-                    style={{ paddingVertical: 14, paddingHorizontal: 16 }}
-                  >
-                    <Text
-                      style={{
-                        flex: 1,
-                        fontSize: 15,
-                        fontWeight: "500",
-                        color: getAlphaColor(colors.text, "B3"),
-                      }}
-                    >
-                      {label}
-                    </Text>
-                    <Icons.CaretRight
-                      size={16}
-                      color={colors.placeholder}
-                      weight="bold"
-                    />
-                  </TouchableOpacity>
-                ),
-              )}
             </View>
           )}
         </ScrollView>

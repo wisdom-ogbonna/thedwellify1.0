@@ -1,0 +1,293 @@
+import { createContext, useContext, useEffect, useState } from "react";
+import { Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API } from "../services/api";
+
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { auth } from "../config/firebase";
+import * as Location from "expo-location";
+import {
+  startLocationTracking,
+  stopLocationTracking,
+  bootstrapLocationTracker, // Ensure this recovery hook is imported from your tracking file
+} from "../services/locationTracker";
+
+/* =========================
+   TYPES
+========================= */
+type UserType = {
+  uid: string;
+  phone?: string;
+};
+
+type RoleType = "agent" | "client";
+
+type AuthContextType = {
+  user: UserType | null;
+  role: RoleType | null;
+  isVerified: boolean;
+  loading: boolean;
+  isOnline: boolean;
+
+  login: (data: { uid: string; phone?: string }) => Promise<void>;
+  setUserRole: (role: RoleType) => Promise<void>;
+  checkProfile: (roleParam?: RoleType) => Promise<void>;
+  logout: () => Promise<void>;
+
+  goOnline: () => Promise<void>;
+  goOffline: () => Promise<void>;
+};
+
+/* =========================
+   CONTEXT
+========================= */
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+/* =========================
+   PROVIDER
+========================= */
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<UserType | null>(null);
+  const [role, setRole] = useState<RoleType | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
+
+  /* =========================
+     AUTH STATE LISTENER
+  ========================= */
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (firebaseUser: User | null) => {
+        try {
+          setLoading(true);
+
+          if (firebaseUser) {
+            // 🔐 Firebase user (source of truth)
+            const userData: UserType = {
+              uid: firebaseUser.uid,
+              phone: firebaseUser.phoneNumber || "",
+            };
+
+            setUser(userData);
+
+            // 📦 Load stored tracking status
+            const storedStatus = await AsyncStorage.getItem("@tracker_is_online");
+            const userWantsOnline = storedStatus === "true";
+
+            // 📦 Load stored role
+            const storedRole = await AsyncStorage.getItem("role");
+            const roleValue = storedRole as RoleType;
+
+            if (roleValue) {
+              setRole(roleValue);
+              await checkProfile(roleValue);
+
+              // 🔄 STEP 4: APP RESTART RECOVERY AUTOMATION
+              if (roleValue === "agent" && userWantsOnline) {
+                try {
+                  console.log("🔄 Recovery engine starting tracker module setup...");
+                  await bootstrapLocationTracker();
+                  setIsOnline(true);
+                } catch (bootstrapErr) {
+                  console.error("❌ Recovery bootstrap trace error:", bootstrapErr);
+                  setIsOnline(false);
+                  await AsyncStorage.setItem("@tracker_is_online", "false");
+                }
+              }
+            } else {
+              setRole(null);
+              setIsVerified(false);
+            }
+          } else {
+            // 🚪 No user authenticated
+            setUser(null);
+            setRole(null);
+            setIsVerified(false);
+            setIsOnline(false);
+          }
+        } catch (error) {
+          console.error("Auth global layout state listener error:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
+
+    return unsubscribe;
+  }, []);
+
+  /* =========================
+     LOGIN (AFTER FIREBASE AUTH)
+  ========================= */
+  const login = async ({ uid, phone }: { uid: string; phone?: string }) => {
+    setUser({ uid, phone });
+    setRole(null);
+    setIsVerified(false);
+  };
+
+  /* =========================
+     SET ROLE
+  ========================= */
+  const setUserRole = async (role: RoleType) => {
+    await AsyncStorage.setItem("role", role);
+    setRole(role);
+  };
+
+  /* =========================
+     CHECK PROFILE
+  ========================= */
+  const checkProfile = async (roleParam?: RoleType) => {
+    try {
+      const roleToUse = roleParam || role;
+      if (!roleToUse) return;
+
+      if (roleToUse === "agent") {
+        await API.get("/agent/profile");
+      } else {
+        await API.get("/client/profile");
+      }
+
+      setIsVerified(true);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) {
+        await logout();
+        return;
+      }
+      if (status === 404) {
+        setIsVerified(false);
+        return;
+      }
+      console.log("Profile verification handle error:", error?.response || error);
+      setIsVerified(false);
+    }
+  };
+
+  /* =========================
+     ONLINE / OFFLINE (STEP 5 RELIABILITY)
+  ========================= */
+  const goOnline = async () => {
+    try {
+      // Hardware and Permissions Sanity Check Pipeline
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        Alert.alert("GPS Disabled", "Please activate device hardware location features before connecting.");
+        throw new Error("Hardware tracking capabilities disabled.");
+      }
+
+      let { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const res = await Location.requestForegroundPermissionsAsync();
+        status = res.status;
+      }
+
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Foreground location configurations are missing.");
+        return;
+      }
+
+      // 🔐 Check background updates access authorization block
+      const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+      if (bgStatus !== "granted") {
+        const bgRes = await Location.requestBackgroundPermissionsAsync();
+        if (bgRes.status !== "granted") {
+          Alert.alert(
+            "Background Location Required",
+            "Change location settings selection to 'Allow all the time' to continue working when backgrounded."
+          );
+          return;
+        }
+      }
+
+      // Fetch seed positioning to prime local coordinates cache cleanly
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const lat = loc.coords.latitude;
+      const lng = loc.coords.longitude;
+      await AsyncStorage.setItem("@tracker_last_location", JSON.stringify({ lat, lng }));
+
+      // Synchronize state flag with backend server
+      await API.post("/location/online");
+
+      // Dispatch seed position coordinate data
+      await API.post("/location/update", { lat, lng, load: 0, rating: 5 });
+
+      // Start the core tracking loop
+      await startLocationTracking();
+
+      setIsOnline(true);
+      await AsyncStorage.setItem("@tracker_is_online", "true");
+      console.log("✅ Agent registration online pipeline validated cleanly.");
+    } catch (error: any) {
+      console.error("❌ Error setting state online:", error?.response?.data || error);
+      setIsOnline(false);
+      await AsyncStorage.setItem("@tracker_is_online", "false");
+      throw error; // Propagate down to UI handlers to reset component spinners cleanly
+    }
+  };
+
+  const goOffline = async () => {
+    try {
+      // Shut down intervals and background processes first to avoid layout memory leaks
+      await stopLocationTracking();
+
+      try {
+        await API.post("/location/offline");
+      } catch (apiErr) {
+        console.warn("⚠️ Remote logout update offline alert skipped (likely offline):", apiErr);
+      }
+
+      setIsOnline(false);
+      await AsyncStorage.setItem("@tracker_is_online", "false");
+      console.log("🔴 Agent successfully turned offline.");
+    } catch (error) {
+      console.error("Critical issue shifting system profile offline:", error);
+    }
+  };
+
+  /* =========================
+     LOGOUT
+  ========================= */
+  const logout = async () => {
+    try {
+      await goOffline();
+      await signOut(auth);
+      await AsyncStorage.removeItem("role");
+      await AsyncStorage.removeItem("@tracker_is_online");
+      await AsyncStorage.removeItem("@tracker_last_location");
+    } catch (error) {
+      console.error("Logout execution layer crash trace:", error);
+    } finally {
+      setUser(null);
+      setRole(null);
+      setIsVerified(false);
+      setIsOnline(false);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        role,
+        isVerified,
+        loading,
+        isOnline,
+        login,
+        setUserRole,
+        checkProfile,
+        logout,
+        goOnline,
+        goOffline,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);
