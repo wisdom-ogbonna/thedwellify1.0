@@ -3,6 +3,17 @@ import type { Availability, Listing } from "../constants/listings";
 
 type MediaFile = { uri: string; name?: string; type?: string };
 
+export type ListingAgent = {
+  id: string;
+  name: string;
+  agencyName?: string;
+  phone?: string;
+};
+
+export type PublicListing = Listing & {
+  agent?: ListingAgent | null;
+};
+
 export type ListingPayload = {
   title?: string;
   location: string;
@@ -82,6 +93,22 @@ const toFormData = (payload: ListingPayload, isUpdate = false) => {
 };
 
 export const listingsApi = {
+  available: async (params: {
+    propertyType?: string;
+    purpose?: string;
+    sort?: "newest" | "price_asc" | "price_desc";
+    q?: string;
+  } = {}) => {
+    const res = await API.get<{ products: PublicListing[]; total: number }>(
+      "/products/available",
+      { params },
+    );
+    return {
+      products: res.data?.products || [],
+      total: res.data?.total || 0,
+    };
+  },
+
   list: async () => {
     const res = await API.get<any>("/products/get-rental-products");
     const rows = Array.isArray(res.data)
