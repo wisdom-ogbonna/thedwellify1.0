@@ -23,7 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { API } from "../../services/api";
 
 const TYPES = ["Apartment", "Hotel", "Shortlet"];
-const MAX_VIDEO_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
 export default function CreateProduct() {
   const router = useRouter();
@@ -96,7 +96,7 @@ export default function CreateProduct() {
     if (fileSize > MAX_VIDEO_SIZE) {
       Alert.alert(
         "Video too large",
-        "Video must be 15MB or less. Please compress or choose another video.",
+        "Video must be 50MB or less. Please compress or choose another video.",
       );
       return;
     }
@@ -278,7 +278,7 @@ export default function CreateProduct() {
           className="p-6 border-dashed border rounded-xl items-center mb-4"
         >
           <VideoCamera size={30} color={colors.text} />
-          <Text style={{ color: colors.text }}>Add Video (MP4, max 15MB)</Text>
+          <Text style={{ color: colors.text }}>Add Video (MP4, max 50MB)</Text>
         </TouchableOpacity>
 
         {/* IMAGE PREVIEW */}
