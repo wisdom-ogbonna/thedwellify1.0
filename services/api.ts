@@ -3,7 +3,7 @@ import { auth } from "../config/firebase";
 
 // ✅ Create Axios instance
 export const API = axios.create({
-  baseURL: "https://dwellify-backend-six.vercel.app/api",
+  baseURL: "https://1045-102-90-102-9.ngrok-free.app/api",
   timeout: 120000,
 });
 
@@ -14,7 +14,7 @@ API.interceptors.request.use(
     try {
       const user = auth.currentUser;
       if (user) {
-        const token = await user.getIdToken(); // 🔥 AUTO REFRESH HERE
+        const token = await user.getIdToken(); // 🔥https://dwellify-backend-bq39.onrender.com AUTO REFRESH HERE
         config.headers.Authorization = `Bearer ${token}`;
       }
 

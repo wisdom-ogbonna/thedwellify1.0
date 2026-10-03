@@ -76,59 +76,53 @@ function Matched({
         };
       default:
         return {
-          label: "MATCHED",
-          bg: "bg-emerald-100",
-          text: "text-emerald-700",
+          label: "WAITING",
+          bg: "bg-amber-100",
+          text: "text-amber-700",
         };
     }
   };
 
   const status = getStatus();
 
+  const resolvedRequestId =
+    request?.requestId || matchData?.request?.requestId || matchData?.requestId;
+
   const handleCancel = () => {
-    Alert.alert("Cancel Match", "Are you sure you want to cancel this match?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Yes",
-        onPress: () => {
-          Alert.alert("Success", "Match cancelled.");
-          setMatchData && setMatchData(null);
-        },
-      },
-    ]);
+    cancelRequest(resolvedRequestId || "");
   };
 
   const cancelRequest = (requestId: string) => {
-    try {
-      const handleCancelRequest = async () => {
-        console.log(requestId);
-        await API.post("/client/cancel-match", {
-          requestId,
-          reason: "Client cancelled request",
-        });
-
-        Alert.alert(
-          "Request Cancelled",
-          "Request has been successfully cancelled.",
-        );
-      };
-
-      Alert.alert(
-        "Cancel Request",
-        "Are you sure you want to cancel this request, you have been matched?",
-        [
-          { text: "No", style: "cancel" },
-          {
-            text: "Yes",
-            onPress: handleCancelRequest,
-          },
-        ],
-      );
-      if (requestId) return;
-    } catch (err: any) {
-      console.log("Cancel error:", err.response?.data || err.message);
-      Alert.alert("Error", "Failed to cancel the request.");
+    if (!requestId) {
+      Alert.alert("Error", "Missing request ID");
+      return;
     }
+
+    Alert.alert(
+      "Cancel Request",
+      "Are you sure you want to cancel this request?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              await API.post("/client/cancel-match", {
+                requestId,
+                reason: "Client cancelled request",
+              });
+              Alert.alert("Request Cancelled", "Your request was cancelled.");
+              setMatchData?.(null);
+            } catch (err: any) {
+              Alert.alert(
+                "Error",
+                err?.response?.data?.error || "Failed to cancel the request.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handlePropertyView = () => {
@@ -179,7 +173,9 @@ function Matched({
         >
           {requestStatus === "inspection_started"
             ? "Your agent is on the way and inspection has started."
-            : "An agent has been assigned to your request."}
+            : requestStatus === "matched"
+              ? "An agent accepted your request."
+              : "Waiting for an agent to accept your request."}
         </Text>
       </View>
 
@@ -285,7 +281,7 @@ function Matched({
       {requestStatus === "matched" ? (
         <TouchableOpacity
           className="w-full h-14 rounded-2xl items-center justify-center border border-red-500/40 bg-red-500/10 mt-4"
-          onPress={() => cancelRequest(matchData?.requestId || "")}
+          onPress={() => cancelRequest(resolvedRequestId || "")}
         >
           <Text className="text-base font-semibold text-red-400">
             Cancel Match

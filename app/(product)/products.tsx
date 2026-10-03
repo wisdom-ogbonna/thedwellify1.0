@@ -241,7 +241,7 @@ export default function RentalProductsScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.push("/(product)/create")}
+          onPress={() => router.push("/(agent)/listings/new")}
           className="shadow-xl justify-center items-center rounded-3xl"
           style={{
             backgroundColor: colors.text,

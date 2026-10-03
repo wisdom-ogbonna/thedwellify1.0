@@ -1,644 +1,337 @@
-import { useTheme } from "@/hooks/use-theme";
-import { useFocusEffect } from "@react-navigation/native";
-import { router } from "expo-router";
 import {
-  Bathtub,
-  Bed,
-  Bell,
-  CaretDown,
-  ChatCircle,
-  Faders,
-  Heart,
-  MagnifyingGlass,
-  MapPin,
-  SquaresFour,
-  Triangle,
-} from "phosphor-react-native";
+  PROPERTY_TYPES,
+  formatPrice,
+  purposeLabel,
+} from "@/constants/listings";
+import { useTheme } from "@/hooks/use-theme";
+import { listingsApi, type PublicListing } from "@/services/listings";
+import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Dimensions,
+  FlatList,
   Image,
+  Pressable,
   RefreshControl,
-  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ChatAvatar } from "@/components/chat/chat-avatar";
-import { useAuth } from "@/context/AuthContext";
-import { startConversation } from "@/services/chatApi";
-import {
-  DiscoverProperty,
-  fetchDiscoverFeed,
-  formatDiscoverPrice,
-  periodForPropertyType,
-} from "@/services/discoverApi";
+const TYPES = ["All", ...PROPERTY_TYPES] as const;
+const PURPOSES = [
+  { id: "All", label: "All" },
+  { id: "Rent", label: "For Rent" },
+  { id: "Sale", label: "For Sale" },
+] as const;
+const SORTS = [
+  { id: "newest", label: "Newest" },
+  { id: "price_asc", label: "Lowest price" },
+  { id: "price_desc", label: "Highest price" },
+] as const;
 
-const { width } = Dimensions.get("window");
-const SAVED_CARD_WIDTH = width * 0.72;
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=600";
-
-const matchesCategory = (item: DiscoverProperty, category: string) => {
-  if (category === "All") return true;
-
-  const type = String(item.propertyType || "").toLowerCase();
-
-  if (category === "Apartment") return type === "apartment";
-  if (category === "Rent") return type === "hotel" || type === "shortlet";
-  if (category === "Land") return type.includes("land");
-
-  return true;
-};
-
-const formatSize = (size: DiscoverProperty["size"]) => {
-  if (size === null || size === undefined || size === "") return null;
-  const raw = String(size);
-  return /sqm|sq\.?\s*m|m²/i.test(raw) ? raw : `${raw} sqm`;
-};
-
-export default function DiscoverMarketplaceScreen() {
+export default function RecommendedScreen() {
   const { colors } = useTheme();
-  const { user } = useAuth();
-
-  const [activeCategory, setActiveCategory] = useState("All");
-  const categories = ["All", "Apartment", "Rent", "Land"];
-
-  const [items, setItems] = useState<DiscoverProperty[]>([]);
+  const [propertyType, setPropertyType] = useState("All");
+  const [purpose, setPurpose] = useState("All");
+  const [sort, setSort] = useState<(typeof SORTS)[number]["id"]>("newest");
+  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
+  const [listings, setListings] = useState<PublicListing[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [chatLoadingId, setChatLoadingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  const loadFeed = useCallback(async (mode: "initial" | "refresh" = "initial") => {
-    if (mode === "refresh") setRefreshing(true);
-    else setLoading(true);
-
-    setError(null);
-
+  const fetchListings = useCallback(async () => {
     try {
-      // Fresh random sample every load/refresh — agent + presence come from the server.
-      const feed = await fetchDiscoverFeed(12);
-      setItems(feed);
+      setError("");
+      const res = await listingsApi.available({
+        propertyType: propertyType === "All" ? undefined : propertyType,
+        purpose: purpose === "All" ? undefined : purpose,
+        sort,
+        q: search || undefined,
+      });
+      setListings(res.products);
+      setTotal(res.total);
     } catch (err: any) {
-      console.error("Discover feed error:", err?.response?.data || err?.message);
-      setError(
-        err?.response?.data?.error ||
-          "Couldn't load properties. Pull to refresh and try again."
-      );
-      if (mode === "initial") setItems([]);
+      setError(err?.response?.data?.error || "Could not load recommended homes.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [propertyType, purpose, sort, search]);
 
   useFocusEffect(
     useCallback(() => {
-      loadFeed("initial");
-    }, [loadFeed])
+      fetchListings();
+    }, [fetchListings]),
   );
 
-  const filtered = useMemo(
-    () => items.filter((item) => matchesCategory(item, activeCategory)),
-    [items, activeCategory]
-  );
+  const header = useMemo(
+    () => (
+      <View>
+        <Text style={[styles.kicker, { color: colors.primary }]}>Discover</Text>
+        <Text style={[styles.heading, { color: colors.text }]}>
+          Homes listed by agents
+        </Text>
+        <Text style={[styles.sub, { color: colors.placeholder }]}>
+          Sort available land, houses and apartments for rent or sale.
+        </Text>
 
-  // Carousel + list from the same random feed (no mocks).
-  const featured = filtered.slice(0, Math.min(3, filtered.length));
-  const recommended =
-    filtered.length > featured.length
-      ? filtered.slice(featured.length)
-      : filtered;
-
-  const openChat = async (product: DiscoverProperty) => {
-    if (!product?.id || chatLoadingId) return;
-
-    setChatLoadingId(product.id);
-    try {
-      // Server resolves agentId from the product — never send a client-chosen agent.
-      const { conversationId } = await startConversation(product.id);
-      router.push(`/(utilities)/chats/?id=${conversationId}`);
-    } catch (err: any) {
-      Alert.alert(
-        "Couldn't open chat",
-        err?.response?.data?.error || "Please try again."
-      );
-    } finally {
-      setChatLoadingId(null);
-    }
-  };
-
-  const openProperty = (productId: string) => {
-    router.push({
-      pathname: "/(utilities)/property-view",
-      params: { propertyId: productId },
-    });
-  };
-
-  const renderMeta = (
-    item: DiscoverProperty,
-    opts?: { compact?: boolean }
-  ) => {
-    const icon = opts?.compact ? 14 : 15;
-    const text = opts?.compact ? "text-[12px]" : "text-[13px]";
-    const sizeLabel = formatSize(item.size);
-
-    return (
-      <View className="flex-row items-center gap-4">
-        {item.beds != null && item.beds !== "" && (
-          <View className="flex-row items-center">
-            <Bed size={icon} color={colors.placeholder} weight="regular" />
-            <Text
-              className={`${text} ml-1.5 font-medium`}
-              style={{ color: colors.placeholder }}
-            >
-              {item.beds}
-            </Text>
-          </View>
-        )}
-        {item.baths != null && item.baths !== "" && (
-          <View className="flex-row items-center">
-            <Bathtub size={icon} color={colors.placeholder} weight="regular" />
-            <Text
-              className={`${text} ml-1.5 font-medium`}
-              style={{ color: colors.placeholder }}
-            >
-              {item.baths}
-            </Text>
-          </View>
-        )}
-        {sizeLabel && (
-          <View className="flex-row items-center">
-            <Triangle size={icon} color={colors.placeholder} weight="regular" />
-            <Text
-              className={`${text} ml-1.5 font-medium`}
-              style={{ color: colors.placeholder }}
-            >
-              {sizeLabel}
-            </Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderAgentRow = (item: DiscoverProperty) => {
-    const online = Boolean(item.agent?.isOnline);
-
-    return (
-      <View className="flex-row items-center justify-between mt-3">
-        <View className="flex-row items-center flex-1 mr-3">
-          <ChatAvatar
-            name={item.agent?.name}
-            userId={item.agent?.id || item.agentId}
-            uri={item.agent?.avatar}
-            size={32}
-            isOnline={online}
-            showPresence
+        <View
+          style={[
+            styles.search,
+            { borderColor: colors.border, backgroundColor: colors.disabled + "14" },
+          ]}
+        >
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search title or location"
+            placeholderTextColor={colors.placeholder}
+            style={[styles.searchInput, { color: colors.text }]}
+            returnKeyType="search"
+            onSubmitEditing={() => setSearch(query.trim())}
           />
-          <View className="ml-2.5 flex-1">
-            <Text
-              className="text-[13px] font-semibold"
-              style={{ color: colors.text }}
-              numberOfLines={1}
-            >
-              {item.agent?.name || "Agent"}
-            </Text>
-            <Text
-              className="text-[11px] font-medium mt-0.5"
-              style={{ color: online ? colors.success || "#16A34A" : colors.placeholder }}
-            >
-              {online ? "Online" : "Offline"}
-            </Text>
-          </View>
+          <Pressable
+            onPress={() => setSearch(query.trim())}
+            style={[styles.searchBtn, { backgroundColor: colors.primary }]}
+          >
+            <Text style={styles.searchBtnText}>Search</Text>
+          </Pressable>
         </View>
 
-        <TouchableOpacity
-          onPress={() => openChat(item)}
-          disabled={chatLoadingId === item.id}
-          className="flex-row items-center px-3 py-2 rounded-full"
-          style={{
-            backgroundColor: `${colors.primary}18`,
-            opacity: chatLoadingId === item.id ? 0.7 : 1,
-          }}
-        >
-          {chatLoadingId === item.id ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <>
-              <ChatCircle size={16} color={colors.primary} weight="fill" />
-              <Text
-                className="text-[12px] font-semibold ml-1.5"
-                style={{ color: colors.primary }}
+        <Text style={[styles.filterLabel, { color: colors.text }]}>Property type</Text>
+        <View style={styles.chipRow}>
+          {TYPES.map((type) => {
+            const active = propertyType === type;
+            return (
+              <Pressable
+                key={type}
+                onPress={() => setPropertyType(type)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active ? colors.primary : colors.disabled + "22",
+                  },
+                ]}
               >
-                Chat Agent
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+                <Text style={[styles.chipText, { color: active ? "#fff" : colors.text }]}>
+                  {type}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={[styles.filterLabel, { color: colors.text }]}>Listed for</Text>
+        <View style={styles.chipRow}>
+          {PURPOSES.map((item) => {
+            const active = purpose === item.id;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => setPurpose(item.id)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active ? colors.primary : colors.disabled + "22",
+                  },
+                ]}
+              >
+                <Text style={[styles.chipText, { color: active ? "#fff" : colors.text }]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={[styles.filterLabel, { color: colors.text }]}>Sort</Text>
+        <View style={styles.chipRow}>
+          {SORTS.map((item) => {
+            const active = sort === item.id;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => setSort(item.id)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active ? colors.text : colors.disabled + "22",
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.chipText, { color: active ? colors.background : colors.text }]}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={[styles.count, { color: colors.placeholder }]}>
+          {total} available propert{total === 1 ? "y" : "ies"}
+        </Text>
       </View>
+    ),
+    [colors, propertyType, purpose, sort, query, total],
+  );
+
+  const renderCard = ({ item }: { item: PublicListing }) => {
+    const image = item.images?.[0];
+    const label = purposeLabel(item.purpose, item.tag);
+    return (
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: "/(utilities)/property-view",
+            params: { propertyId: item.id },
+          })
+        }
+        style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}
+      >
+        {image ? (
+          <Image source={{ uri: image }} style={styles.image} />
+        ) : (
+          <View style={[styles.image, styles.imageFallback, { backgroundColor: colors.disabled + "33" }]}>
+            <Text style={{ color: colors.placeholder, fontWeight: "700" }}>No photo</Text>
+          </View>
+        )}
+        <View
+          style={[
+            styles.badge,
+            { backgroundColor: item.purpose === "Sale" ? "#16A34A" : colors.primary },
+          ]}
+        >
+          <Text style={styles.badgeText}>{label}</Text>
+        </View>
+        <View style={styles.cardBody}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
+            {item.title || "Untitled property"}
+          </Text>
+          <Text style={[styles.meta, { color: colors.placeholder }]} numberOfLines={1}>
+            {item.propertyType}
+            {item.location ? ` · ${item.location}` : ""}
+          </Text>
+          <Text style={[styles.price, { color: colors.primary }]}>
+            {item.price ? formatPrice(item.price) : "Price on request"}
+          </Text>
+          {!!item.agent?.name && (
+            <Text style={[styles.agent, { color: colors.placeholder }]}>
+              Listed by {item.agent.name}
+              {item.agent.agencyName ? ` · ${item.agent.agencyName}` : ""}
+            </Text>
+          )}
+        </View>
+      </Pressable>
     );
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={["top"]}
-    >
-      {/* 1. App Bar Header */}
-      <View
-        className="flex-row items-center justify-between px-5 py-4"
-        style={{ backgroundColor: colors.background }}
-      >
-        <View className="flex-row items-center gap-1.5">
-          <MapPin weight="fill" size={20} color={colors.primary} />
-          <Text
-            className="text-[15px] font-semibold"
-            style={{ color: colors.text }}
-          >
-            Lagos, Nigeria
-          </Text>
-          <CaretDown color={colors.text} weight="bold" size={13} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top"]}>
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator color={colors.primary} />
         </View>
-        <View className="flex-row gap-3 items-center">
-          <TouchableOpacity
-            className="w-10 h-10 rounded-full border items-center justify-center"
-            style={{ borderColor: `${colors.border}80` }}
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>{error}</Text>
+          <Pressable
+            onPress={fetchListings}
+            style={[styles.retry, { backgroundColor: colors.primary }]}
           >
-            <Bell color={colors.text} size={20} weight="regular" />
-          </TouchableOpacity>
-          <ChatAvatar
-            name={user?.phone || "You"}
-            userId={user?.uid}
-            size={40}
-          />
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
         </View>
-      </View>
-
-      {/* Main Scrollable Canvas */}
-      <ScrollView
-        className="flex-1"
-        style={{ backgroundColor: colors.background }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => loadFeed("refresh")}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-      >
-        {/* 2. Search Input Bar */}
-        <View className="px-5 mt-2 mb-6">
-          <View
-            className="flex-row items-center border rounded-full px-4 py-2.5 shadow-sm shadow-black/5"
-            style={{
-              backgroundColor: colors.background,
-              borderColor: `${colors.border}80`,
-            }}
-          >
-            <MagnifyingGlass
-              size={20}
-              color={colors.placeholder}
-              weight="regular"
+      ) : (
+        <FlatList
+          data={listings}
+          keyExtractor={(item) => item.id}
+          renderItem={renderCard}
+          ListHeaderComponent={header}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchListings();
+              }}
+              tintColor={colors.primary}
             />
-            <TextInput
-              placeholder="Search location, property..."
-              placeholderTextColor={colors.placeholder}
-              className="flex-1 text-[15px] font-normal ml-3 p-0"
-              style={{ color: colors.text }}
-            />
-            <TouchableOpacity
-              className="pl-3 border-l"
-              style={{ borderColor: `${colors.border}80` }}
-            >
-              <Faders size={20} color={colors.primary} weight="regular" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* 3. Category Pill Selector Row */}
-        <View className="mb-7">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10 }}
-            className="flex-row"
-          >
-            {categories.map((cat) => {
-              const isSelected = activeCategory === cat;
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setActiveCategory(cat)}
-                  className={`flex-row items-center px-6 py-3.5 rounded-full mr-3 ${
-                    isSelected ? "shadow-md shadow-blue-500/30" : ""
-                  }`}
-                  style={{
-                    backgroundColor: isSelected
-                      ? colors.primary
-                      : colors.disabled,
-                  }}
-                >
-                  {cat === "All" && (
-                    <SquaresFour
-                      size={18}
-                      color={"#FFFFFF"}
-                      weight={isSelected ? "fill" : "regular"}
-                      style={{ marginRight: 8 }}
-                    />
-                  )}
-                  <Text className="text-[15px] font-semibold text-white">
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {loading ? (
-          <View className="py-24 items-center justify-center px-5">
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text
-              className="mt-4 text-[14px]"
-              style={{ color: colors.placeholder }}
-            >
-              Loading properties…
-            </Text>
-          </View>
-        ) : error && items.length === 0 ? (
-          <View className="py-20 items-center justify-center px-8">
-            <Text
-              className="text-[16px] font-semibold text-center mb-2"
-              style={{ color: colors.text }}
-            >
-              Something went wrong
-            </Text>
-            <Text
-              className="text-[13px] text-center mb-5"
-              style={{ color: colors.placeholder }}
-            >
-              {error}
-            </Text>
-            <TouchableOpacity
-              onPress={() => loadFeed("initial")}
-              className="px-5 py-3 rounded-full"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <Text className="text-white font-semibold text-[14px]">
-                Try again
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No available properties
               </Text>
-            </TouchableOpacity>
-          </View>
-        ) : filtered.length === 0 ? (
-          <View className="py-20 items-center justify-center px-8">
-            <Text
-              className="text-[16px] font-semibold text-center mb-2"
-              style={{ color: colors.text }}
-            >
-              No properties yet
-            </Text>
-            <Text
-              className="text-[13px] text-center mb-5"
-              style={{ color: colors.placeholder }}
-            >
-              {activeCategory === "All"
-                ? "Pull to refresh once agents list new homes."
-                : `Nothing matched “${activeCategory}”. Try another category.`}
-            </Text>
-            <TouchableOpacity
-              onPress={() => loadFeed("refresh")}
-              className="px-5 py-3 rounded-full"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <Text className="text-white font-semibold text-[14px]">
-                Refresh
+              <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
+                Try another type, switch between rent and sale, or clear search.
               </Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {/* 4. Saved Large Carousel Cards Section */}
-            {featured.length > 0 && (
-              <View className="mb-8">
-                <View className="flex-row justify-between items-center px-5 mb-4">
-                  <Text
-                    className="text-[18px] font-bold tracking-tight"
-                    style={{ color: colors.text }}
-                  >
-                    Saved
-                  </Text>
-                  <TouchableOpacity onPress={() => loadFeed("refresh")}>
-                    <Text
-                      className="text-[13px] font-semibold"
-                      style={{ color: colors.primary }}
-                    >
-                      Refresh
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  snapToInterval={SAVED_CARD_WIDTH + 16}
-                  decelerationRate="fast"
-                  contentContainerStyle={{ paddingHorizontal: 20 }}
-                >
-                  {featured.map((item, index) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      activeOpacity={0.92}
-                      onPress={() => openProperty(item.id)}
-                      style={{
-                        width: SAVED_CARD_WIDTH,
-                        marginRight: 16,
-                        backgroundColor: colors.background,
-                        borderColor: `${colors.border}80`,
-                      }}
-                      className="border rounded-3xl overflow-hidden shadow-sm shadow-black/5"
-                    >
-                      {/* Showcase Media */}
-                      <View className="relative h-48 w-full">
-                        <Image
-                          source={{ uri: item.image || PLACEHOLDER_IMAGE }}
-                          className="w-full h-full"
-                          resizeMode="cover"
-                        />
-                        {index === 0 && (
-                          <View
-                            className="absolute top-4 left-4 px-3 py-1 rounded-full"
-                            style={{ backgroundColor: colors.primary }}
-                          >
-                            <Text
-                              className="text-[10px] font-bold uppercase tracking-wider"
-                              style={{ color: colors.background }}
-                            >
-                              Featured
-                            </Text>
-                          </View>
-                        )}
-                        <TouchableOpacity className="absolute top-4 right-4 w-9 h-9 bg-black/20 backdrop-blur-md rounded-full items-center justify-center border border-white/30">
-                          <Heart size={18} color="#FFFFFF" weight="regular" />
-                        </TouchableOpacity>
-                      </View>
-
-                      {/* Info Segment */}
-                      <View className="p-4">
-                        <Text
-                          className="text-[16px] font-semibold mb-1"
-                          style={{ color: colors.text }}
-                          numberOfLines={1}
-                        >
-                          {item.title}
-                        </Text>
-                        <View className="flex-row items-center mb-2.5">
-                          <MapPin
-                            size={14}
-                            color={colors.placeholder}
-                            weight="regular"
-                          />
-                          <Text
-                            className="text-[13px] ml-1"
-                            style={{ color: colors.placeholder }}
-                            numberOfLines={1}
-                          >
-                            {item.location || "Location TBA"}
-                          </Text>
-                        </View>
-
-                        <View className="flex-row items-baseline mb-3.5">
-                          <Text
-                            className="text-[16px] font-bold"
-                            style={{ color: colors.primary }}
-                          >
-                            {formatDiscoverPrice(item.price)}
-                          </Text>
-                          <Text
-                            className="text-[13px] font-medium"
-                            style={{ color: colors.primary }}
-                          >
-                            {periodForPropertyType(item.propertyType)}
-                          </Text>
-                        </View>
-
-                        {/* Horizontal Meta */}
-                        <View
-                          className="pt-2 border-t"
-                          style={{ borderColor: `${colors.border}40` }}
-                        >
-                          {renderMeta(item)}
-                        </View>
-
-                        {renderAgentRow(item)}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* 5. Vertical Recommended Listings Section */}
-            <View className="px-5 mb-10">
-              <View className="flex-row justify-between items-center mb-4">
-                <Text
-                  className="text-[18px] font-bold tracking-tight"
-                  style={{ color: colors.text }}
-                >
-                  Recommended for you
-                </Text>
-                <TouchableOpacity onPress={() => loadFeed("refresh")}>
-                  <Text
-                    className="text-[13px] font-semibold"
-                    style={{ color: colors.primary }}
-                  >
-                    See all
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {(recommended.length > 0 ? recommended : filtered).map((list) => (
-                <View
-                  key={list.id}
-                  className="border rounded-3xl p-3 mb-4 shadow-sm shadow-black/5"
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: `${colors.border}80`,
-                  }}
-                >
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => openProperty(list.id)}
-                    className="flex-row items-center"
-                  >
-                    <Image
-                      source={{ uri: list.image || PLACEHOLDER_IMAGE }}
-                      className="w-24 h-24 rounded-2xl"
-                    />
-
-                    <View className="flex-1 ml-3.5 justify-between py-0.5">
-                      <View>
-                        <Text
-                          className="text-[15px] font-semibold mb-1"
-                          style={{ color: colors.text }}
-                          numberOfLines={1}
-                        >
-                          {list.title}
-                        </Text>
-                        <View className="flex-row items-center">
-                          <MapPin
-                            size={13}
-                            color={colors.placeholder}
-                            weight="regular"
-                          />
-                          <Text
-                            className="text-[12px] ml-1"
-                            style={{ color: colors.placeholder }}
-                            numberOfLines={1}
-                          >
-                            {list.location || "Location TBA"}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View className="flex-row items-end justify-between mt-3">
-                        <View className="flex-row items-baseline">
-                          <Text
-                            className="text-[15px] font-bold"
-                            style={{ color: colors.primary }}
-                          >
-                            {formatDiscoverPrice(list.price)}
-                          </Text>
-                          {!!periodForPropertyType(list.propertyType) && (
-                            <Text
-                              className="text-[11px] font-medium"
-                              style={{ color: colors.primary }}
-                            >
-                              {periodForPropertyType(list.propertyType)}
-                            </Text>
-                          )}
-                        </View>
-
-                        {renderMeta(list, { compact: true })}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  {renderAgentRow(list)}
-                </View>
-              ))}
             </View>
-          </>
-        )}
-      </ScrollView>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  list: { paddingHorizontal: 20, paddingBottom: 120 },
+  kicker: { fontSize: 13, fontWeight: "800", marginTop: 8, letterSpacing: 1, textTransform: "uppercase" },
+  heading: { fontSize: 28, fontWeight: "900", marginTop: 4 },
+  sub: { fontSize: 14, marginTop: 6, marginBottom: 18, lineHeight: 20 },
+  search: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingLeft: 14,
+    paddingRight: 6,
+    height: 52,
+    marginBottom: 18,
+  },
+  searchInput: { flex: 1, fontSize: 15 },
+  searchBtn: { height: 38, paddingHorizontal: 14, borderRadius: 12, justifyContent: "center" },
+  searchBtnText: { color: "#fff", fontWeight: "800" },
+  filterLabel: { fontSize: 13, fontWeight: "800", marginBottom: 8 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+  chip: { paddingHorizontal: 14, height: 36, borderRadius: 18, justifyContent: "center" },
+  chipText: { fontSize: 13, fontWeight: "800" },
+  count: { fontSize: 13, marginBottom: 14, fontWeight: "600" },
+  card: {
+    borderWidth: 1,
+    borderRadius: 22,
+    overflow: "hidden",
+    marginBottom: 16,
+  },
+  image: { width: "100%", height: 188 },
+  imageFallback: { alignItems: "center", justifyContent: "center" },
+  badge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  cardBody: { padding: 14 },
+  title: { fontSize: 18, fontWeight: "800" },
+  meta: { fontSize: 13, marginTop: 4 },
+  price: { fontSize: 16, fontWeight: "900", marginTop: 8 },
+  agent: { fontSize: 12, marginTop: 6, fontWeight: "600" },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  empty: { alignItems: "center", paddingTop: 40, paddingHorizontal: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: "800", textAlign: "center" },
+  emptyCopy: { fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
+  retry: { marginTop: 16, paddingHorizontal: 20, height: 44, borderRadius: 12, justifyContent: "center" },
+  retryText: { color: "#fff", fontWeight: "800" },
+});

@@ -6,80 +6,72 @@ import Constants from "expo-constants";
 /**
  * ✅ SETUP NOTIFICATION CHANNELS
  */
+export const REQUEST_CHANNEL_ID = "requests_v4";
+
 export const setupNotifications = async () => {
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(
-      "requests_v2",
-      {
-        name: "Incoming Requests",
-
-        importance:
-          Notifications.AndroidImportance.MAX,
-
-        sound: "ringtone.wav",
-
-        vibrationPattern: [0, 500, 500, 500],
-
-        lockscreenVisibility:
-          Notifications.AndroidNotificationVisibility
-            .PUBLIC,
-      }
-    );
+    await Notifications.setNotificationChannelAsync(REQUEST_CHANNEL_ID, {
+      name: "Incoming Requests",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "ringtone.wav",
+      vibrationPattern: [0, 500, 500, 500],
+      enableVibrate: true,
+      lockscreenVisibility:
+        Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
   }
 };
 
 /**
  * ✅ REGISTER PUSH TOKEN
  */
-export const registerForPushNotificationsAsync =
-  async () => {
-    if (!Device.isDevice) {
-      alert(
-        "Must use physical device for Push Notifications"
-      );
+export const registerForPushNotificationsAsync = async () => {
+  if (!Device.isDevice) {
+    alert("Must use physical device for Push Notifications");
+    return null;
+  }
 
-      return null;
-    }
+  const { status: existingStatus } =
+    await Notifications.getPermissionsAsync();
 
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
 
-    let finalStatus = existingStatus;
+  if (existingStatus !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
 
-    if (existingStatus !== "granted") {
-      const { status } =
-        await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
 
-      finalStatus = status;
-    }
+  if (finalStatus !== "granted") {
+    alert("Permission not granted");
+    return null;
+  }
 
-    if (finalStatus !== "granted") {
-      alert("Permission not granted");
+  const projectId =
+    Constants?.expoConfig?.extra?.eas?.projectId ||
+    Constants?.easConfig?.projectId;
 
-      return null;
-    }
+  if (!projectId) {
+    console.log("❌ Missing projectId");
+    return null;
+  }
 
-    const projectId =
-      Constants?.expoConfig?.extra?.eas?.projectId ||
-      Constants?.easConfig?.projectId;
+  const tokenData = await Notifications.getExpoPushTokenAsync({
+    projectId,
+  });
 
-    if (!projectId) {
-      console.log("❌ Missing projectId");
+  const token = tokenData.data;
 
-      return null;
-    }
+  console.log("✅ Expo Push Token:", token);
 
-    const tokenData =
-      await Notifications.getExpoPushTokenAsync({
-        projectId,
-      });
-
-    const token = tokenData.data;
-
-    console.log("✅ Expo Push Token:", token);
-
-    return {
-      token,
-      platform: Platform.OS,
-    };
+  return {
+    token,
+    platform: Platform.OS,
   };
+};

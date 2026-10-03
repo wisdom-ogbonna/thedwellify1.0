@@ -17,7 +17,7 @@ import PropertyCard from "../../components/client-ui/agent-view-property-card";
 import { API } from "../../services/api";
 import ConfirmBookingModal from "../modal";
 
-const CATEGORIES = ["All", "Apartment", "Hotel", "Shortlet"];
+const CATEGORIES = ["All", "Land", "House", "Apartment", "Hotel", "Shortlet", "Other"];
 
 const AvailableProperties: React.FC = () => {
   const { colors } = useTheme();
@@ -80,14 +80,14 @@ const AvailableProperties: React.FC = () => {
 
   const listData = useMemo(() => {
     return [
-      { id: "header", type: "header" },
-      { id: "filter", type: "filter" },
+      { id: "header", rowType: "header" },
+      { id: "filter", rowType: "filter" },
       ...filteredProperties.map((p) => ({
         ...p,
-        type: propertyType,
+        rowType: "property",
       })),
     ];
-  }, [filteredProperties, propertyType]);
+  }, [filteredProperties]);
 
   const handleBooking = () => {
     router.replace({
@@ -147,7 +147,7 @@ const AvailableProperties: React.FC = () => {
           keyExtractor={(item, index) => item.id || index.toString()}
           stickyHeaderIndices={[1]}
           renderItem={({ item }: any) => {
-            if (item.type === "header") {
+            if (item.rowType === "header") {
               return (
                 <View
                   className="px-4 py-2"
@@ -163,7 +163,7 @@ const AvailableProperties: React.FC = () => {
               );
             }
 
-            if (item.type === "filter") {
+            if (item.rowType === "filter") {
               return (
                 <View
                   style={{
@@ -236,7 +236,7 @@ const AvailableProperties: React.FC = () => {
         </TouchableOpacity>
 
         {/* Book Button - 70% */}
-        {status === "inspection_started" || status === "matched" ? null : (
+        {requestId || status === "inspection_started" || status === "matched" || status === "offered" ? null : (
           <TouchableOpacity
             onPress={() => setBookingModalOpen(true)}
             style={{

@@ -18,7 +18,9 @@
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "location",
-          "fetch"
+          "fetch",
+          "remote-notification",
+          "audio"
         ]
       }
     },

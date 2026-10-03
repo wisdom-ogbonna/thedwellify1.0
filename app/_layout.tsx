@@ -21,6 +21,7 @@ import { setupNotifications } from "../services/notification";
 import { sendHeartbeat } from "../services/chatApi";
 import { flushOutbox, startOutboxWatcher, stopOutboxWatcher } from "../services/chatOutbox";
 import { connectSocket, disconnectSocket } from "../services/socket";
+import { playRingtone } from "../services/ringtone";
 import OfflineModal from "./(utilities)/offlineModal";
 
 SplashScreen.preventAutoHideAsync();
@@ -50,23 +51,41 @@ function AppContent() {
      HANDLE NOTIFICATIONS
   ========================= */
   useEffect(() => {
+    const receivedSub = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        const data = notification.request.content.data;
+
+        if (data?.type === "incoming_request") {
+          playRingtone();
+        }
+      },
+    );
+
     const responseSub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
 
         if (data?.type === "incoming_request") {
+          playRingtone();
           router.push({
-            pathname: "/requests",
-
+            pathname: "/(utilities)/requests",
             params: {
               requestId: String(data.requestId),
-              agentId: String(data.agentId),
-              clientName: String(data.clientName),
-              propertyType: String(data.propertyType),
-              lat: String(data.lat),
-              lng: String(data.lng),
+              agentId: String(data.agentId || ""),
+              propertyType: String(data.propertyType || ""),
+              lat: String(data.lat || ""),
+              lng: String(data.lng || ""),
             },
           });
+        }
+
+        if (
+          data?.type === "request_accepted" ||
+          data?.type === "request_unavailable" ||
+          data?.type === "request_cancelled" ||
+          data?.type === "request_rematch"
+        ) {
+          router.push("/(client)/client-map");
         }
 
         if (data?.type === "NEW_PROPERTY") {
@@ -94,6 +113,7 @@ function AppContent() {
     );
 
     return () => {
+      receivedSub.remove();
       responseSub.remove();
     };
   }, [router]);

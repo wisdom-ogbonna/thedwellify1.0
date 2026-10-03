@@ -27,12 +27,7 @@ const POLL_INTERVAL_MS = 3000;
 const RING_RADIUS = 34;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-const ACCEPTED_STATUSES = new Set([
-  "matched",
-  "inspection_started",
-  "accepted",
-  "active",
-]);
+const ACCEPTED_STATUSES = new Set(["matched", "inspection_started"]);
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -147,8 +142,8 @@ const ClientPaymentStartInspection: React.FC = () => {
   // ─── Send Request ─────────────────────────────────────────────────────────
 
   const sendInspectionRequest = useCallback(async () => {
-    if (!requestId || !agentId) {
-      setError("Missing identity parameters (requestId or agentId).");
+    if (!requestId) {
+      setError("Missing request ID.");
       setScreenState("error");
       return;
     }
@@ -159,10 +154,6 @@ const ClientPaymentStartInspection: React.FC = () => {
     try {
       await API.post("/notifications/request", {
         requestId,
-        agentId,
-        propertyType,
-        lat: Number(lat),
-        lng: Number(lng),
       });
 
       if (!mountedRef.current) return;
@@ -634,7 +625,7 @@ const ClientPaymentStartInspection: React.FC = () => {
           {/* Matched → Go to Dashboard */}
           {screenState === "matched" && (
             <TouchableOpacity
-              onPress={() => router.replace("/(client)/dashboard")}
+              onPress={() => router.replace("/(client)/client-map")}
               className="w-full py-4 rounded-md items-center justify-center"
               style={{
                 backgroundColor: colors.primary,
@@ -649,7 +640,7 @@ const ClientPaymentStartInspection: React.FC = () => {
           {/* Timeout → Rematch */}
           {screenState === "timeout" && (
             <TouchableOpacity
-              onPress={() => router.replace("/(client)/dashboard")}
+              onPress={() => router.replace("/(client)/client-map")}
               style={{
                 width: "100%",
                 paddingVertical: 16,
@@ -668,7 +659,7 @@ const ClientPaymentStartInspection: React.FC = () => {
           {screenState === "error" && (
             <View style={{ flexDirection: "row", gap: 10 }}>
               <TouchableOpacity
-                onPress={() => router.replace("/(client)/dashboard")}
+                onPress={() => router.replace("/(client)/client-map")}
                 style={{
                   flex: 1,
                   paddingVertical: 16,

@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "phosphor-react-native";
 import { API } from "../../services/api";
 import * as Location from "expo-location";
-// import { stopRingtone } from "../../services/ringtone";
+import { playRingtone, stopRingtone } from "../../services/ringtone";
 
 export default function RequestDetailsScreen() {
   const { colors } = useTheme();
@@ -22,7 +22,11 @@ export default function RequestDetailsScreen() {
   const { requestId, propertyType, lat, lng, clientName } =
     useLocalSearchParams();
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(true);
+  const [stale, setStale] = useState(false);
+  const [staleMessage, setStaleMessage] = useState("");
   const [address, setAddress] = useState("");
+  const AGENT_HOME = "/(agent)/agent-dashboard";
 
   const handleAction = async (
     endpoint: string,
@@ -32,17 +36,56 @@ export default function RequestDetailsScreen() {
     if (!requestId) return;
     setLoading(true);
     try {
-      // ✅ STOP SOUND
-      // await stopRingtone();
+      await stopRingtone();
       await API.post(endpoint, { requestId });
       Alert.alert("Success", successMsg);
-      router.replace(nav as any);
+      router.replace((nav || AGENT_HOME) as any);
     } catch (error: any) {
       Alert.alert("Error", error?.response?.data?.error || "Action failed");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const verifyRequest = async () => {
+      if (!requestId) {
+        setStale(true);
+        setStaleMessage("Missing request ID");
+        setVerifying(false);
+        return;
+      }
+
+      try {
+        const res = await API.get(`/match/request/${requestId}`);
+        const data = res.data;
+
+        if (!data?.actionable) {
+          await stopRingtone();
+          setStale(true);
+          setStaleMessage(
+            data?.error ||
+              `This request is no longer available (${data?.status || "unknown"}).`,
+          );
+        } else {
+          playRingtone();
+        }
+      } catch (error: any) {
+        await stopRingtone();
+        setStale(true);
+        setStaleMessage(
+          error?.response?.data?.error || "This request is no longer available.",
+        );
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    verifyRequest();
+    return () => {
+      stopRingtone();
+    };
+  }, [requestId]);
 
   useEffect(() => {
     const getAddress = async () => {
@@ -87,7 +130,10 @@ export default function RequestDetailsScreen() {
       {/* Close Header */}
       <View className="px-8 py-4 flex-row justify-end">
         <TouchableOpacity
-          onPress={() => router.replace("/(agent)/dashboard")}
+          onPress={async () => {
+            await stopRingtone();
+            router.replace("/(agent)/agent-dashboard");
+          }}
           className="p-2 rounded-full"
         >
           <X size={30} color={colors.text} weight="bold" />
@@ -95,6 +141,36 @@ export default function RequestDetailsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 32 }}>
+        {verifying ? (
+          <View className="items-center py-20">
+            <ActivityIndicator color={colors.primary} />
+            <Text style={{ color: colors.text }} className="mt-4">
+              Checking request...
+            </Text>
+          </View>
+        ) : stale ? (
+          <View className="py-10">
+            <Text
+              className="text-3xl font-black mb-4"
+              style={{ color: colors.text }}
+            >
+              Request unavailable
+            </Text>
+            <Text style={{ color: colors.text, opacity: 0.6 }} className="mb-8">
+              {staleMessage}
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.replace(AGENT_HOME)}
+              className="py-5 rounded-full items-center"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <Text className="text-white font-bold">Back to dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {!verifying && !stale ? (
+          <>
         <Text
           className="text-sm font-bold uppercase tracking-widest opacity-40 mb-2"
           style={{ color: colors.text }}
@@ -128,7 +204,7 @@ export default function RequestDetailsScreen() {
               handleAction(
                 "/client/request/decline",
                 "Request declined",
-                "/(agent)/dashboard"
+                AGENT_HOME
               )
             }
             className="flex-1 py-5 rounded-full border-2 items-center"
@@ -148,7 +224,7 @@ export default function RequestDetailsScreen() {
                 "/client/request/accept",
                 "Request accepted",
                 // "/(utilities)/inspection?requestId=" + requestId
-                "/(agent)/agent-dashboard"
+                AGENT_HOME
               )
             }
             className="flex-1 py-5 rounded-full items-center justify-center"
@@ -163,6 +239,8 @@ export default function RequestDetailsScreen() {
             )}
           </TouchableOpacity>
         </View>
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );
