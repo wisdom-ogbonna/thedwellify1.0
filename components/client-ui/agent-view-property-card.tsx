@@ -11,6 +11,7 @@ const PropertyCard = ({ item }: { item: any }) => {
   const label = purposeLabel(item.purpose, item.tag);
 
   return (
+    <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
     <Pressable
       onPress={() =>
         router.push({
@@ -18,7 +19,6 @@ const PropertyCard = ({ item }: { item: any }) => {
           params: { propertyId: item.id },
         })
       }
-      style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}
     >
       {image ? (
         <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
@@ -45,6 +45,18 @@ const PropertyCard = ({ item }: { item: any }) => {
         </Text>
       </View>
     </Pressable>
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: "/(utilities)/chats",
+              params: { productId: item.id },
+            })
+          }
+          style={[styles.chatBtn, { backgroundColor: colors.primary, marginHorizontal: 16, marginBottom: 16 }]}
+        >
+          <Text style={styles.chatBtnText}>Message agent</Text>
+        </Pressable>
+    </View>
   );
 };
 
@@ -85,6 +97,17 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: "900",
+  },
+  chatBtn: {
+    marginTop: 12,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatBtnText: {
+    color: "#fff",
+    fontWeight: "800",
   },
 });
 
