@@ -1,6 +1,7 @@
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -28,28 +29,38 @@ const CARD_WIDTH = width * 0.42;
 const getPremiumImage = (type: string): string => {
   const normalized = type.toLowerCase();
 
-  if (normalized.includes("hotel"))
+  if (normalized.includes("hotel")) {
     return "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=600";
-  if (normalized.includes("apartment"))
+  }
+
+  if (normalized.includes("apartment")) {
     return "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600";
-  if (normalized.includes("shortlet"))
+  }
+
+  if (normalized.includes("shortlet")) {
     return "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80&w=600";
-  if (normalized.includes("rent"))
+  }
+
+  if (normalized.includes("rent")) {
     return "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80&w=600";
-  if (normalized.includes("sale"))
+  }
+
+  if (normalized.includes("sale")) {
     return "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=600";
-  if (normalized.includes("land"))
+  }
+
+  if (normalized.includes("land")) {
     return "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=600";
-  if (normalized.includes("house"))
+  }
+
+  if (normalized.includes("house")) {
     return "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=600";
+  }
 
   return "https://images.unsplash.com/photo-1600607687931-cecebd80d62f?auto=format&fit=crop&q=80&w=600";
 };
 
 export default function Request({
-  locationLoading,
-  address,
-  getLocation,
   PROPERTY_TYPES,
   selectedType,
   setSelectedType,
@@ -58,110 +69,128 @@ export default function Request({
 }: RequestProps): React.JSX.Element {
   const { colors, isDark } = useTheme();
 
+  const [listingMode, setListingMode] = useState<"buy" | "rent">("buy");
+
   const primaryColor = colors.primary || "#0066FF";
-  const mutedBg = isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9";
+
   const cardBg = isDark ? "#18181B" : "#FFFFFF";
+
   const borderColor = isDark ? "#27272A" : "#E2E8F0";
+
   const secondaryText = isDark ? "#A1A1AA" : "#64748B";
+
+  const router = useRouter();
 
   return (
     <View
       className="flex-1 relative"
       style={{ backgroundColor: colors.background }}
     >
-      <View className="pb-25 pt-3">
-        <View className="px-6 mb-6 mt-4">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 105,
+        }}
+      >
+        {/* HEADER */}
+        <View className="px-6 pt-7 mb-6">
           <Text
             style={{ color: colors.text }}
-            className="text-3xl font-black tracking-tight  leading-[40px] mb-3"
+            className="text-3xl font-black tracking-tight leading-[40px] mb-2"
           >
             Find Your Next Premium Stay
           </Text>
+
           <Text
             style={{ color: secondaryText }}
-            className="text-md font-medium"
+            className="text-[14px] font-medium"
           >
             Discover tailored properties designed for your lifestyle.
           </Text>
         </View>
 
-        <View className="px-6 mb-12">
-          <TouchableOpacity
-            onPress={getLocation}
-            activeOpacity={0.7}
+        {/* BUY / RENT SWITCH */}
+        <View className="px-6 mb-7">
+          <View
+            className="w-full h-13 rounded-full p-1 flex-row"
             style={{
-              backgroundColor: cardBg,
-              borderColor: borderColor,
+              backgroundColor: isDark ? "#151C2B" : "#F1F5F9",
               borderWidth: 1,
+              borderColor: borderColor,
             }}
-            className="flex-row items-center rounded-3xl p-3 pr-5 shadow-sm shadow-black/5"
           >
-            <View
-              className="w-12 h-12 rounded-full items-center justify-center mr-4"
-              style={{ backgroundColor: mutedBg }}
-            >
-              <Ionicons name="location" size={22} color={primaryColor} />
-            </View>
-
-            <View className="flex-1 justify-center">
-              <Text
-                style={{ color: secondaryText }}
-                className="text-[11px] uppercase font-bold tracking-wider mb-1"
-              >
-                Current Location
-              </Text>
-              {locationLoading ? (
-                <ActivityIndicator
-                  color={primaryColor}
-                  size="small"
-                  style={{ alignSelf: "flex-start" }}
-                />
-              ) : (
-                <Text
-                  style={{ color: colors.text }}
-                  className="text-[15px] font-semibold"
-                  numberOfLines={1}
-                >
-                  {address || "Tap to detect your location..."}
-                </Text>
-              )}
-            </View>
-
-            <View
-              className="w-8 h-8 rounded-full items-center justify-center"
-              style={{ backgroundColor: isDark ? "#27272A" : "#F8FAFC" }}
+            {/* BUY */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setListingMode("buy")}
+              className="flex-1 rounded-full flex-row items-center justify-center"
+              style={{
+                backgroundColor:
+                  listingMode === "buy" ? primaryColor : "transparent",
+              }}
             >
               <Ionicons
-                name="refresh"
-                size={16}
-                color={isDark ? "#E4E4E7" : "#475569"}
+                name="home"
+                size={18}
+                color={listingMode === "buy" ? "#FFFFFF" : secondaryText}
               />
-            </View>
-          </TouchableOpacity>
+
+              <Text
+                className="ml-2 text-[14px] font-medium"
+                style={{
+                  color: listingMode === "buy" ? "#FFFFFF" : secondaryText,
+                }}
+              >
+                Buy
+              </Text>
+            </TouchableOpacity>
+
+            {/* RENT */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setListingMode("rent")}
+              className="flex-1 rounded-full flex-row items-center justify-center"
+              style={{
+                backgroundColor:
+                  listingMode === "rent" ? primaryColor : "transparent",
+              }}
+            >
+              <Ionicons
+                name="key-outline"
+                size={18}
+                color={listingMode === "rent" ? "#FFFFFF" : secondaryText}
+              />
+
+              <Text
+                className="ml-2 text-[14px] font-medium"
+                style={{
+                  color: listingMode === "rent" ? "#FFFFFF" : secondaryText,
+                }}
+              >
+                Rent
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View>
-          <View className="px-6 mb-5 flex-row justify-between items-end">
-            <Text style={{ color: colors.text }} className="text-xl font-bold">
+        {/* PROPERTY TYPES */}
+        <View className="mb-6">
+          <View className="px-6 mb-4">
+            <Text
+              style={{ color: colors.text }}
+              className="text-[16px] font-bold"
+            >
               What are you looking for?
             </Text>
-
-            <View className="flex-row items-center opacity-70 bg-black/5 dark:bg-white/10 px-3 py-1.5 rounded-full">
-              <Text
-                style={{ color: secondaryText }}
-                className="text-[11px] font-bold uppercase tracking-wider mr-1"
-              >
-                Swipe
-              </Text>
-              <Ionicons name="arrow-forward" size={12} color={secondaryText} />
-            </View>
           </View>
 
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24, gap: 16 }}
-            snapToInterval={CARD_WIDTH + 16}
+            contentContainerStyle={{
+              paddingHorizontal: 8,
+              gap: 12,
+            }}
             decelerationRate="fast"
           >
             {PROPERTY_TYPES.map((type: string) => {
@@ -170,7 +199,7 @@ export default function Request({
               return (
                 <TouchableOpacity
                   key={type}
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                   onPress={() => setSelectedType(type)}
                   style={{
                     width: CARD_WIDTH,
@@ -178,44 +207,53 @@ export default function Request({
                     borderColor: active ? primaryColor : borderColor,
                     borderWidth: active ? 2 : 1,
                   }}
-                  className="rounded-[28px] p-3 flex-col justify-between shadow-sm shadow-black/5 min-h-48"
+                  className="rounded-[20px] p-2.5 min-h-35.75"
                 >
-                  <View className="w-full h-24 rounded-[20px] overflow-hidden bg-gray-200 mb-4 relative">
+                  {/* IMAGE */}
+                  <View className="w-full h-19 rounded-[15px] overflow-hidden bg-gray-200 relative">
                     <Image
-                      source={{ uri: getPremiumImage(type) }}
+                      source={{
+                        uri: getPremiumImage(type),
+                      }}
                       className="w-full h-full"
                       resizeMode="cover"
                     />
+
+                    {/* SELECTED ICON */}
                     {active && (
                       <View
-                        style={{ backgroundColor: colors.primary }}
-                        className="absolute top-2 right-2 backdrop-blur-md rounded-full p-1.5 shadow-md"
+                        className="absolute bottom-2 left-2 w-7 h-7 rounded-full items-center justify-center"
+                        style={{
+                          backgroundColor: primaryColor,
+                        }}
                       >
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={20}
-                          color="#FFFFFF"
-                        />
+                        <Ionicons name="home" size={15} color="#FFFFFF" />
                       </View>
                     )}
                   </View>
 
-                  <View className="px-2 pb-2">
+                  {/* TEXT */}
+                  <View className="px-1.5 pt-2">
                     <Text
                       style={{
                         color: active ? "#FFFFFF" : colors.text,
                       }}
-                      className="text-[15px] font-bold tracking-tight mb-1 capitalize"
+                      className="text-[14px] font-bold"
                     >
                       {type}
                     </Text>
+
                     <Text
                       style={{
-                        color: active ? "rgba(255,255,255,0.8)" : secondaryText,
+                        color: active
+                          ? "rgba(255,255,255,0.75)"
+                          : secondaryText,
                       }}
-                      className="text-[12px] font-medium"
+                      className="text-[11px] font-medium mt-0.5"
                     >
-                      Explore {type.toLowerCase()}s
+                      {listingMode === "buy"
+                        ? `Buy ${type.toLowerCase()}`
+                        : `Rent ${type.toLowerCase()}`}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -223,10 +261,55 @@ export default function Request({
             })}
           </ScrollView>
         </View>
-      </View>
 
+        {/* CUSTOM PROPERTY REQUEST */}
+        <View className="px-6 mb-1">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.push("/(utilities)/request-custom-property")}
+            style={{
+              backgroundColor: isDark ? "#151C2B" : "#F8FAFC",
+              borderColor: borderColor,
+            }}
+            className="w-full rounded-[20px] border p-4 flex-row items-center"
+          >
+            {/* ICON */}
+            <View
+              className="w-12 h-12 rounded-[14px] items-center justify-center mr-4"
+              style={{
+                backgroundColor: isDark ? "rgba(0,102,255,0.18)" : "#E8F1FF",
+              }}
+            >
+              <Ionicons name="home-outline" size={23} color={primaryColor} />
+            </View>
+
+            {/* TEXT */}
+            <View className="flex-1">
+              <Text
+                style={{ color: colors.text }}
+                className="text-[14px] font-bold mb-1"
+              >
+                Request Custom Property
+              </Text>
+
+              <Text
+                style={{ color: secondaryText }}
+                className="text-[11px] font-medium leading-[16px] mr-4"
+                numberOfLines={2}
+              >
+                Tell us what you&apos;re looking for and we&apos;ll find the best options.
+              </Text>
+            </View>
+
+            {/* ARROW */}
+            <Ionicons name="chevron-forward" size={20} color={secondaryText} />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* BOTTOM REQUEST BUTTON */}
       <View
-        className="absolute bottom-0 w-full px-6 pt-4 pb-4"
+        className="absolute bottom-0 w-full px-6 pt-3 pb-5"
         style={{
           backgroundColor: colors.background,
         }}
@@ -234,16 +317,22 @@ export default function Request({
         <TouchableOpacity
           onPress={handleRequest}
           disabled={loading}
-          style={{ backgroundColor: primaryColor }}
-          className="w-full h-12 rounded-[20px] items-center justify-center flex-row shadow-lg active:scale-[0.98]"
+          activeOpacity={0.85}
+          style={{
+            backgroundColor: primaryColor,
+            opacity: loading ? 0.8 : 1,
+          }}
+          className="w-full h-14 rounded-2xl items-center justify-center flex-row shadow-lg"
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" size="large" />
+            <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <>
-              <Text className="text-white font-bold text-[16px] mr-2">
+
+              <Text className="text-white font-bold text-[16px] ml-2 mr-2">
                 Request Match
               </Text>
+
               <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
             </>
           )}
