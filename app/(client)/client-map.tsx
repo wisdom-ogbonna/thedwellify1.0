@@ -13,7 +13,7 @@ import { registerForPushNotificationsAsync } from "../../services/notification";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet"] as const;
+const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet", "Land", "House"] as const;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
