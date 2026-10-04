@@ -186,16 +186,14 @@ export default function RecommendedScreen() {
   const renderCard = ({ item }: { item: PublicListing }) => {
     const image = item.images?.[0];
     const label = purposeLabel(item.purpose, item.tag);
+    const openProperty = () =>
+      router.push({
+        pathname: "/(utilities)/property-view",
+        params: { propertyId: item.id },
+      });
     return (
-      <Pressable
-        onPress={() =>
-          router.push({
-            pathname: "/(utilities)/property-view",
-            params: { propertyId: item.id },
-          })
-        }
-        style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}
-      >
+      <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        <Pressable onPress={openProperty}>
         {image ? (
           <Image source={{ uri: image }} style={styles.image} />
         ) : (
@@ -229,7 +227,19 @@ export default function RecommendedScreen() {
             </Text>
           )}
         </View>
-      </Pressable>
+        </Pressable>
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: "/(utilities)/chats",
+              params: { productId: item.id },
+            })
+          }
+          style={[styles.chatBtn, { backgroundColor: colors.primary, marginHorizontal: 14, marginBottom: 14 }]}
+        >
+          <Text style={styles.chatBtnText}>Message agent</Text>
+        </Pressable>
+      </View>
     );
   };
 
@@ -328,6 +338,14 @@ const styles = StyleSheet.create({
   meta: { fontSize: 13, marginTop: 4 },
   price: { fontSize: 16, fontWeight: "900", marginTop: 8 },
   agent: { fontSize: 12, marginTop: 6, fontWeight: "600" },
+  chatBtn: {
+    marginTop: 12,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatBtnText: { color: "#fff", fontWeight: "800" },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   empty: { alignItems: "center", paddingTop: 40, paddingHorizontal: 16 },
   emptyTitle: { fontSize: 18, fontWeight: "800", textAlign: "center" },
