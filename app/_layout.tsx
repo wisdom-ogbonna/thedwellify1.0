@@ -19,6 +19,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import "../global.css";
 import { setupNotifications } from "../services/notification";
 import { playRingtone } from "../services/ringtone";
+import { connectSocket, disconnectSocket } from "../services/socket";
 import OfflineModal from "./(utilities)/offlineModal";
 
 SplashScreen.preventAutoHideAsync();
@@ -98,6 +99,13 @@ function AppContent() {
             },
           });
         }
+
+        if (data?.type === "listing_chat" && data.conversationId) {
+          router.push({
+            pathname: "/(utilities)/chats",
+            params: { id: String(data.conversationId) },
+          });
+        }
       },
     );
 
@@ -165,6 +173,14 @@ function AppContent() {
       return;
     }
   }, [user, role, isVerified, loading, segments, router]);
+
+  useEffect(() => {
+    if (!user) {
+      disconnectSocket();
+      return;
+    }
+    connectSocket().catch(() => undefined);
+  }, [user]);
 
   /* Hide android navigation buttons and auto-fade them out */
   // useEffect(() => {
