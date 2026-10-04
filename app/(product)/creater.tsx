@@ -1,6 +1,6 @@
 import { useTheme } from "@/hooks/use-theme";
+import { pickLibraryImages, pickLibraryVideo } from "@/services/media-picker";
 import { ResizeMode, Video } from "expo-av";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import {
   CloudArrowUp,
@@ -45,69 +45,46 @@ export default function CreateProduct() {
    * 📸 PICK IMAGES
    */
   const pickImages = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert("Permission required");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.4,
-    });
-
-    if (!result.canceled) {
+    try {
+      const result = await pickLibraryImages(10);
+      if (!result.ok) {
+        if (result.reason === "permission") {
+          Alert.alert("Permission required", "Allow photo access to upload images.");
+        }
+        return;
+      }
       setImages(result.assets);
+    } catch {
+      Alert.alert(
+        "Photo error",
+        "Could not read that photo. Try another image saved on this iPhone.",
+      );
     }
   };
 
-  /**
-   * 🎥 PICK VIDEO (FIXED)
-   */
   const pickVideo = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert("Permission required");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos, // ✅ FIXED
-      allowsEditing: false,
-      quality: 1,
-    });
-
-    if (result.canceled) return;
-
-    const file = result.assets[0];
-
-    // 🔥 Get file size safely
-    const fileSize = (file as any).fileSize || (file as any).size;
-
-    if (!fileSize) {
-      Alert.alert("Error", "Cannot read video size");
-      return;
-    }
-
-    // ❌ Validate size BEFORE upload
-    if (fileSize > MAX_VIDEO_SIZE) {
+    try {
+      const result = await pickLibraryVideo();
+      if (!result.ok) {
+        if (result.reason === "permission") {
+          Alert.alert("Permission required", "Allow video access to upload a tour.");
+        }
+        return;
+      }
+      if (result.asset.fileSize && result.asset.fileSize > MAX_VIDEO_SIZE) {
+        Alert.alert(
+          "Video too large",
+          "Video must be 50MB or less. Please compress or choose another video.",
+        );
+        return;
+      }
+      setVideo(result.asset);
+    } catch {
       Alert.alert(
-        "Video too large",
-        "Video must be 50MB or less. Please compress or choose another video.",
+        "Video error",
+        "Could not read that video. Try another file saved on this iPhone.",
       );
-      return;
     }
-
-    // ❌ Validate format
-    if (!file.uri.endsWith(".mp4")) {
-      Alert.alert("Invalid format", "Only MP4 videos are allowed");
-      return;
-    }
-
-    setVideo(file);
   };
 
   const removeImage = (index: number) => {

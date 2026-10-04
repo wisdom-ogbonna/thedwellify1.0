@@ -84,7 +84,13 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Dwellify to access your photos so you can add listing images and videos."
+        }
+      ]
     ],
     "extra": {
       "eas": {

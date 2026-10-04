@@ -7,7 +7,7 @@ import {
 } from "@/constants/listings";
 import { useTheme } from "@/hooks/use-theme";
 import { listingsApi, type ListingPayload } from "@/services/listings";
-import * as ImagePicker from "expo-image-picker";
+import { pickLibraryImages, pickLibraryVideo } from "@/services/media-picker";
 import * as Location from "expo-location";
 import { router, useNavigation } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -29,7 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 const TOTAL_STEPS = 4;
 
-type LocalMedia = { uri: string; remote?: boolean };
+type LocalMedia = { uri: string; remote?: boolean; name?: string; type?: string };
 type PurposeChoice = "Sale" | "Rent" | "";
 
 export default function ListingForm({ listingId }: { listingId?: string }) {
@@ -156,42 +156,58 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
   };
 
   const pickPhotos = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission required", "Allow photo access to upload images.");
-      return;
+    try {
+      const result = await pickLibraryImages(Math.max(1, 10 - photos.length));
+      if (!result.ok) {
+        if (result.reason === "permission") {
+          Alert.alert("Permission required", "Allow photo access to upload images.");
+        }
+        return;
+      }
+      setPhotos((prev) =>
+        [
+          ...prev,
+          ...result.assets.map((asset) => ({
+            uri: asset.uri,
+            name: asset.name,
+            type: asset.type,
+          })),
+        ].slice(0, 10),
+      );
+    } catch {
+      Alert.alert(
+        "Photo error",
+        "Could not read that photo. Try another image, or pick one already saved on this iPhone.",
+      );
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      quality: 0.6,
-      selectionLimit: Math.max(1, 10 - photos.length),
-    });
-    if (result.canceled) return;
-    setPhotos((prev) =>
-      [...prev, ...result.assets.map((asset) => ({ uri: asset.uri }))].slice(0, 10),
-    );
   };
 
   const pickVideo = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission required", "Allow video access to upload a tour.");
-      return;
+    try {
+      const result = await pickLibraryVideo();
+      if (!result.ok) {
+        if (result.reason === "permission") {
+          Alert.alert("Permission required", "Allow video access to upload a tour.");
+        }
+        return;
+      }
+      if (result.asset.fileSize && result.asset.fileSize > MAX_VIDEO_SIZE) {
+        Alert.alert("Video too large", "Please choose an MP4 video of 50MB or less.");
+        return;
+      }
+      setRemoveVideo(false);
+      setVideo({
+        uri: result.asset.uri,
+        remote: false,
+        name: result.asset.name,
+        type: result.asset.type,
+      });
+    } catch {
+      Alert.alert(
+        "Video error",
+        "Could not read that video. Try another file saved on this iPhone.",
+      );
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["videos"],
-      quality: 1,
-    });
-    if (result.canceled) return;
-    const file = result.assets[0];
-    const fileSize = (file as any).fileSize ?? (file as any).filesize;
-    if (fileSize && fileSize > MAX_VIDEO_SIZE) {
-      Alert.alert("Video too large", "Please choose an MP4 video of 50MB or less.");
-      return;
-    }
-    setRemoveVideo(false);
-    setVideo({ uri: file.uri, remote: false });
   };
 
   const buildPayload = (): ListingPayload => ({
@@ -212,13 +228,17 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
       .filter((p) => !p.remote)
       .map((p, index) => ({
         uri: p.uri,
-        name: `image_${index}.jpg`,
-        type: "image/jpeg",
+        name: p.name || `image_${index}.jpg`,
+        type: p.type || "image/jpeg",
       })),
     keepImages: photos.filter((p) => p.remote).map((p) => p.uri),
     video:
       video && !video.remote
-        ? { uri: video.uri, name: "video.mp4", type: "video/mp4" }
+        ? {
+            uri: video.uri,
+            name: video.name || "video.mp4",
+            type: video.type || "video/mp4",
+          }
         : null,
     removeVideo,
   });
