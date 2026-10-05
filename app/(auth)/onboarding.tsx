@@ -7,25 +7,22 @@ import {
 import { Sora_600SemiBold, useFonts } from "@expo-google-fonts/sora";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
-  Dimensions,
   FlatList,
   Image,
   ImageSourcePropType,
   ListRenderItemInfo,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  SafeAreaView,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-
-// ─── SLIDE DATA ───────────────────────────────────────────────────────────────
 interface Slide {
   id: string;
   headlineParts: { text: string; accent: boolean }[];
@@ -73,56 +70,13 @@ const SLIDES: Slide[] = [
   },
 ];
 
-// ─── PROGRESS DASHES ───────────────────────────────────────────────────────────
-function ProgressDashes({ activeIndex }: { activeIndex: number }) {
-  const { colors } = useTheme();
-  return (
-    <View className="flex-row items-center justify-center gap-x-2 w-full px-5 absolute top-16 z-20">
-      {SLIDES.map((_, i) => {
-        const isActive = i === activeIndex;
-        return (
-          <View
-            key={i}
-            style={[
-              styles.dash,
-              {
-                backgroundColor: isActive ? colors.primary : "#E2E8F0",
-                flex: 1,
-              },
-            ]}
-          />
-        );
-      })}
-    </View>
-  );
-}
-
-// ─── TERMS FOOTER ─────────────────────────────────────────────────────────────
-function TermsText() {
-  const { colors } = useTheme();
-  return (
-    <Text
-      style={styles.termsText && { color: colors.text }}
-      className="text-center text-[12px] px-6 mt-7 mb-7 leading-relaxed"
-    >
-      {"By continuing, you accept our "}
-      <Text className="text-slate-600 font-semibold underline">
-        Terms & Conditions
-      </Text>
-      {" and "}
-      <Text className="text-slate-600 font-semibold underline">
-        Privacy Policy.
-      </Text>
-    </Text>
-  );
-}
-
-// ─── MAIN ONBOARDING SCREEN ────────────────────────────────────────────────────
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const { width, height } = useWindowDimensions();
+  const listRef = useRef<FlatList<Slide>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const listRef = useRef<FlatList>(null);
-  const { colors } = useTheme();
+  const [pageHeight, setPageHeight] = useState(0);
 
   const [fontsLoaded] = useFonts({
     Sora_600SemiBold,
@@ -131,160 +85,183 @@ export default function OnboardingScreen() {
     Inter_600SemiBold,
   });
 
+  const compact = height < 740;
+  const imageHeight = Math.min(height * (compact ? 0.28 : 0.34), compact ? 220 : 280);
+  const headlineSize = compact ? 26 : 32;
+  const slideHeight = pageHeight || height;
+
+  const dashes = useMemo(
+    () =>
+      SLIDES.map((slide, index) => (
+        <View
+          key={slide.id}
+          style={[
+            styles.dash,
+            {
+              backgroundColor: index === activeIndex ? colors.primary : colors.disabled + "55",
+            },
+          ]}
+        />
+      )),
+    [activeIndex, colors.disabled, colors.primary],
+  );
+
   if (!fontsLoaded) return null;
+
+  const goTo = (index: number) => {
+    listRef.current?.scrollToIndex({ index, animated: true });
+    setActiveIndex(index);
+  };
 
   const handleNext = () => {
     if (activeIndex < SLIDES.length - 1) {
-      const next = activeIndex + 1;
-      listRef.current?.scrollToIndex({ index: next, animated: true });
-      setActiveIndex(next);
-    } else {
-      router.push("/(auth)/phone");
+      goTo(activeIndex + 1);
+      return;
     }
+    router.push("/(auth)/phone");
   };
 
-  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
-    // Boundary checks to ensure activeIndex stays safe
-    if (index >= 0 && index < SLIDES.length) {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    if (index >= 0 && index < SLIDES.length && index !== activeIndex) {
       setActiveIndex(index);
     }
   };
 
   const renderItem = ({ item }: ListRenderItemInfo<Slide>) => (
-    <View
-      style={{ width: SCREEN_W, backgroundColor: colors.background }}
-      className="flex-1 justify-between pt-24 pb-8"
-    >
-      {/* Visual Asset Section */}
-      <View className="flex-1 justify-center items-center px-6">
+    <View style={[styles.slide, { width, height: slideHeight, backgroundColor: colors.background }]}>
+      <View style={styles.hero}>
         <Image
           source={item.image}
-          style={styles.imageIllustration}
+          style={[styles.image, { height: imageHeight }]}
           resizeMode="contain"
         />
       </View>
 
-      {/* Narrative & Interface Interface Block */}
-      <View className="px-8 w-full">
+      <View style={styles.copy}>
         <Text
-          style={styles.headline}
-          className="text-center tracking-tight mb-3"
+          style={[
+            styles.headline,
+            { color: colors.text, fontSize: headlineSize, lineHeight: headlineSize + 8 },
+          ]}
         >
-          {item.headlineParts.map((part, i) => (
-            <Text
-              key={i}
-              style={{ color: part.accent ? colors.primary : colors.text }}
-            >
+          {item.headlineParts.map((part, index) => (
+            <Text key={`${item.id}-${index}`} style={{ color: part.accent ? colors.primary : colors.text }}>
               {part.text}
             </Text>
           ))}
         </Text>
-
-        <Text
-          style={styles.subtitle && { color: colors.text, marginVertical: 12, }}
-          className="text-center text-slate-500 mb-8 px-2"
-        >
-          {item.subtitle}
-        </Text>
-
-        <TouchableOpacity
+        <Text style={[styles.subtitle, { color: colors.placeholder }]}>{item.subtitle}</Text>
+        <Pressable
           onPress={handleNext}
-          activeOpacity={0.9}
-          className="rounded-2xl h-14 items-center justify-center w-full"
-          style={styles.button && { backgroundColor: colors.primary }}
+          style={[styles.button, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.buttonText} className="text-white text-[16px]">
-            {item.cta}
-          </Text>
-        </TouchableOpacity>
-
-        <TermsText />
+          <Text style={styles.buttonText}>{item.cta}</Text>
+        </Pressable>
+        <Text style={[styles.terms, { color: colors.placeholder }]}>
+          By continuing, you accept our{" "}
+          <Text style={[styles.termsLink, { color: colors.text }]}>Terms & Conditions</Text>
+          {" and "}
+          <Text style={[styles.termsLink, { color: colors.text }]}>Privacy Policy</Text>.
+        </Text>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView
-      style={{ backgroundColor: colors.background }}
-      className="flex-1"
-    >
-      <StatusBar style="dark" />
-      {/* Global Interactive Elements over Slides */}
-      <ProgressDashes activeIndex={activeIndex} />
-
-      {/*activeIndex < SLIDES.length - 1 && (
-        <TouchableOpacity
-          onPress={() => router.push("/(auth)/phone")}
-          className="absolute top-24 right-6 z-20 bg-slate-50 px-4 py-2 rounded-full"
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-        >
-          <Text
-            style={styles.skipText}
-            className="text-slate-500 font-semibold"
-          >
-            Skip
-          </Text>
-        </TouchableOpacity>
-      )*/}
-
-      <FlatList
-        ref={listRef}
-        data={SLIDES}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScroll}
-        scrollEventThrottle={16}
-        bounces={false}
-        getItemLayout={(_, index) => ({
-          length: SCREEN_W,
-          offset: SCREEN_W * index,
-          index,
-        })}
-      />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <View style={styles.progress}>{dashes}</View>
+      <View style={styles.listWrap} onLayout={(event) => setPageHeight(event.nativeEvent.layout.height)}>
+        <FlatList
+          ref={listRef}
+          data={SLIDES}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScroll}
+          scrollEventThrottle={16}
+          bounces={false}
+          style={styles.list}
+          getItemLayout={(_, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
+        />
+      </View>
     </SafeAreaView>
   );
 }
 
-// ─── STYLES DEFINITIONS ───────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  dash: {
-    height: 5,
-    borderRadius: 999,
-    transitionProperty: "all",
+  safe: { flex: 1 },
+  progress: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 8,
   },
-  imageIllustration: {
+  dash: {
+    flex: 1,
+    height: 4,
+    borderRadius: 999,
+  },
+  listWrap: { flex: 1 },
+  list: { flex: 1 },
+  slide: {
+    justifyContent: "space-between",
+    paddingBottom: 8,
+  },
+  hero: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  image: {
     width: "100%",
-    height: SCREEN_H * 0.38,
+  },
+  copy: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
   },
   headline: {
     fontFamily: "Sora_600SemiBold",
-    fontSize: 32,
-    lineHeight: 40,
+    textAlign: "center",
   },
   subtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 15,
-    lineHeight: 23,
+    lineHeight: 22,
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 22,
   },
   button: {
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
     fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+    fontSize: 16,
   },
-  skipText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-  },
-  termsText: {
+  terms: {
     fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    marginTop: 14,
+  },
+  termsLink: {
+    fontFamily: "Inter_600SemiBold",
+    textDecorationLine: "underline",
   },
 });
