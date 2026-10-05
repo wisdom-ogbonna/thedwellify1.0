@@ -61,6 +61,9 @@ const getPremiumImage = (type: string): string => {
 };
 
 export default function Request({
+  locationLoading,
+  address,
+  getLocation,
   PROPERTY_TYPES,
   selectedType,
   setSelectedType,
@@ -79,6 +82,8 @@ export default function Request({
 
   const secondaryText = isDark ? "#A1A1AA" : "#64748B";
 
+  const mutedBg = isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9";
+
   const router = useRouter();
 
   return (
@@ -92,21 +97,60 @@ export default function Request({
           paddingBottom: 105,
         }}
       >
-        {/* HEADER */}
-        <View className="px-6 pt-7 mb-6">
-          <Text
-            style={{ color: colors.text }}
-            className="text-3xl font-black tracking-tight leading-[40px] mb-2"
+        {/* LOCATION */}
+        <View className="px-6 mt-5 mb-7">
+          <TouchableOpacity
+            onPress={getLocation}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: cardBg,
+              borderColor: borderColor,
+              borderWidth: 1,
+            }}
+            className="flex-row items-center rounded-3xl p-3 pr-5 shadow-sm shadow-black/5"
           >
-            Find Your Next Premium Stay
-          </Text>
+            <View
+              className="w-12 h-12 rounded-full items-center justify-center mr-4"
+              style={{ backgroundColor: mutedBg }}
+            >
+              <Ionicons name="location" size={22} color={primaryColor} />
+            </View>
 
-          <Text
-            style={{ color: secondaryText }}
-            className="text-[14px] font-medium"
-          >
-            Discover tailored properties designed for your lifestyle.
-          </Text>
+            <View className="flex-1 justify-center">
+              <Text
+                style={{ color: secondaryText }}
+                className="text-[11px] uppercase font-bold tracking-wider"
+              >
+                Current Location
+              </Text>
+              {locationLoading ? (
+                <ActivityIndicator
+                  color={primaryColor}
+                  size="small"
+                  style={{ alignSelf: "flex-start" }}
+                />
+              ) : (
+                <Text
+                  style={{ color: colors.text }}
+                  className="text-[15px] font-semibold"
+                  numberOfLines={1}
+                >
+                  {address || "Tap to detect your location..."}
+                </Text>
+              )}
+            </View>
+
+            <View
+              className="w-8 h-8 rounded-full items-center justify-center"
+              style={{ backgroundColor: isDark ? "#27272A" : "#F8FAFC" }}
+            >
+              <Ionicons
+                name="refresh"
+                size={16}
+                color={isDark ? "#E4E4E7" : "#475569"}
+              />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* BUY / RENT SWITCH */}
@@ -174,7 +218,7 @@ export default function Request({
         </View>
 
         {/* PROPERTY TYPES */}
-        <View className="mb-6">
+        <View>
           <View className="px-6 mb-4">
             <Text
               style={{ color: colors.text }}
@@ -259,51 +303,54 @@ export default function Request({
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
-        </View>
-
-        {/* CUSTOM PROPERTY REQUEST */}
-        <View className="px-6 mb-1">
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => router.push("/(utilities)/request-custom-property")}
-            style={{
-              backgroundColor: isDark ? "#151C2B" : "#F8FAFC",
-              borderColor: borderColor,
-            }}
-            className="w-full rounded-[20px] border p-4 flex-row items-center"
-          >
-            {/* ICON */}
-            <View
-              className="w-12 h-12 rounded-[14px] items-center justify-center mr-4"
+            <TouchableOpacity
+              key="Request Custom Property"
+              activeOpacity={0.85}
+              onPress={() =>
+                router.push("/(utilities)/request-custom-property")
+              }
               style={{
-                backgroundColor: isDark ? "rgba(0,102,255,0.18)" : "#E8F1FF",
+                width: CARD_WIDTH,
+                backgroundColor: cardBg,
+                borderColor: borderColor,
+                borderWidth: 1,
               }}
+              className="rounded-[20px] p-2.5 min-h-35.75"
             >
-              <Ionicons name="home-outline" size={23} color={primaryColor} />
-            </View>
+              {/* IMAGE */}
+              <View className="w-full h-19 rounded-[15px] overflow-hidden bg-gray-200 relative">
+                <Image
+                  source={{
+                    uri: getPremiumImage("sale"),
+                  }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              </View>
 
-            {/* TEXT */}
-            <View className="flex-1">
-              <Text
-                style={{ color: colors.text }}
-                className="text-[14px] font-bold mb-1"
-              >
-                Request Custom Property
-              </Text>
+              {/* TEXT */}
+              <View className="px-1.5 pt-2">
+                <Text
+                  style={{
+                    color: colors.text,
+                  }}
+                  className="text-[14px] font-bold"
+                >
+                  {"Request Custom Property"}
+                </Text>
 
-              <Text
-                style={{ color: secondaryText }}
-                className="text-[11px] font-medium leading-[16px] mr-4"
-                numberOfLines={2}
-              >
-                Tell us what you&apos;re looking for and we&apos;ll find the best options.
-              </Text>
-            </View>
-
-            {/* ARROW */}
-            <Ionicons name="chevron-forward" size={20} color={secondaryText} />
-          </TouchableOpacity>
+                <Text
+                  style={{
+                    color: secondaryText,
+                  }}
+                  className="text-[11px] font-medium mt-0.5"
+                >
+                  Tell us what you&apos;re looking for and we&apos;ll find the
+                  best options.
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </ScrollView>
 
@@ -328,7 +375,6 @@ export default function Request({
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <>
-
               <Text className="text-white font-bold text-[16px] ml-2 mr-2">
                 Request Match
               </Text>

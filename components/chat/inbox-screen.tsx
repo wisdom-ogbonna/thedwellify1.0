@@ -2,6 +2,7 @@ import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
 import { chatApi, type Conversation } from "@/services/chat";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -32,7 +33,11 @@ const formatTime = (value?: string | null) => {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-export default function InboxScreen({ role }: { role: "client" | "agent" }) {
+export default function InboxScreen({
+  role
+}: {
+  role: "client" | "agent";
+}) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [items, setItems] = useState<Conversation[]>([]);
@@ -72,7 +77,12 @@ export default function InboxScreen({ role }: { role: "client" | "agent" }) {
     if (!q) return items;
     return items.filter((item) => {
       const peer = role === "agent" ? item.client?.name : item.agent?.name;
-      const hay = [peer, item.property?.title, item.property?.location, item.lastMessage]
+      const hay = [
+        peer,
+        item.property?.title,
+        item.property?.location,
+        item.lastMessage,
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -80,13 +90,27 @@ export default function InboxScreen({ role }: { role: "client" | "agent" }) {
     });
   }, [items, query, role]);
 
-  const unreadTotal = items.reduce((sum, item) => sum + (item.unreadCount || 0), 0);
+  const unreadTotal = items.reduce(
+    (sum, item) => sum + (item.unreadCount || 0),
+    0,
+  );
 
   const renderItem = ({ item }: { item: Conversation }) => {
     const peer = role === "agent" ? item.client : item.agent;
     const image = item.property?.image;
-    const preview = item.lastMessage || "Start the conversation";
+    const hasUnread = (item.unreadCount || 0) > 0;
     const mine = item.lastSenderId && item.lastSenderId === user?.uid;
+    const hasMessage = Boolean(item.lastMessage);
+    const preview = item.lastMessage || "Start the conversation";
+
+    // "Shortlet Home - For Sale • ₦15,000"
+    const propertyLine =
+      (item.property?.title || "Property enquiry") +
+      (item.property?.purpose
+        ? ` - ${purposeLabel(item.property.purpose)}`
+        : "") +
+      (item.property?.price ? ` • ${formatPrice(item.property.price)}` : "");
+
     return (
       <Pressable
         onPress={() =>
@@ -95,183 +119,344 @@ export default function InboxScreen({ role }: { role: "client" | "agent" }) {
             params: { id: item.id },
           })
         }
-        style={[styles.row, { borderColor: colors.border }]}
+        accessibilityRole="button"
+        accessibilityLabel={`Chat with ${peer?.name || "contact"}${
+          hasUnread ? `, ${item.unreadCount} unread` : ""
+        }`}
+        style={({ pressed }) => [
+          styles.card,
+          {
+            backgroundColor: hasUnread
+              ? colors.primary + "14"
+              : colors.disabled + "14",
+            borderColor: hasUnread ? colors.primary + "66" : "#222226",
+            opacity: pressed ? 0.85 : 1,
+          },
+        ]}
       >
         {image ? (
           <Image source={{ uri: image }} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.primary }]}>
+          <View
+            style={[
+              styles.avatar,
+              styles.avatarFallback,
+              { backgroundColor: colors.primary },
+            ]}
+          >
             <Text style={styles.avatarLetter}>
               {(peer?.name || "D").slice(0, 1).toUpperCase()}
             </Text>
           </View>
         )}
-        <View style={styles.rowBody}>
-          <View style={styles.rowTop}>
-            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+
+        <View style={styles.cardBody}>
+          {/* Name + time */}
+          <View style={styles.topRow}>
+            <Text
+              style={[styles.name, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {peer?.name || (role === "agent" ? "Client" : "Agent")}
             </Text>
             <Text
               style={[
                 styles.time,
-                { color: item.unreadCount ? colors.primary : colors.placeholder },
+                {
+                  color: hasUnread ? colors.primary : colors.placeholder,
+                  fontWeight: hasUnread ? "700" : "500",
+                },
               ]}
             >
               {formatTime(item.lastMessageAt)}
             </Text>
           </View>
-          <Text style={[styles.property, { color: colors.placeholder }]} numberOfLines={1}>
-            {item.property?.title || "Property enquiry"}
-            {item.property?.purpose
-              ? ` · ${purposeLabel(item.property.purpose)}`
-              : ""}
-            {item.property?.price ? ` · ${formatPrice(item.property.price)}` : ""}
-          </Text>
-          <View style={styles.previewRow}>
+
+          {/* Property line + unread badge */}
+          <View style={styles.midRow}>
             <Text
-              style={[
-                styles.preview,
-                {
-                  color: item.unreadCount ? colors.text : colors.placeholder,
-                  fontWeight: item.unreadCount ? "700" : "500",
-                },
-              ]}
+              style={[styles.property, { color: colors.placeholder }]}
               numberOfLines={1}
             >
-              {mine ? `You: ${preview}` : preview}
+              {propertyLine}
             </Text>
-            {item.unreadCount > 0 ? (
+            {hasUnread && (
               <View style={[styles.badge, { backgroundColor: colors.primary }]}>
                 <Text style={styles.badgeText}>
                   {item.unreadCount > 9 ? "9+" : item.unreadCount}
                 </Text>
               </View>
-            ) : null}
+            )}
           </View>
+
+          {/* Last message */}
+          <Text
+            style={[
+              styles.preview,
+              {
+                color: hasMessage ? colors.text : colors.placeholder,
+                fontWeight: hasUnread ? "700" : "500",
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {mine && hasMessage ? `You: ${preview}` : preview}
+          </Text>
         </View>
       </Pressable>
     );
   };
 
-  return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={[styles.kicker, { color: colors.primary }]}>Inbox</Text>
-        <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
-        <Text style={[styles.sub, { color: colors.placeholder }]}>
-          {role === "agent"
-            ? "Reply to clients asking about your listings."
-            : "Chat agents about homes you want to rent or buy."}
-        </Text>
-        {unreadTotal > 0 ? (
-          <Text style={[styles.unreadHint, { color: colors.primary }]}>
-            {unreadTotal} unread
-          </Text>
-        ) : null}
-        <View
-          style={[
-            styles.search,
-            { borderColor: colors.border, backgroundColor: colors.disabled + "14" },
-          ]}
-        >
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder={role === "agent" ? "Search clients or listings" : "Search agents or listings"}
-            placeholderTextColor={colors.placeholder}
-            style={[styles.searchInput, { color: colors.text }]}
-          />
+  /* Header is an element, so the search input keeps focus while typing. */
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.titleRow}>
+        <View style={styles.titleCol}>
+          <Text style={[styles.kicker, { color: colors.primary }]}>INBOX</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : error ? (
-        <View style={styles.centered}>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>{error}</Text>
-          <Pressable onPress={load} style={[styles.retry, { backgroundColor: colors.primary }]}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
-              tintColor={colors.primary}
-            />
+      <Text style={[styles.sub, { color: colors.placeholder }]}>
+        {role === "agent"
+          ? "Reply to clients asking about your listings."
+          : "Chat agents about homes you want to rent or buy."}
+      </Text>
+
+      <View
+        style={[
+          styles.search,
+          {
+            borderColor: colors.border,
+            backgroundColor: colors.disabled + "14",
+          },
+        ]}
+      >
+        <Ionicons name="search-outline" size={20} color={colors.placeholder} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder={
+            role === "agent"
+              ? "Search clients or listings"
+              : "Search agents or listings"
           }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No conversations yet</Text>
-              <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
-                {role === "agent"
-                  ? "When a client taps one of your properties, the chat will appear here."
-                  : "Open a listing and tap Message agent to start a live chat."}
-              </Text>
-            </View>
-          }
+          placeholderTextColor={colors.placeholder}
+          style={[styles.searchInput, { color: colors.text }]}
+          returnKeyType="search"
+          autoCorrect={false}
         />
+        {query.length > 0 && (
+          <Pressable
+            onPress={() => setQuery("")}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color={colors.placeholder}
+            />
+          </Pressable>
+        )}
+      </View>
+
+      {unreadTotal > 0 && (
+        <View style={styles.unreadRow}>
+          <Ionicons name="mail" size={18} color={colors.primary} />
+          <Text style={[styles.unreadText, { color: colors.primary }]}>
+            {unreadTotal} unread
+          </Text>
+        </View>
       )}
+    </View>
+  );
+
+  /* Loading / error / empty live inside the list so the search stays usable. */
+  const emptyState = loading ? (
+    <View style={styles.empty}>
+      <ActivityIndicator color={colors.primary} />
+    </View>
+  ) : error ? (
+    <View style={styles.empty}>
+      <Ionicons
+        name="cloud-offline-outline"
+        size={32}
+        color={colors.placeholder}
+      />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{error}</Text>
+      <Pressable
+        onPress={load}
+        style={[styles.retry, { backgroundColor: colors.primary }]}
+      >
+        <Text style={styles.retryText}>Retry</Text>
+      </Pressable>
+    </View>
+  ) : (
+    <View style={styles.empty}>
+      <Ionicons
+        name="chatbubbles-outline"
+        size={32}
+        color={colors.placeholder}
+      />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>
+        {query ? "No matches" : "No conversations yet"}
+      </Text>
+      <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
+        {query
+          ? "Try a different name or listing."
+          : role === "agent"
+            ? "When a client taps one of your properties, the chat will appear here."
+            : "Open a listing and tap Message agent to start a live chat."}
+      </Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={["top"]}
+    >
+      <FlatList
+        data={loading || error ? [] : filtered}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={header}
+        ListEmptyComponent={emptyState}
+        ItemSeparatorComponent={Separator}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={colors.primary}
+          />
+        }
+      />
     </SafeAreaView>
   );
 }
 
+function Separator() {
+  return <View style={{ height: 12 }} />;
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
-  kicker: { fontSize: 12, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" },
-  title: { fontSize: 30, fontWeight: "900", marginTop: 4 },
-  sub: { fontSize: 14, marginTop: 6, lineHeight: 20 },
-  unreadHint: { marginTop: 8, fontWeight: "800" },
-  search: {
-    marginTop: 16,
-    height: 48,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    justifyContent: "center",
+
+  list: {
+    width: "100%",
+    maxWidth: 640,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 120,
   },
-  searchInput: { fontSize: 15 },
-  list: { paddingHorizontal: 20, paddingBottom: 120 },
-  row: {
+
+  header: { paddingHorizontal: 4, paddingBottom: 20 },
+  titleRow: {
     flexDirection: "row",
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 16,
   },
-  avatar: { width: 58, height: 58, borderRadius: 18 },
+  titleCol: { flex: 1 },
+  kicker: { fontSize: 13, fontWeight: "800", letterSpacing: 1 },
+  title: {
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: "900",
+    letterSpacing: -0.6,
+    marginTop: 2,
+  },
+  sub: { fontSize: 15, lineHeight: 22, marginTop: 8 },
+
+  // Search
+  search: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: 52,
+    marginTop: 20,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 26,
+  },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 15, paddingVertical: 0 },
+
+  unreadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 18,
+  },
+  unreadText: { fontSize: 16, fontWeight: "700" },
+
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#222226",
+    borderRadius: 24,
+    backgroundColor: "#121214"
+  },
+  avatar: { width: 56, height: 56, borderRadius: 18 },
   avatarFallback: { alignItems: "center", justifyContent: "center" },
-  avatarLetter: { color: "#fff", fontWeight: "900", fontSize: 20 },
-  rowBody: { flex: 1, marginLeft: 12 },
-  rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  name: { fontSize: 16, fontWeight: "800", flex: 1, paddingRight: 8 },
-  time: { fontSize: 12, fontWeight: "700" },
-  property: { fontSize: 12, marginTop: 3, fontWeight: "600" },
-  previewRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  preview: { flex: 1, fontSize: 14, paddingRight: 8 },
+  avatarLetter: { color: "#fff", fontWeight: "900", fontSize: 22 },
+  cardBody: { flex: 1, minWidth: 0 },
+
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  name: { flex: 1, fontSize: 17, fontWeight: "800" },
+  time: { fontSize: 13 },
+
+  midRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 3,
+  },
+  property: { flex: 1, fontSize: 14 },
   badge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 6,
   },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  empty: { alignItems: "center", paddingTop: 48, paddingHorizontal: 16 },
+  badgeText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+
+  preview: { fontSize: 16, marginTop: 4 },
+
+  // States
+  empty: {
+    alignItems: "center",
+    paddingTop: 48,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
   emptyTitle: { fontSize: 18, fontWeight: "800", textAlign: "center" },
-  emptyCopy: { fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
-  retry: { marginTop: 16, paddingHorizontal: 20, height: 44, borderRadius: 12, justifyContent: "center" },
+  emptyCopy: { fontSize: 14, lineHeight: 21, textAlign: "center" },
+  retry: {
+    marginTop: 6,
+    paddingHorizontal: 24,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+  },
   retryText: { color: "#fff", fontWeight: "800" },
 });

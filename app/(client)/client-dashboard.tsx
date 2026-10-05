@@ -128,7 +128,7 @@ export default function RecommendedScreen() {
         <View
           style={[
             styles.search,
-            { borderColor: colors.border, backgroundColor: fieldBg },
+            { borderColor: "#222226", backgroundColor: fieldBg },
           ]}
         >
           <TextInput
@@ -171,7 +171,7 @@ export default function RecommendedScreen() {
         <View
           style={[
             styles.segment,
-            { backgroundColor: segmentBg, borderColor: colors.border },
+            { backgroundColor: segmentBg, borderColor: "#222226" },
           ]}
         >
           {PURPOSES.map((item) => {
@@ -222,7 +222,7 @@ export default function RecommendedScreen() {
                     backgroundColor: active
                       ? colors.primary + "22"
                       : colors.disabled + "14",
-                    borderColor: active ? colors.primary : colors.border,
+                    borderColor: active ? colors.primary : "#222226",
                   },
                 ]}
               >
@@ -270,7 +270,7 @@ export default function RecommendedScreen() {
         {!!error && listings.length > 0 && (
           <Pressable
             onPress={fetchListings}
-            style={[styles.banner, { borderColor: colors.border }]}
+            style={[styles.banner, { borderColor: "#222226" }]}
           >
             <Ionicons name="alert-circle-outline" size={18} color="#DC2626" />
             <Text style={[styles.bannerText, { color: colors.text }]}>
@@ -409,7 +409,7 @@ function ListingCard({
     <View
       style={[
         styles.card,
-        { backgroundColor: colors.background, borderColor: colors.border },
+        { backgroundColor: colors.background, borderColor: "#222226" },
       ]}
     >
       <Pressable
@@ -506,7 +506,7 @@ function ListingCard({
       </Pressable>
 
       {/* Footer: agent on the left, action on the right */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <View style={[styles.footer, { borderTopColor: "#222226" }]}>
         {agentName ? (
           <View style={styles.agentWrap}>
             <View

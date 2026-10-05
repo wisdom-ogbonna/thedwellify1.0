@@ -13,8 +13,19 @@ import { registerForPushNotificationsAsync } from "../../services/notification";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet", "Land", "House"] as const;
+const PROPERTY_TYPES = [
+  "Hotel",
+  "Apartment",
+  "Shortlet",
+  "Land",
+  "House",
+] as const;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
+
+// How long after the map stops moving before the sheet pops back up
+const SHEET_RAISE_DELAY_MS = 600;
+// Safety net in case the map never reports that it stopped (e.g. a tiny drag)
+const SHEET_RAISE_FALLBACK_MS = 2000;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,14 +116,60 @@ export default function RequestMatchScreen() {
     null,
   );
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [sheetCollapsed, setSheetCollapsed] = useState(false);
   const mapRef = useRef<MapView | null>(null);
   const router = useRouter();
   const { colors } = useTheme();
-  const { height: SCREEN_HEIGHT, width } = Dimensions.get("window");
+  const { width } = Dimensions.get("window");
   const sidebarX = useRef(new Animated.Value(-width)).current;
 
-  const SNAP_50 = -SCREEN_HEIGHT * 0.59;
-  const SNAP_80 = -SCREEN_HEIGHT * 0.8;
+  // Map-interaction tracking (refs so they never cause re-renders or stale closures)
+  const userInteractingRef = useRef(false);
+  const raiseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ─── Sheet follows map interaction ────────────────────────────────────────
+
+  const clearSheetTimers = useCallback(() => {
+    if (raiseTimerRef.current) clearTimeout(raiseTimerRef.current);
+    if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+    raiseTimerRef.current = null;
+    fallbackTimerRef.current = null;
+  }, []);
+
+  const releaseMap = useCallback(() => {
+    clearSheetTimers();
+    userInteractingRef.current = false;
+    setSheetCollapsed(false);
+  }, [clearSheetTimers]);
+
+  // Called while the user is dragging / pinching the map
+  const handleMapGesture = useCallback(() => {
+    userInteractingRef.current = true;
+    setSheetCollapsed(true);
+
+    // A new gesture cancels any pending "pop back up"
+    clearSheetTimers();
+    fallbackTimerRef.current = setTimeout(releaseMap, SHEET_RAISE_FALLBACK_MS);
+  }, [clearSheetTimers, releaseMap]);
+
+  // Called whenever the map comes to rest. Only user gestures matter here;
+  // programmatic moves (animateToRegion / fitToCoordinates) are ignored.
+  const handleRegionChangeComplete = useCallback(() => {
+    if (!userInteractingRef.current) return;
+    clearSheetTimers();
+    raiseTimerRef.current = setTimeout(releaseMap, SHEET_RAISE_DELAY_MS);
+  }, [clearSheetTimers, releaseMap]);
+
+  // onRegionChange also fires for programmatic moves, so only react to gestures
+  const handleRegionChange = useCallback(
+    (_region: unknown, details?: { isGesture?: boolean }) => {
+      if (details?.isGesture) handleMapGesture();
+    },
+    [handleMapGesture],
+  );
+
+  useEffect(() => clearSheetTimers, [clearSheetTimers]);
 
   // ─── Preserve last known agent location ───────────────────────────────────
 
@@ -285,8 +342,11 @@ export default function RequestMatchScreen() {
 
       if (data.agent) {
         setAgentLocation({ lat: data.agent.lat, lng: data.agent.lng });
+        // Don't yank the camera away while the user is exploring the map.
         // liveData carries client coords at top-level lat/lng
-        fitMapToMarkers(data.lat, data.lng, data.agent.lat, data.agent.lng);
+        if (!userInteractingRef.current) {
+          fitMapToMarkers(data.lat, data.lng, data.agent.lat, data.agent.lng);
+        }
       }
     } catch (err: unknown) {
       const error = err as ApiError;
@@ -299,7 +359,6 @@ export default function RequestMatchScreen() {
   useEffect(() => {
     getLocation();
     syncPushToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -362,8 +421,11 @@ export default function RequestMatchScreen() {
     } catch (err: unknown) {
       const error = err as ApiError;
       const serverError =
-        (error?.response?.data as { error?: string; message?: string } | undefined)
-          ?.error || error?.response?.data?.message;
+        (
+          error?.response?.data as
+            | { error?: string; message?: string }
+            | undefined
+        )?.error || error?.response?.data?.message;
 
       if (serverError === "No available agents nearby") {
         setRequestStatus("no_agents");
@@ -408,6 +470,11 @@ export default function RequestMatchScreen() {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
+        // Lower the sheet while the user moves the map, raise it when they stop.
+        // onPanDrag covers dragging; onRegionChange(isGesture) also covers pinch/rotate.
+        onPanDrag={handleMapGesture}
+        onRegionChange={handleRegionChange}
+        onRegionChangeComplete={handleRegionChangeComplete}
       >
         {lat != null && lng != null && (
           <Marker
@@ -437,7 +504,11 @@ export default function RequestMatchScreen() {
       </MapView>
 
       {/* Bottom sheet */}
-      <BottomModal visible={true} onClose={() => {}} colors={colors}>
+      <BottomModal
+        onClose={() => {}}
+        colors={colors}
+        collapsed={sheetCollapsed}
+      >
         <ClientEvent
           locationLoading={locationLoading}
           address={address}
