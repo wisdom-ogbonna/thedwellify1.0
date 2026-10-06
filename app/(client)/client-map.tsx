@@ -18,7 +18,6 @@ const PROPERTY_TYPES = [
   "Apartment",
   "Shortlet",
   "Land",
-  "House",
 ] as const;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
 

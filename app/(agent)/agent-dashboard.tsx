@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -404,19 +405,16 @@ export default function MapScreen() {
           </Text>
         </View>
 
-        {/* Right Profile Avatar */}
-        <TouchableOpacity activeOpacity={0.85} className="shadow-md">
-          <Image
-            source={{
-              uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5d-Q11KjCzqjJTsFyu52nPBtSBvIIyW1-Ew8mw8ENBw&s=10",
-            }}
-            className="w-15 h-15 rounded-full"
-            style={{
-              borderWidth: 2,
-              borderColor: colors.border || "#3A3A3A",
-            }}
-          />
-        </TouchableOpacity>
+        <Pressable onPress={() => router.push("/(utilities)/agent-profile")}>
+                    <Image
+                      source={{
+                        uri:
+                          "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
+                      }}
+                      style={{ borderColor: colors.success}}
+                      className="w-13 h-13 rounded-full border-2"
+                    />
+                  </Pressable>
       </View>
 
       <MapView

@@ -30,19 +30,19 @@ const getPremiumImage = (type: string): string => {
   const normalized = type.toLowerCase();
 
   if (normalized.includes("hotel")) {
-    return "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=600";
+    return "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=120&w=600";
   }
 
   if (normalized.includes("apartment")) {
-    return "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600";
+    return "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=120&w=600";
   }
 
   if (normalized.includes("shortlet")) {
-    return "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80&w=600";
+    return "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=120&w=600";
   }
 
   if (normalized.includes("rent")) {
-    return "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80&w=600";
+    return "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=120&w=600";
   }
 
   if (normalized.includes("sale")) {
@@ -315,39 +315,13 @@ export default function Request({
                 borderColor: borderColor,
                 borderWidth: 1,
               }}
-              className="rounded-[20px] p-2.5 min-h-35.75"
+              className="rounded-[20px] p-2.5 min-h-35.75 justify-center items-center w-12 h-12 self-center"
             >
-              {/* IMAGE */}
-              <View className="w-full h-19 rounded-[15px] overflow-hidden bg-gray-200 relative">
-                <Image
-                  source={{
-                    uri: getPremiumImage("sale"),
-                  }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
-              </View>
-
-              {/* TEXT */}
-              <View className="px-1.5 pt-2">
-                <Text
-                  style={{
-                    color: colors.text,
-                  }}
-                  className="text-[14px] font-bold"
-                >
-                  {"Request Custom Property"}
-                </Text>
-
-                <Text
-                  style={{
-                    color: secondaryText,
-                  }}
-                  className="text-[11px] font-medium mt-0.5"
-                >
-                  Tell us what you&apos;re looking for and we&apos;ll find the
-                  best options.
-                </Text>
+              <View
+                style={{ backgroundColor: colors.primary }}
+                className="rounded-full justify-center items-center w-18 h-18 self-center"
+              >
+                <Ionicons name="add" size={40} color="#fff" />
               </View>
             </TouchableOpacity>
           </ScrollView>

@@ -8,11 +8,18 @@ import {
   Bell,
   Briefcase,
   Camera,
+  Check,
   ChevronRight,
+  Clock,
   HelpCircle,
   Landmark,
   LogOut,
+  Mail,
+  Moon,
+  Phone,
   Settings,
+  Shield,
+  Sun,
   User,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -46,7 +53,9 @@ export default function ProfileScreen() {
   const [isThemeSwitchOn, setIsThemeSwitchOn] = useState<boolean>(isDark);
   const scheme = useColorScheme();
 
-  const [accountType, setAccountType] = useState<"agent" | "client">("agent");
+  const surface = isDark ? "#0F1A2B" : "#FFFFFF";
+  const iconBg = isDark ? "#162235" : "#F1F5F9";
+  const danger = "#F26B6B";
 
   const fetchProfile = async () => {
     try {
@@ -147,36 +156,49 @@ export default function ProfileScreen() {
     {
       id: "personal",
       label: "Personal Information",
+      subtitle: "Name, national ID, contact details",
       icon: User,
       path: "/profile/personal",
     },
     {
       id: "business",
       label: "Business Information",
+      subtitle: "Agency, broker license, tax info",
       icon: Briefcase,
       path: "/profile/business",
     },
     {
       id: "bank",
-      label: "Bank Details",
+      label: "Bank Details & Payouts",
+      subtitle: "Commission accounts and routing",
       icon: Landmark,
       path: "/profile/bank",
     },
     {
       id: "notifications",
       label: "Notification Settings",
+      subtitle: "Push, inquiries, leads & alerts",
       icon: Bell,
       path: "/profile/notifications",
     },
     {
+      id: "privacy",
+      label: "Privacy & Security",
+      subtitle: "Two-factor auth, passcodes, sessions",
+      icon: Shield,
+      path: "/profile/privacy",
+    },
+    {
       id: "help",
       label: "Help & Support",
+      subtitle: "Agent concierge 24/7, FAQs",
       icon: HelpCircle,
       path: "/profile/help",
     },
     {
       id: "logout",
       label: "Logout",
+      subtitle: "Sign out from this device",
       icon: LogOut,
       path: "/profile/logout",
     },
@@ -207,15 +229,18 @@ export default function ProfileScreen() {
       >
         <Text
           style={{ color: colors.text }}
-          className="text-lg font-bold font-['Poppins']"
+          className="text-3xl font-bold font-['Poppins']"
         >
           Profile
         </Text>
         <Pressable
-          className="p-1"
           onPress={() => router.push("/(agent)/enquires")}
+          style={[
+            styles.headerBtn,
+            { backgroundColor: surface, borderColor: "#1D2C42" },
+          ]}
         >
-          <Settings size={22} color={colors.text} className="p-1 rounded-xl" />
+          <Settings size={22} color={colors.text} />
         </Pressable>
       </View>
 
@@ -235,7 +260,7 @@ export default function ProfileScreen() {
           style={{
             backgroundColor: colors.background,
           }}
-          className="items-center pt-6 pb-6"
+          className="items-center pt-4 pb-6"
         >
           <View style={styles.avatarWrap}>
             <Image
@@ -244,12 +269,33 @@ export default function ProfileScreen() {
                   profile?.avatar ||
                   "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
               }}
-              style={[styles.avatar, { borderColor: colors.border }]}
+              style={[styles.avatar, { borderColor: colors.primary }]}
             />
+
+            {/* Verified badge (top right) */}
+            <View
+              style={[
+                styles.verifiedBadge,
+                {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.background,
+                },
+              ]}
+            >
+              <Check size={16} color="#FFFFFF" strokeWidth={3} />
+            </View>
+
+            {/* Camera button (bottom right) */}
             <Pressable
               onPress={handleAvatarUpload}
               disabled={uploadingAvatar}
-              style={[styles.cameraBtn, { backgroundColor: colors.primary }]}
+              style={[
+                styles.cameraBtn,
+                {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.background,
+                },
+              ]}
             >
               {uploadingAvatar ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -261,15 +307,10 @@ export default function ProfileScreen() {
 
           <Text
             style={{ color: colors.text }}
-            className="text-xl font-bold font-['Poppins'] mt-4"
+            className="text-2xl font-bold font-['Poppins'] mt-3"
           >
             {profile?.name || "Tunde Bakare"}
           </Text>
-          <Pressable onPress={handleAvatarUpload} disabled={uploadingAvatar}>
-            <Text style={{ color: colors.primary, fontWeight: "700", marginTop: 6 }}>
-              {uploadingAvatar ? "Uploading…" : "Change photo"}
-            </Text>
-          </Pressable>
 
           <Pressable
             onPress={() => router.push("/(agent)/personalInfo")}
@@ -277,20 +318,20 @@ export default function ProfileScreen() {
               borderColor: colors.primary,
               backgroundColor: colors.background,
             }}
-            className="border rounded-full px-6 py-3 mt-2"
+            className="border rounded-full px-12 py-3 mt-4"
           >
             <Text
               style={{ color: colors.primary }}
-              className="text-md font-semibold font-['Inter']"
+              className="text-base font-semibold tracking-wide font-['Inter']"
             >
               Edit Profile
             </Text>
           </Pressable>
 
-          <View className="flex-row items-center mt-3 gap-3">
+          <View className="flex-row items-center mt-5 gap-3">
             <Text
               style={{ color: colors.text }}
-              className="text-md font-['Inter'] tracking-wider"
+              className="text-base font-['Inter']"
             >
               Real Estate Agent
             </Text>
@@ -298,62 +339,87 @@ export default function ProfileScreen() {
               style={{
                 color: colors.success,
                 backgroundColor: `${colors.success}15`,
+                borderColor: `${colors.success}60`,
+                borderWidth: 1,
+                overflow: "hidden",
               }}
-              className="text-md font-bold px-3 py-1 rounded-full font-['Inter'] uppercase"
+              className="text-sm font-bold px-3 py-1 rounded-md font-['Inter'] uppercase tracking-wider"
             >
               Verified
             </Text>
           </View>
 
-          <Text
-            style={{ color: colors.placeholder }}
-            className="text-md font-['Inter'] mt-3"
-          >
-            {profile?.email || "tundebakare@gmail.com"}
-          </Text>
-          <Text
-            style={{ color: colors.placeholder }}
-            className="text-md font-['Inter'] mt-1"
-          >
-            {profile?.phone || "+234 801 234 5678"}
-          </Text>
+          <View className="flex-row items-center mt-4 gap-2">
+            <Mail size={18} color={colors.placeholder} />
+            <Text
+              style={{ color: colors.placeholder }}
+              className="text-base font-['Inter']"
+            >
+              {profile?.email || "tundebakare@gmail.com"}
+            </Text>
+          </View>
+          <View className="flex-row items-center mt-2 gap-2">
+            <Phone size={18} color={colors.placeholder} />
+            <Text
+              style={{ color: colors.placeholder }}
+              className="text-base font-['Inter']"
+            >
+              {profile?.phone || "+234 801 234 5678"}
+            </Text>
+          </View>
         </View>
 
-        {/* Account Type Card */}
-        <View className="px-5 mt-6">
+        {/* Agent Availability Card */}
+        <View className="px-5 mt-4">
           <View
-            style={{
-              backgroundColor: isDark ? "#123" : "#FAF8FF",
-            }}
-            className="rounded-3xl p-5 shadow-md"
+            style={{ backgroundColor: surface, borderColor: "#1D2C42" }}
+            className="rounded-3xl border p-5"
           >
-            <View className="flex-row items-center justify-between mb-4">
-              <View>
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3 shrink">
                 <Text
-                  style={{ color: colors.text }}
-                  className="text-[10px] font-bold font-['Inter'] uppercase tracking-wider"
+                  style={{ color: colors.placeholder }}
+                  className="text-xs font-bold font-['Inter'] uppercase tracking-widest"
                 >
-                  Account Type
+                  Agent Availability
                 </Text>
-                <Text
-                  style={{ color: colors.text }}
-                  className="text-lg font-bold font-['Poppins'] mt-0.5"
+                <View
+                  style={{
+                    backgroundColor: isOnline
+                      ? `${colors.success}15`
+                      : `${colors.placeholder}20`,
+                    borderColor: isOnline ? `${colors.success}60` : "#1D2C42",
+                  }}
+                  className="flex-row items-center gap-1.5 border rounded-full px-2.5 py-1"
                 >
-                  {accountType === "agent" ? "Agent Account" : "Client Account"}
-                </Text>
+                  <View
+                    style={{
+                      backgroundColor: isOnline
+                        ? colors.success
+                        : colors.placeholder,
+                    }}
+                    className="w-2 h-2 rounded-full"
+                  />
+                  <Text
+                    style={{
+                      color: isOnline ? colors.success : colors.placeholder,
+                    }}
+                    className="text-xs font-bold font-['Inter']"
+                  >
+                    {toggling ? "Updating..." : isOnline ? "Online" : "Offline"}
+                  </Text>
+                </View>
               </View>
-              <View
-                style={{ backgroundColor: "#0A6CFF10" }}
-                className="p-2.5 flex-row gap-3 justify-center items-center rounded-xl"
-              >
+
+              <View className="flex-row items-center gap-2">
                 <Text
-                  style={{ color: colors.text }}
-                  className="text-lg font-semibold"
+                  style={{ color: colors.placeholder }}
+                  className="text-base font-['Inter']"
                 >
-                  {toggling ? "Updating..." : isOnline ? "Online" : "Offline"}:
+                  {isOnline ? "Online: " : "Offline: "}
                 </Text>
                 <Switch
-                  trackColor={{ false: colors.border, true: colors.primary }}
+                  trackColor={{ false: "#1D2C42", true: colors.primary }}
                   value={isOnline}
                   onValueChange={handleToggle}
                   disabled={toggling}
@@ -362,148 +428,84 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* Agent Radio Switch */}
-            <Pressable
-              onPress={() => setAccountType("agent")}
+            <View
               style={{
-                borderColor:
-                  accountType === "agent" ? colors.primary : colors.placeholder,
+                borderColor: "#1D2C42",
                 backgroundColor: colors.background,
               }}
-              className="flex-row items-center justify-between p-4 rounded-2xl border-2 mb-3"
+              className="flex-row items-center border rounded-2xl p-4 mt-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
-                <User
-                  size={20}
-                  color={
-                    accountType === "agent"
-                      ? colors.primary
-                      : colors.placeholder
-                  }
+              <View
+                style={{
+                  backgroundColor: isOnline
+                    ? `${colors.success}20`
+                    : `${colors.placeholder}20`,
+                }}
+                className="w-12 h-12 rounded-xl items-center justify-center"
+              >
+                <Clock
+                  size={22}
+                  color={isOnline ? colors.success : colors.placeholder}
                 />
-                <View className="ml-3">
-                  <Text
-                    style={{
-                      color: colors.text,
-                    }}
-                    className="text-lg font-bold font-['Inter']"
-                  >
-                    Agent Account
-                  </Text>
-                  <Text
-                    style={{ color: colors.placeholder }}
-                    className="text-md font-['Inter'] mt-0.5"
-                  >
-                    Manage listings & enquiries
-                  </Text>
-                </View>
+              </View>
+              <View className="flex-1 mx-4">
+                <Text
+                  style={{ color: colors.text }}
+                  className="text-base font-bold font-['Inter']"
+                >
+                  {isOnline ? "Receiving Inquiries" : "Not Receiving Inquiries"}
+                </Text>
+                <Text
+                  style={{ color: colors.placeholder }}
+                  className="text-sm font-['Inter'] mt-0.5"
+                >
+                  {isOnline
+                    ? "Ready for direct buyer leads and instant client calls"
+                    : "You won't receive new buyer leads or client calls"}
+                </Text>
               </View>
               <View
                 style={{
-                  borderColor:
-                    accountType === "agent" ? colors.primary : colors.border,
-                }}
-                className="w-5 h-5 rounded-full border-2 items-center justify-center"
-              >
-                {accountType === "agent" && (
-                  <View
-                    style={{ backgroundColor: colors.primary }}
-                    className="w-2.5 h-2.5 rounded-full"
-                  />
-                )}
-              </View>
-            </Pressable>
-
-            {/* Client Radio Switch */}
-            <Pressable
-              onPress={() => setAccountType("client")}
-              style={{
-                borderColor:
-                  accountType === "client"
-                    ? colors.primary
+                  backgroundColor: isOnline
+                    ? colors.success
                     : colors.placeholder,
-                backgroundColor: colors.background,
-              }}
-              className="flex-row items-center justify-between p-4 rounded-2xl border-2 mb-4"
-            >
-              <View className="flex-row items-center flex-1 pr-4">
-                <Briefcase
-                  size={20}
-                  color={
-                    accountType === "client"
-                      ? colors.primary
-                      : colors.placeholder
-                  }
-                />
-                <View className="ml-3">
-                  <Text
-                    style={{
-                      color: colors.text,
-                    }}
-                    className="text-lg font-bold font-['Inter']"
-                  >
-                    Client Account
-                  </Text>
-                  <Text
-                    style={{ color: colors.placeholder }}
-                    className="text-md font-['Inter'] mt-0.5"
-                  >
-                    Search properties & favorites
-                  </Text>
-                </View>
-              </View>
-              <View
-                style={{
-                  borderColor:
-                    accountType === "client" ? colors.primary : colors.border,
                 }}
-                className="w-5 h-5 rounded-full border-2 items-center justify-center"
-              >
-                {accountType === "client" && (
-                  <View
-                    style={{ backgroundColor: colors.primary }}
-                    className="w-2.5 h-2.5 rounded-full"
-                  />
-                )}
-              </View>
-            </Pressable>
-
-            <Pressable
-              style={{ backgroundColor: colors.primary }}
-              className="h-14 rounded-2xl items-center justify-center shadow-sm"
-            >
-              <Text className="text-white text-lg font-bold font-['Inter']">
-                Save Account Changes
-              </Text>
-            </Pressable>
+                className="w-2.5 h-2.5 rounded-full"
+              />
+            </View>
           </View>
         </View>
 
         {/* System Theme Switcher Controls Menu */}
         <View className="px-5 pt-5 pb-2">
-          <View>
-            <View
-              className="border rounded-3xl w-full p-6 mb-8 flex-row items-center justify-between"
-              style={{
-                borderColor: colors.border,
-                backgroundColor: colors.background,
-              }}
-            >
+          <View
+            className="border rounded-3xl w-full p-5 flex-row items-center justify-between"
+            style={{
+              borderColor: "#1D2C42",
+              backgroundColor: surface,
+            }}
+          >
+            <View className="flex-row items-center gap-4">
+              <View
+                style={{ backgroundColor: iconBg }}
+                className="w-12 h-12 rounded-xl items-center justify-center"
+              >
+                {isDark ? (
+                  <Moon size={22} color={colors.primary} />
+                ) : (
+                  <Sun size={22} color={colors.primary} />
+                )}
+              </View>
               <View>
                 <Text
-                  className="text-xs uppercase tracking-widest opacity-60 font-bold mb-1"
-                  style={{
-                    color: colors.text,
-                  }}
+                  className="text-xs uppercase tracking-widest font-bold mb-1"
+                  style={{ color: colors.placeholder }}
                 >
                   Theme
                 </Text>
-
                 <Text
-                  className="font-semibold text-base"
-                  style={{
-                    color: colors.text,
-                  }}
+                  className="font-semibold text-lg"
+                  style={{ color: colors.text }}
                 >
                   {scheme === "dark"
                     ? "Dark Mode"
@@ -512,40 +514,38 @@ export default function ProfileScreen() {
                       : "System Default"}
                 </Text>
               </View>
-              <View
-                style={{ backgroundColor: "#0A6CFF10" }}
-                className="p-2.5 flex-row gap-3 justify-center items-center rounded-xl"
-              >
-                <Switch
-                  value={isThemeSwitchOn}
-                  trackColor={{
-                    false: colors.border,
-                    true: colors.primary,
-                  }}
-                  thumbColor={isThemeSwitchOn ? colors.text : colors.primary}
-                  onValueChange={handleThemeChange}
-                />
-              </View>
             </View>
+            <Switch
+              value={isThemeSwitchOn}
+              trackColor={{
+                false: "#1D2C42",
+                true: colors.primary,
+              }}
+              thumbColor="#ffffff"
+              onValueChange={handleThemeChange}
+            />
           </View>
         </View>
 
         {/* Settings & Security Tree */}
-        <View className="mt-2 px-5">
+        <View className="mt-4 px-5">
           <Text
             style={{ color: colors.placeholder }}
-            className="text-md uppercase tracking-wider mb-3 ml-1 font-['Inter']"
+            className="text-sm uppercase tracking-widest mb-3 ml-1 font-semibold font-['Inter']"
           >
             Settings & Security
           </Text>
           <View
             style={{
-              backgroundColor: colors.background,
+              backgroundColor: surface,
+              borderColor: "#1D2C42",
             }}
-            className="rounded-3xl gap-5 overflow-hidden"
+            className="rounded-3xl border overflow-hidden"
           >
             {settingsOptions.map((item, index) => {
               const IconComponent = item.icon;
+              const isLogout = item.id === "logout";
+              const isLast = index === settingsOptions.length - 1;
               return (
                 <Pressable
                   key={item.id}
@@ -558,24 +558,53 @@ export default function ProfileScreen() {
                       router.push("/(agent)/bank");
                     } else if (item.id === "notifications") {
                       router.push("/(agent)/notification");
+                    } else if (item.id === "privacy") {
+                      router.push("/(agent)/privacy" as any);
                     } else if (item.id === "help") {
                       router.push("/(agent)/help");
                     } else if (item.id === "logout") {
                       handleLogout();
                     }
                   }}
-                  className={"flex-row items-center justify-between px-5 py-4 "}
+                  style={{
+                    borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+                    borderBottomColor: "#1D2C42",
+                  }}
+                  className="flex-row items-center justify-between px-5 py-5"
                 >
-                  <View className="flex-row items-center">
-                    <IconComponent size={20} color={colors.placeholder} />
-                    <Text
-                      style={{ color: colors.text }}
-                      className="text-[16px] font-semibold font-['Inter'] ml-4"
+                  <View className="flex-row items-center flex-1 pr-3">
+                    <View
+                      style={{
+                        backgroundColor: isLogout ? `${danger}18` : iconBg,
+                      }}
+                      className="w-12 h-12 rounded-xl items-center justify-center"
                     >
-                      {item.label}
-                    </Text>
+                      <IconComponent
+                        size={20}
+                        color={isLogout ? danger : colors.placeholder}
+                      />
+                    </View>
+                    <View className="ml-4 flex-1">
+                      <Text
+                        style={{ color: isLogout ? danger : colors.text }}
+                        className="text-[17px] font-semibold font-['Inter']"
+                      >
+                        {item.label}
+                      </Text>
+                      <Text
+                        style={{
+                          color: isLogout ? `${danger}CC` : colors.placeholder,
+                        }}
+                        className="text-sm font-['Inter'] mt-1"
+                      >
+                        {item.subtitle}
+                      </Text>
+                    </View>
                   </View>
-                  <ChevronRight size={18} color={colors.placeholder} />
+                  <ChevronRight
+                    size={18}
+                    color={isLogout ? danger : colors.placeholder}
+                  />
                 </Pressable>
               );
             })}
@@ -587,6 +616,14 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   avatarWrap: {
     width: 108,
     height: 108,
@@ -598,11 +635,22 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     backgroundColor: "#E2E8F0",
-    borderWidth: 1,
+    borderWidth: 3,
+  },
+  verifiedBadge: {
+    position: "absolute",
+    right: 4,
+    top: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
   },
   cameraBtn: {
     position: "absolute",
-    right: 2,
+    right: 0,
     bottom: 2,
     width: 34,
     height: 34,
@@ -610,6 +658,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#FFFFFF",
   },
 });
