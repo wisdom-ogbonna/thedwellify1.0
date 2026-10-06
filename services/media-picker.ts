@@ -75,6 +75,29 @@ export const pickLibraryImages = async (selectionLimit = 10) => {
   };
 };
 
+export const pickCameraImage = async () => {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    return { ok: false as const, reason: "permission" as const };
+  }
+
+  try {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      allowsEditing: false,
+      exif: false,
+      preferredAssetRepresentationMode: currentRepresentation,
+    });
+    if (result.canceled) return { ok: false as const, reason: "canceled" as const };
+    return {
+      ok: true as const,
+      asset: toPickedMedia(result.assets[0], "avatar.jpg"),
+    };
+  } catch {
+    return { ok: false as const, reason: "canceled" as const };
+  }
+};
+
 export const pickLibraryVideo = async () => {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {

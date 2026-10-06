@@ -98,6 +98,8 @@ export const listingsApi = {
     purpose?: string;
     sort?: "newest" | "price_asc" | "price_desc";
     q?: string;
+    minPrice?: number;
+    maxPrice?: number;
   } = {}) => {
     const res = await API.get<{ products: PublicListing[]; total: number }>(
       "/products/available",

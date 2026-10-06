@@ -1,3 +1,6 @@
+import PriceFilter, {
+  type PriceRange,
+} from "@/components/listings/price-filter";
 import {
   PROPERTY_TYPES,
   formatPrice,
@@ -49,6 +52,7 @@ export default function RecommendedScreen() {
 
   const [propertyType, setPropertyType] = useState("All");
   const [purpose, setPurpose] = useState("All");
+  const [priceRange, setPriceRange] = useState<PriceRange>({ min: null, max: null });
   const [sort, setSort] = useState<(typeof SORTS)[number]["id"]>("newest");
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
@@ -72,6 +76,8 @@ export default function RecommendedScreen() {
         purpose: purpose === "All" ? undefined : purpose,
         sort,
         q: search || undefined,
+        minPrice: priceRange.min ?? undefined,
+        maxPrice: priceRange.max ?? undefined,
       });
       if (id !== requestId.current) return;
       setListings(res.products);
@@ -88,7 +94,7 @@ export default function RecommendedScreen() {
         setFetching(false);
       }
     }
-  }, [propertyType, purpose, sort, search]);
+  }, [propertyType, purpose, priceRange.min, priceRange.max, sort, search]);
 
   useFocusEffect(
     useCallback(() => {
@@ -208,6 +214,11 @@ export default function RecommendedScreen() {
           style={styles.chipScroll}
           contentContainerStyle={styles.chipRow}
         >
+          <PriceFilter
+            purpose={purpose}
+            value={priceRange}
+            onChange={setPriceRange}
+          />
           {TYPES.map((type) => {
             const active = propertyType === type;
             return (
@@ -288,6 +299,7 @@ export default function RecommendedScreen() {
       colors,
       propertyType,
       purpose,
+      priceRange,
       sort,
       query,
       total,
@@ -326,7 +338,7 @@ export default function RecommendedScreen() {
         No available properties
       </Text>
       <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
-        Try another type, switch between rent and sale, or clear search.
+        Try another type, switch rent or sale, or change the price filter.
       </Text>
     </View>
   );

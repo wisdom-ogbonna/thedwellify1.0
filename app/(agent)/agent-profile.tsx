@@ -1,13 +1,13 @@
 import { useModal } from "@/components/dialogs/popup-modal";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
-import { API } from "@/services/api";
+import { agentApi } from "@/services/agent";
+import { pickCameraImage, pickLibraryImages } from "@/services/media-picker";
 import { router } from "expo-router";
 import {
   Bell,
   Briefcase,
   Camera,
-  CheckCircle2,
   ChevronRight,
   HelpCircle,
   Landmark,
@@ -24,6 +24,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   useColorScheme,
   View,
@@ -40,6 +41,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [isThemeSwitchOn, setIsThemeSwitchOn] = useState<boolean>(isDark);
   const scheme = useColorScheme();
@@ -48,14 +50,62 @@ export default function ProfileScreen() {
 
   const fetchProfile = async () => {
     try {
-      const res = await API.get("/agent/profile");
-      setProfile(res.data);
+      const data = await agentApi.profile();
+      setProfile(data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const uploadPickedAvatar = async (
+    picked:
+      | { ok: true; assets: { uri: string; name: string; type: string }[] }
+      | { ok: true; asset: { uri: string; name: string; type: string } }
+      | { ok: false; reason: "permission" | "canceled" },
+  ) => {
+    if (!picked.ok) {
+      if (picked.reason === "permission") {
+        Alert.alert(
+          "Permission required",
+          "Allow camera or photo access to set a profile picture.",
+        );
+      }
+      return;
+    }
+    const file = "assets" in picked ? picked.assets[0] : picked.asset;
+    if (!file) return;
+    setUploadingAvatar(true);
+    setProfile((prev: any) => ({ ...prev, avatar: file.uri }));
+    try {
+      const res = await agentApi.uploadAvatar(file);
+      setProfile((prev: any) => ({ ...prev, avatar: res.avatar || file.uri }));
+    } catch (err: any) {
+      Alert.alert(
+        "Upload failed",
+        err?.response?.data?.error || "Could not update your profile picture.",
+      );
+      fetchProfile();
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarUpload = () => {
+    if (uploadingAvatar) return;
+    Alert.alert("Profile photo", "This photo is shown on your agent profile.", [
+      {
+        text: "Take photo",
+        onPress: async () => uploadPickedAvatar(await pickCameraImage()),
+      },
+      {
+        text: "Choose from library",
+        onPress: async () => uploadPickedAvatar(await pickLibraryImages(1)),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   useEffect(() => {
@@ -187,28 +237,26 @@ export default function ProfileScreen() {
           }}
           className="items-center pt-6 pb-6"
         >
-          <View className="relative">
+          <View style={styles.avatarWrap}>
             <Image
               source={{
                 uri:
                   profile?.avatar ||
                   "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
               }}
-              style={{ borderColor: colors.border }}
-              className="w-24 h-24 rounded-full bg-slate-200 border"
+              style={[styles.avatar, { borderColor: colors.border }]}
             />
             <Pressable
-              style={{ backgroundColor: colors.primary }}
-              className="absolute bottom-0 right-0 p-2 rounded-full border-2 border-white shadow-sm"
+              onPress={handleAvatarUpload}
+              disabled={uploadingAvatar}
+              style={[styles.cameraBtn, { backgroundColor: colors.primary }]}
             >
-              <Camera size={14} color="#FFFFFF" />
+              {uploadingAvatar ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Camera size={16} color="#FFFFFF" />
+              )}
             </Pressable>
-            <View
-              style={{ backgroundColor: colors.primary }}
-              className="absolute top-0 right-0 rounded-full p-0.5 border border-white"
-            >
-              <CheckCircle2 size={16} color="#FFFFFF" fill={colors.primary} />
-            </View>
           </View>
 
           <Text
@@ -217,6 +265,11 @@ export default function ProfileScreen() {
           >
             {profile?.name || "Tunde Bakare"}
           </Text>
+          <Pressable onPress={handleAvatarUpload} disabled={uploadingAvatar}>
+            <Text style={{ color: colors.primary, fontWeight: "700", marginTop: 6 }}>
+              {uploadingAvatar ? "Uploading…" : "Change photo"}
+            </Text>
+          </Pressable>
 
           <Pressable
             onPress={() => router.push("/(agent)/personalInfo")}
@@ -532,3 +585,31 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  avatarWrap: {
+    width: 108,
+    height: 108,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#E2E8F0",
+    borderWidth: 1,
+  },
+  cameraBtn: {
+    position: "absolute",
+    right: 2,
+    bottom: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+});
