@@ -12,6 +12,7 @@ export type PropertyRequestPayload = {
 };
 
 export type PropertyRequest = {
+  id: string;
   requestId: string;
   clientId: string;
   clientName: string;

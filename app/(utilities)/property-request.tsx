@@ -73,15 +73,25 @@ export default function PropertyRequestDetail() {
   }, [load]);
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.safe,
+        { backgroundColor: colors.background, paddingTop: insets.top },
+      ]}
+    >
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
-          style={[styles.back, { backgroundColor: isDark ? "#152033" : "#F1F5F9" }]}
+          style={[
+            styles.back,
+            { backgroundColor: isDark ? "#152033" : "#F1F5F9" },
+          ]}
         >
           <ChevronLeft size={22} color={colors.text} />
         </Pressable>
-        <Text style={[styles.title, { color: colors.text }]}>Property request</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Property request
+        </Text>
       </View>
 
       {loading ? (
@@ -90,18 +100,29 @@ export default function PropertyRequestDetail() {
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Text style={{ color: colors.error, textAlign: "center" }}>{error}</Text>
+          <Text style={{ color: colors.error, textAlign: "center" }}>
+            {error}
+          </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24 }}>
-          <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
+        <ScrollView
+          contentContainerStyle={{
+            padding: 20,
+            paddingBottom: insets.bottom + 24,
+          }}
+        >
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: card, borderColor: border },
+            ]}
+          >
             <View style={styles.badgeRow}>
               <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                <Text style={styles.badgeText}>{item?.purpose || "Request"}</Text>
+                <Text style={styles.badgeText}>
+                  {item?.purpose || "Request"}
+                </Text>
               </View>
-              <Text style={{ color: colors.placeholder, fontWeight: "600" }}>
-                {item?.status === "open" ? "Open" : item?.status}
-              </Text>
             </View>
             <Text style={[styles.client, { color: colors.text }]}>
               {item?.clientName || "A client"}
@@ -112,11 +133,39 @@ export default function PropertyRequestDetail() {
             </Text>
           </View>
 
-          <Row icon={Building2} label="Property type" value={item?.propertyType || "—"} colors={colors} card={card} border={border} />
-          <Row icon={MapPin} label="Location" value={item?.location || "—"} colors={colors} card={card} border={border} />
-          <Row icon={DollarSign} label="Budget" value={budgetText(item)} colors={colors} card={card} border={border} />
+          <Row
+            icon={Building2}
+            label="Property type"
+            value={item?.propertyType || "—"}
+            colors={colors}
+            card={card}
+            border={border}
+          />
+          <Row
+            icon={MapPin}
+            label="Location"
+            value={item?.location || "—"}
+            colors={colors}
+            card={card}
+            border={border}
+          />
+          <Row
+            icon={DollarSign}
+            label="Budget"
+            value={budgetText(item)}
+            colors={colors}
+            card={card}
+            border={border}
+          />
           {item?.bedrooms ? (
-            <Row icon={BedDouble} label="Bedrooms" value={item.bedrooms} colors={colors} card={card} border={border} />
+            <Row
+              icon={BedDouble}
+              label="Bedrooms"
+              value={item.bedrooms}
+              colors={colors}
+              card={card}
+              border={border}
+            />
           ) : null}
           {item?.features?.length ? (
             <Row
@@ -138,6 +187,24 @@ export default function PropertyRequestDetail() {
           />
         </ScrollView>
       )}
+      <View>
+        <Pressable
+          onPress={() => router.push({ pathname: "/(utilities)/chats", params: { id: String(item?.id) } })}
+          style={{ backgroundColor: colors.primary }}
+        >
+          <Text
+            style={{
+              backgroundColor: colors.primary,
+              color: "#FFFFFF",
+              textAlign: "center",
+              padding: 16,
+              fontWeight: "700",
+            }}
+          >
+            Chat with {item?.clientName || "client"}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

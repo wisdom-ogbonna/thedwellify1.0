@@ -365,7 +365,7 @@ export default function PremiumProfileScreen() {
             Icon={Clock}
             title="History"
             iconColor="#A8422D"
-            onPress={() => router.push("/utilities/client-history-event")}
+            onPress={() => router.push("/(utilities)/history")}
           />
           <ProfileMenuRow
             Icon={Calendar}
