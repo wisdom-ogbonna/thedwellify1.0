@@ -1,8 +1,9 @@
+import { needsRooms } from "@/constants/listings";
 import { useTheme } from "@/hooks/use-theme";
+import { createPropertyRequest } from "@/services/property-requests";
 import { useRouter } from "expo-router";
 import {
   ArrowRight,
-  Ban,
   Bath,
   Bell,
   BedDouble,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -52,6 +54,15 @@ const FEATURES = [
   { label: "Bathrooms", icon: Bath },
   { label: "Swimming Pool", icon: Waves },
 ];
+
+const PROPERTY_TYPE_OPTIONS = [
+  { key: "Land", sub: "Plots and undeveloped land", icon: MapPin },
+  { key: "House", sub: "Detached or family home", icon: Home },
+  { key: "Apartment", sub: "Flats and apartments", icon: Building2 },
+  { key: "Hotel", sub: "Hotel or hospitality", icon: Sofa },
+  { key: "Shortlet", sub: "Short stays and serviced lets", icon: Key },
+  { key: "Other", sub: "Something else", icon: FileText },
+] as const;
 
 const BEDROOMS = ["1", "2", "3+"] as const;
 const TOTAL_STEPS = 5;
@@ -109,6 +120,8 @@ export default function CustomPropertyRequest() {
 
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const [mode, setMode] = useState<"buy" | "rent">("buy");
   const [propertyType, setPropertyType] = useState("");
@@ -122,7 +135,9 @@ export default function CustomPropertyRequest() {
   const minValue = toNumber(minBudget);
   const maxValue = toNumber(maxBudget);
   const budgetInvalid = minValue > 0 && maxValue > 0 && minValue > maxValue;
-  const canSubmit = maxValue > 0 && !budgetInvalid;
+  const locationReady = location.trim().length > 1;
+  const canSubmit =
+    Boolean(propertyType) && locationReady && maxValue > 0 && !budgetInvalid;
 
   /* animated progress bar */
   const progress = useRef(new Animated.Value(1 / TOTAL_STEPS)).current;
@@ -144,13 +159,30 @@ export default function CustomPropertyRequest() {
   const next = () => setStep((s) => Math.min(TOTAL_STEPS, s + 1));
   const back = () => (step > 1 ? setStep((s) => s - 1) : router.back());
 
-  const handleSend = () => {
-    if (!canSubmit) return;
-    // TODO: call your API here, then show the success screen.
-    setSubmitted(true);
+  const handleSend = async () => {
+    if (!canSubmit || sending) return;
+    setSubmitError("");
+    setSending(true);
+    try {
+      await createPropertyRequest({
+        lookingFor: details.trim(),
+        purpose: mode === "buy" ? "Buy" : "Rent",
+        propertyType,
+        location: location.trim(),
+        minBudget: minValue || null,
+        maxBudget: maxValue,
+        bedrooms: needsRooms(propertyType) ? bedrooms : "",
+        features,
+      });
+      setSubmitted(true);
+    } catch (error: any) {
+      setSubmitError(error?.message || "Failed to send request. Try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
-  const goHome = () => router.replace("/" as any); // TODO: point at your home route
+  const goHome = () => router.replace("/(client)/client-map");
 
   /* ------------------------------ SUCCESS ------------------------------ */
 
@@ -192,8 +224,8 @@ export default function CustomPropertyRequest() {
                 paddingHorizontal: 8,
               }}
             >
-              Your property request has been successfully sent to our trusted
-              agents. They will review your details and get back to you soon.
+              Your property request has been sent to all Dwellify agents. They
+              will review your details and get back to you soon.
             </Text>
 
             {/* Summary */}
@@ -263,33 +295,41 @@ export default function CustomPropertyRequest() {
 
               <SummaryRow
                 P={P}
-                icon={DollarSign}
-                label="Budget Range"
-                value={budgetText}
+                icon={Building2}
+                label="Property Type"
+                value={propertyType || "Any"}
               />
               <SummaryRow
                 P={P}
                 icon={MapPin}
                 label="Location"
-                value={location.trim() || "Anywhere"}
+                value={location.trim()}
               />
               <SummaryRow
                 P={P}
-                icon={Building2}
-                label="Property Type"
-                value={propertyType.trim() || "Any"}
+                icon={DollarSign}
+                label="Budget Range"
+                value={budgetText}
               />
-              <SummaryRow
-                P={P}
-                icon={BedDouble}
-                label="Bedrooms"
-                value={bedrooms || "Any"}
-              />
+              {needsRooms(propertyType) ? (
+                <SummaryRow
+                  P={P}
+                  icon={BedDouble}
+                  label="Bedrooms"
+                  value={bedrooms || "Any"}
+                />
+              ) : null}
               <SummaryRow
                 P={P}
                 icon={ShieldCheck}
-                label="Additional Features"
+                label="Features"
                 value={features.length ? features.join(", ") : "None"}
+              />
+              <SummaryRow
+                P={P}
+                icon={FileText}
+                label="Looking for"
+                value={details.trim() || "No extra details"}
                 last
               />
             </View>
@@ -360,91 +400,132 @@ export default function CustomPropertyRequest() {
 
   const renderStep = () => {
     switch (step) {
-      /* ---------------------------- 1 · MODE ---------------------------- */
       case 1:
         return (
           <>
             <Title P={P}>What are you looking for?</Title>
             <Subtitle color={P.link}>
-              Let us help you find the right property.
+              Choose whether you want to buy or rent.
             </Subtitle>
 
             <View style={{ marginTop: 32, gap: 16 }}>
               {(
                 [
                   {
-                    key: "buy",
+                    key: "buy" as const,
                     title: "Buy",
                     sub: "Own your dream property",
                     icon: <Home size={26} color="#FFFFFF" />,
                   },
                   {
-                    key: "rent",
+                    key: "rent" as const,
                     title: "Rent",
-                    sub: "Find the perfect place to call home",
+                    sub: "Find a place to call home",
                     icon: <Key size={26} color="#FFFFFF" />,
                   },
-                ] as const
+                ]
               ).map((item) => (
-                <TouchableOpacity
+                <ChoiceRow
                   key={item.key}
-                  activeOpacity={0.85}
+                  P={P}
+                  title={item.title}
+                  sub={item.sub}
+                  icon={item.icon}
+                  active={mode === item.key}
                   onPress={() => {
                     setMode(item.key);
                     next();
                   }}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    padding: 16,
-                    borderRadius: 24,
-                    backgroundColor: P.card,
-                    borderWidth: 1,
-                    borderColor: P.border,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: P.blue,
-                    }}
-                  >
-                    {item.icon}
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 16, paddingRight: 24 }}>
-                    <Text
-                      style={{
-                        color: P.text,
-                        fontSize: 18,
-                        fontWeight: "700",
-                      }}
-                    >
-                      {item.title}
-                    </Text>
-                    <Text
-                      style={{
-                        color: P.muted,
-                        fontSize: 15,
-                        lineHeight: 22,
-                        marginTop: 2,
-                      }}
-                    >
-                      {item.sub}
-                    </Text>
-                  </View>
-                  <ChevronRight size={22} color={P.sub} />
-                </TouchableOpacity>
+                />
               ))}
             </View>
           </>
         );
 
-      /* --------------------------- 2 · BUDGET --------------------------- */
       case 2:
+        return (
+          <>
+            <Title P={P}>Property type</Title>
+            <Subtitle color={P.link}>
+              {mode === "buy" ? "What do you want to buy?" : "What do you want to rent?"}
+            </Subtitle>
+
+            <View style={{ marginTop: 28, gap: 12 }}>
+              {PROPERTY_TYPE_OPTIONS.map((item) => {
+                const Icon = item.icon;
+                const active = propertyType === item.key;
+                return (
+                  <ChoiceRow
+                    key={item.key}
+                    P={P}
+                    title={item.key}
+                    sub={item.sub}
+                    icon={<Icon size={22} color="#FFFFFF" />}
+                    active={active}
+                    onPress={() => {
+                      setPropertyType(item.key);
+                      if (item.key === "Land") setBedrooms("");
+                      next();
+                    }}
+                  />
+                );
+              })}
+            </View>
+          </>
+        );
+
+      case 3:
+        return (
+          <>
+            <Title P={P}>Where do you want to live?</Title>
+            <Subtitle color={P.link}>Agents need a location to match you.</Subtitle>
+
+            <FieldLabel P={P} required>
+              Preferred location
+            </FieldLabel>
+
+            <View
+              style={{
+                height: 54,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+                paddingHorizontal: 18,
+                borderRadius: 18,
+                backgroundColor: P.card,
+                borderWidth: 1,
+                borderColor: P.border,
+              }}
+            >
+              <MapPin size={22} color={P.sub} />
+              <TextInput
+                value={location}
+                onChangeText={setLocation}
+                placeholder="e.g. Port Harcourt, Rivers State"
+                placeholderTextColor={P.muted}
+                returnKeyType="done"
+                style={{
+                  flex: 1,
+                  fontSize: 17,
+                  color: P.text,
+                  paddingVertical: 0,
+                }}
+              />
+            </View>
+            {!locationReady && location.length > 0 ? (
+              <Text style={{ color: P.danger, fontSize: 13, marginTop: 8 }}>
+                Enter a city or area so agents know where to look.
+              </Text>
+            ) : null}
+
+            <MapPreview
+              place={location.split(",")[0].trim() || "Your area"}
+              region={location.trim() || "Nigeria"}
+            />
+          </>
+        );
+
+      case 4:
         return (
           <>
             <Title P={P}>What is your budget?</Title>
@@ -487,78 +568,59 @@ export default function CustomPropertyRequest() {
               icon={<ArrowRight size={20} color="#FFFFFF" />}
               iconAfter
               onPress={next}
-              disabled={!canSubmit}
+              disabled={maxValue <= 0 || budgetInvalid}
               style={{ marginTop: 28 }}
             />
           </>
         );
 
-      /* -------------------------- 3 · LOCATION -------------------------- */
-      case 3:
-        return (
-          <>
-            <Title P={P}>Where do you want to live?</Title>
-            <Subtitle color={P.link}>Tell us your preferred location.</Subtitle>
-
-            <View
-              style={{
-                marginTop: 32,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-                marginBottom: 10,
-              }}
-            >
-              <Text style={{ color: P.sub, fontSize: 16 }}>
-                Preferred location
-              </Text>
-              <Text style={{ color: P.muted, fontSize: 14 }}>(Optional)</Text>
-            </View>
-
-            <View
-              style={{
-                height: 54,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 14,
-                paddingHorizontal: 18,
-                borderRadius: 18,
-                backgroundColor: P.card,
-                borderWidth: 1,
-                borderColor: P.border,
-              }}
-            >
-              <MapPin size={22} color={P.sub} />
-              <TextInput
-                value={location}
-                onChangeText={setLocation}
-                placeholder="e.g. Port Harcourt, Rivers State"
-                placeholderTextColor={P.muted}
-                returnKeyType="done"
-                style={{
-                  flex: 1,
-                  fontSize: 17,
-                  color: P.text,
-                  paddingVertical: 0,
-                }}
-              />
-            </View>
-
-            <MapPreview
-              place={location.split(",")[0].trim() || "Your area"}
-              region={location.trim() || "Nigeria"}
-            />
-          </>
-        );
-        
-      /* ---------------------------- 5 · MORE ---------------------------- */
       default:
         return (
           <>
             <Title P={P}>Tell us more</Title>
             <Subtitle color={P.sub}>
-              Any additional details will help us find the best matches for you.
+              Extra details help agents send better matches. This step is optional.
             </Subtitle>
+
+            {needsRooms(propertyType) ? (
+              <>
+                <FieldLabel P={P}>Bedrooms</FieldLabel>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  {BEDROOMS.map((item) => (
+                    <OptionTile
+                      key={item}
+                      P={P}
+                      label={item}
+                      active={bedrooms === item}
+                      onPress={() =>
+                        setBedrooms((current) => (current === item ? "" : item))
+                      }
+                      centered
+                      style={{ flex: 1 }}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : null}
+
+            <FieldLabel P={P}>Features</FieldLabel>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {FEATURES.map((item) => {
+                const Icon = item.icon;
+                const active = features.includes(item.label);
+                return (
+                  <OptionTile
+                    key={item.label}
+                    P={P}
+                    label={item.label}
+                    active={active}
+                    onPress={() => toggleFeature(item.label)}
+                    left={<Icon size={16} color={active ? "#FFFFFF" : P.sub} />}
+                    style={{ paddingRight: 16 }}
+                  />
+                );
+              })}
+            </View>
 
             <View
               style={{
@@ -570,7 +632,7 @@ export default function CustomPropertyRequest() {
               }}
             >
               <Text style={{ color: P.text, fontSize: 18, fontWeight: "700" }}>
-                Additional Details
+                What are you looking for?
               </Text>
               <Text style={{ color: P.sub, fontSize: 15 }}>(Optional)</Text>
             </View>
@@ -616,12 +678,25 @@ export default function CustomPropertyRequest() {
               </Text>
             </View>
 
+            {submitError ? (
+              <Text style={{ color: P.danger, fontSize: 14, marginTop: 12 }}>
+                {submitError}
+              </Text>
+            ) : null}
+
             <PrimaryButton
               P={P}
-              label="Send Request"
-              icon={<Send size={20} color="#FFFFFF" />}
+              label={sending ? "Sending to agents..." : "Send Request"}
+              icon={
+                sending ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Send size={20} color="#FFFFFF" />
+                )
+              }
               onPress={handleSend}
-              disabled={!canSubmit}
+              disabled={!canSubmit || sending}
+              loading={sending}
               bold
               style={{ marginTop: 16 }}
             />
@@ -655,7 +730,7 @@ export default function CustomPropertyRequest() {
                 <Text
                   style={{ color: P.text, fontSize: 16, fontWeight: "700" }}
                 >
-                  Your request will be sent to our agents
+                  All agents will be notified
                 </Text>
                 <Text
                   style={{
@@ -665,8 +740,8 @@ export default function CustomPropertyRequest() {
                     marginTop: 4,
                   }}
                 >
-                  You&apos;ll get an instant in-app notification once a vetted
-                  agent reviews your criteria and matches listings.
+                  We send your Buy/Rent choice, property type, location, and
+                  budget to every agent on Dwellify.
                 </Text>
               </View>
             </View>
@@ -754,6 +829,7 @@ export default function CustomPropertyRequest() {
               icon={<ArrowRight size={20} color="#FFFFFF" />}
               iconAfter
               onPress={next}
+              disabled={!locationReady}
               style={{ width: "100%", maxWidth: 560, alignSelf: "center" }}
             />
           </View>
@@ -846,6 +922,67 @@ function FieldLabel({
   );
 }
 
+function ChoiceRow({
+  P,
+  title,
+  sub,
+  icon,
+  active,
+  onPress,
+}: {
+  P: Palette;
+  title: string;
+  sub: string;
+  icon: React.ReactNode;
+  active?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onPress}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 16,
+        borderRadius: 24,
+        backgroundColor: P.card,
+        borderWidth: 1,
+        borderColor: active ? P.blue : P.border,
+      }}
+    >
+      <View
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: P.blue,
+        }}
+      >
+        {icon}
+      </View>
+      <View style={{ flex: 1, marginLeft: 16, paddingRight: 24 }}>
+        <Text style={{ color: P.text, fontSize: 18, fontWeight: "700" }}>
+          {title}
+        </Text>
+        <Text
+          style={{
+            color: P.muted,
+            fontSize: 15,
+            lineHeight: 22,
+            marginTop: 2,
+          }}
+        >
+          {sub}
+        </Text>
+      </View>
+      <ChevronRight size={22} color={P.sub} />
+    </TouchableOpacity>
+  );
+}
+
 function PrimaryButton({
   P,
   label,
@@ -853,6 +990,7 @@ function PrimaryButton({
   iconAfter,
   onPress,
   disabled,
+  loading,
   bold,
   style,
 }: {
@@ -862,6 +1000,7 @@ function PrimaryButton({
   iconAfter?: boolean;
   onPress: () => void;
   disabled?: boolean;
+  loading?: boolean;
   bold?: boolean;
   style?: any;
 }) {
@@ -869,9 +1008,9 @@ function PrimaryButton({
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || loading}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityState={{ disabled: !!(disabled || loading) }}
       style={[
         {
           height: 54,
@@ -881,7 +1020,7 @@ function PrimaryButton({
           justifyContent: "center",
           gap: 10,
           backgroundColor: P.blue,
-          opacity: disabled ? 0.45 : 1,
+          opacity: disabled || loading ? 0.45 : 1,
           shadowColor: P.blue,
           shadowOpacity: 0.35,
           shadowRadius: 16,

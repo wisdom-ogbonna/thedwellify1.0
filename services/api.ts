@@ -3,10 +3,10 @@ import { auth } from "../config/firebase";
 
 // ✅ Create Axios instance
 export const API = axios.create({
-  baseURL: "https://dwellify-backend-six.vercel.app/api",
+  baseURL: "https://8568-169-159-116-47.ngrok-free.app/api",
   timeout: 120000,
 });
-
+ 
 
 // ✅ Attach Firebase token automatically (AUTO REFRESH 🔥)
 API.interceptors.request.use(
