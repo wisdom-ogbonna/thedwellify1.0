@@ -4,6 +4,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { API } from "@/services/api";
 import { useRouter } from "expo-router";
 import {
+  Bell,
   Calendar,
   ChevronRight,
   Clock,
@@ -353,6 +354,12 @@ export default function PremiumProfileScreen() {
             title="Saved Properties"
             badge="12"
             iconColor="#3B82F6"
+          />
+          <ProfileMenuRow
+            Icon={Bell}
+            title="Notifications"
+            iconColor="#1877F2"
+            onPress={() => router.push("/(utilities)/notifications")}
           />
           <ProfileMenuRow
             Icon={Clock}

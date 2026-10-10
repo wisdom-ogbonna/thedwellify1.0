@@ -5,7 +5,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { Bell } from "lucide-react-native";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -393,13 +393,17 @@ export default function MapScreen() {
           className="flex-row items-center p-1.5 pr-5 rounded-full shadow-lg"
           style={{ backgroundColor: "#2A2A2A" }}
         >
-          <TouchableOpacity
-            activeOpacity={0.85}
-            className="w-10 h-10 rounded-full justify-center items-center mr-3"
-            style={{ backgroundColor: colors.primary }}
-          >
-            <Bell size={18} color="#FFFFFF" />
-          </TouchableOpacity>
+          <NotificationBell
+            color="#FFFFFF"
+            size={18}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: colors.primary,
+              marginRight: 12,
+            }}
+          />
           <Text className="text-white text-base font-bold tracking-wide">
             Dwellify
           </Text>

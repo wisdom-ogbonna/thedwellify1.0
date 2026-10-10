@@ -1,6 +1,7 @@
 import PriceFilter, {
   type PriceRange,
 } from "@/components/listings/price-filter";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   PROPERTY_TYPES,
   formatPrice,
@@ -122,7 +123,10 @@ export default function RecommendedScreen() {
   const header = useMemo(
     () => (
       <View>
-        <Text style={[styles.kicker, { color: colors.primary }]}>Discover</Text>
+        <View style={styles.topRow}>
+          <Text style={[styles.kicker, { color: colors.primary }]}>Discover</Text>
+          <NotificationBell color={colors.text} size={20} />
+        </View>
         <Text style={[styles.heading, { color: colors.text }]}>
           Homes listed by agents
         </Text>
@@ -583,6 +587,11 @@ const styles = StyleSheet.create({
   },
 
   // Header
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   kicker: { fontSize: 13, fontWeight: "800" },
   heading: {
     fontSize: 26,

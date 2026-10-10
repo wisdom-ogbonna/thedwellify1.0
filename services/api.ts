@@ -12,9 +12,11 @@ export const API = axios.create({
 API.interceptors.request.use(
   async (config) => {
     try {
+      config.headers = config.headers || {};
+      config.headers["ngrok-skip-browser-warning"] = "true";
       const user = auth.currentUser;
       if (user) {
-        const token = await user.getIdToken(); // 🔥https://dwellify-backend-six.vercel.app AUTO REFRESH HERE
+        const token = await user.getIdToken();
         config.headers.Authorization = `Bearer ${token}`;
       }
 

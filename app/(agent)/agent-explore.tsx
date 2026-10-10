@@ -1,3 +1,4 @@
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
 import { agentApi } from "@/services/agent";
@@ -6,7 +7,6 @@ import {
   ArrowUpDown,
   Bath,
   Bed,
-  Bell,
   ChevronDown,
   Heart,
   ImageIcon,
@@ -132,7 +132,6 @@ export default function ExploreScreen() {
   const [typeIndex, setTypeIndex] = useState(0);
   const [sortIndex, setSortIndex] = useState(0);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-  const [unreadCount] = useState(3); // TODO: wire to your notifications source
 
   const typeFilter = TYPE_OPTIONS[typeIndex];
   const sortLabel = SORT_OPTIONS[sortIndex];
@@ -545,22 +544,18 @@ export default function ExploreScreen() {
             />
           </Pressable>
 
-          <Pressable
-            style={{ backgroundColor: surface, borderColor: "#27272A" }}
-            className="w-12 h-12 rounded-full border items-center justify-center"
-          >
-            <Bell size={20} color={colors.text} />
-            {unreadCount > 0 && (
-              <View
-                style={{ backgroundColor: colors.error }}
-                className="absolute -top-1 -right-1 min-w-5.5 h-5.5 px-1 rounded-full items-center justify-center"
-              >
-                <Text className="text-white text-xs font-bold font-['Inter']">
-                  {unreadCount}
-                </Text>
-              </View>
-            )}
-          </Pressable>
+          <NotificationBell
+            color={colors.text}
+            size={20}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: surface,
+              borderWidth: 1,
+              borderColor: "#27272A",
+            }}
+          />
         </View>
       </View>
 

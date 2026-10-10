@@ -557,7 +557,7 @@ export default function ProfileScreen() {
                     } else if (item.id === "bank") {
                       router.push("/(agent)/bank");
                     } else if (item.id === "notifications") {
-                      router.push("/(agent)/notification");
+                      router.push("/(utilities)/notifications");
                     } else if (item.id === "privacy") {
                       router.push("/(agent)/privacy" as any);
                     } else if (item.id === "help") {

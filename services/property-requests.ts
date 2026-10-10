@@ -55,3 +55,19 @@ export const createPropertyRequest = async (payload: PropertyRequestPayload) => 
     throw new Error(messageFromError(error));
   }
 };
+
+export const getPropertyRequest = async (
+  id: string,
+  role?: "agent" | "client" | string | null,
+) => {
+  const path =
+    role === "client"
+      ? `/client/property-requests/${id}`
+      : `/agent/property-requests/${id}`;
+  try {
+    const res = await API.get<{ request: PropertyRequest }>(path);
+    return res.data.request;
+  } catch (error) {
+    throw new Error(messageFromError(error));
+  }
+};

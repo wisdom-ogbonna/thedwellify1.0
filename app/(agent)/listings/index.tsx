@@ -1,3 +1,4 @@
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { formatPrice, purposeLabel, type Listing } from "@/constants/listings";
 import { useTheme } from "@/hooks/use-theme";
 import { listingsApi } from "@/services/listings";
@@ -361,19 +362,22 @@ export default function MyListingsScreen() {
           </Text>
         </View>
 
-        <Pressable
-          onPress={() => router.push("/(agent)/listings/new")}
-          style={[
-            styles.addButton,
-            {
-              backgroundColor: colors.primary,
-            },
-          ]}
-        >
-          <Ionicons name="add" size={21} color="#FFFFFF" />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <NotificationBell color={colors.text} size={20} />
+          <Pressable
+            onPress={() => router.push("/(agent)/listings/new")}
+            style={[
+              styles.addButton,
+              {
+                backgroundColor: colors.primary,
+              },
+            ]}
+          >
+            <Ionicons name="add" size={21} color="#FFFFFF" />
 
-          <Text style={styles.addButtonText}>Add Property</Text>
-        </Pressable>
+            <Text style={styles.addButtonText}>Add Property</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.searchRow}>

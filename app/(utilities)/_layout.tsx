@@ -13,6 +13,8 @@ export default function UtilitiesLayout() {
       <Stack.Screen name="agent-tracking" />
       <Stack.Screen name="client-payment-start-inspection" />
       <Stack.Screen name="request-custom-property" />
+      <Stack.Screen name="notifications" />
+      <Stack.Screen name="property-request" />
     </Stack>
   );
 }

@@ -1,3 +1,4 @@
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
@@ -215,6 +216,7 @@ export default function InboxScreen({
           <Text style={[styles.kicker, { color: colors.primary }]}>INBOX</Text>
           <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
         </View>
+        <NotificationBell color={colors.text} size={20} />
       </View>
 
       <Text style={[styles.sub, { color: colors.placeholder }]}>

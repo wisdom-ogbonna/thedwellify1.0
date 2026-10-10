@@ -1,5 +1,6 @@
 import ClientEvent from "@/components/client-event";
 import BottomModal from "@/components/dialogs/bottom-modal";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import Sidebar from "@/components/sidebar/sidebar";
 import { useTheme } from "@react-navigation/native";
 import * as Location from "expo-location";
@@ -7,6 +8,7 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Animated, Dimensions, Easing, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notification";
@@ -119,6 +121,7 @@ export default function RequestMatchScreen() {
   const mapRef = useRef<MapView | null>(null);
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { width } = Dimensions.get("window");
   const sidebarX = useRef(new Animated.Value(-width)).current;
 
@@ -501,6 +504,32 @@ export default function RequestMatchScreen() {
             />
           )}
       </MapView>
+
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          top: insets.top + 8,
+          right: 16,
+          zIndex: 60,
+        }}
+      >
+        <NotificationBell
+          color="#111827"
+          size={20}
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: 23,
+            backgroundColor: "#FFFFFF",
+            shadowColor: "#000",
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: 4,
+          }}
+        />
+      </View>
 
       {/* Bottom sheet */}
       <BottomModal

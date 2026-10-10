@@ -1,4 +1,5 @@
 import { needsRooms } from "@/constants/listings";
+import { useInbox } from "@/context/InboxContext";
 import { useTheme } from "@/hooks/use-theme";
 import { createPropertyRequest } from "@/services/property-requests";
 import { useRouter } from "expo-router";
@@ -114,6 +115,7 @@ const toNumber = (value: string) => Number(value.replace(/,/g, "")) || 0;
 
 export default function CustomPropertyRequest() {
   const { isDark } = useTheme();
+  const { refresh: refreshInbox } = useInbox();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const P: Palette = isDark ? DARK : LIGHT;
@@ -174,6 +176,7 @@ export default function CustomPropertyRequest() {
         bedrooms: needsRooms(propertyType) ? bedrooms : "",
         features,
       });
+      refreshInbox();
       setSubmitted(true);
     } catch (error: any) {
       setSubmitError(error?.message || "Failed to send request. Try again.");
@@ -384,11 +387,19 @@ export default function CustomPropertyRequest() {
 
             <PrimaryButton
               P={P}
+              label="View notifications"
+              icon={<Bell size={20} color="#FFFFFF" />}
+              onPress={() => router.replace("/(utilities)/notifications")}
+              bold
+              style={{ marginTop: 14 }}
+            />
+            <PrimaryButton
+              P={P}
               label="Back to Home"
               icon={<Home size={20} color="#FFFFFF" />}
               onPress={goHome}
               bold
-              style={{ marginTop: 14 }}
+              style={{ marginTop: 10 }}
             />
           </View>
         </ScrollView>
