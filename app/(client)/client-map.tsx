@@ -230,7 +230,6 @@ export default function RequestMatchScreen() {
   const syncPushToken = async (): Promise<void> => {
     try {
       const user = auth.currentUser;
-      console.log("Hello", user);
       if (!user) {
         console.log("[Push Sync]: Deferred — no authenticated user context");
         return;
