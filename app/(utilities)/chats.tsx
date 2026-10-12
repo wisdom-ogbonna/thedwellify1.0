@@ -7,6 +7,14 @@ import {
   type ChatMessage,
   type Conversation,
 } from "@/services/chat";
+import {
+  connectSocket,
+  emitTyping,
+  getSocket,
+  isSocketConnected,
+  joinConversation,
+  leaveConversation,
+} from "@/services/socket";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { PaperPlaneRight } from "phosphor-react-native";
@@ -71,6 +79,18 @@ const mergeThread = (local: ChatMessage[], remote: ChatMessage[]) => {
   });
 };
 
+const upsertMessage = (prev: ChatMessage[], incoming: ChatMessage) => {
+  const nonce = incoming.nonce;
+  const without = prev.filter((item) => {
+    if (item.id === incoming.id) return false;
+    if (nonce && (item.nonce === nonce || item.id === nonce)) return false;
+    return true;
+  });
+  return [...without, incoming].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+};
+
 const buildRows = (messages: ChatMessage[]): ThreadRow[] => {
   const chronological: ThreadRow[] = [];
   messages.forEach((message, index) => {
@@ -117,6 +137,9 @@ export default function ChatThreadScreen() {
   const [error, setError] = useState("");
   const inputRef = useRef<TextInput>(null);
   const sendingRef = useRef<Set<string>>(new Set());
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [peerOnline, setPeerOnline] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
 
   const theme = useMemo(
     () => ({
@@ -177,25 +200,114 @@ export default function ChatThreadScreen() {
   }, [openConversation]);
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !user?.uid) return;
     let active = true;
-    const pull = async () => {
-      try {
-        const rows = await chatApi.messages(conversationId);
-        if (!active) return;
-        setMessages((prev) => mergeThread(prev, rows));
-        const incoming = rows[rows.length - 1];
-        if (incoming && incoming.senderId !== user?.uid) {
+    let typingClear: ReturnType<typeof setTimeout> | null = null;
+
+    const attach = async () => {
+      await connectSocket();
+      if (!active) return;
+      const socket = getSocket();
+      const joined = await joinConversation(conversationId);
+      if (!active) return;
+      if (joined?.peerOnline) setPeerOnline(true);
+
+      const onNew = (message: ChatMessage) => {
+        if (!message || message.conversationId !== conversationId) return;
+        setMessages((prev) => upsertMessage(prev, message));
+        if (message.senderId && message.senderId !== user.uid) {
+          setPeerTyping(false);
           chatApi.markRead(conversationId).catch(() => undefined);
         }
-      } catch {
-        // keep local bubbles if a poll fails
-      }
+      };
+
+      const onAck = (ack: { conversationId?: string; userId?: string; mode?: string }) => {
+        if (ack?.conversationId !== conversationId || ack.userId === user.uid) return;
+        setMessages((prev) =>
+          prev.map((item) => {
+            if (item.senderId !== user.uid) return item;
+            if (ack.mode === "read") {
+              return { ...item, status: "read", readAt: new Date().toISOString() };
+            }
+            if (ack.mode === "delivered" && item.status !== "read") {
+              return {
+                ...item,
+                status: "delivered",
+                deliveredAt: new Date().toISOString(),
+              };
+            }
+            return item;
+          }),
+        );
+      };
+
+      const onTyping = (payload: {
+        conversationId?: string;
+        userId?: string;
+        isTyping?: boolean;
+      }) => {
+        if (payload.conversationId !== conversationId || payload.userId === user.uid) return;
+        setPeerTyping(Boolean(payload.isTyping));
+        if (typingClear) clearTimeout(typingClear);
+        if (payload.isTyping) {
+          typingClear = setTimeout(() => setPeerTyping(false), 2500);
+        }
+      };
+
+      const onPresence = (payload: {
+        conversationId?: string;
+        userId?: string;
+        online?: boolean;
+      }) => {
+        if (payload.conversationId && payload.conversationId !== conversationId) return;
+        if (payload.userId === user.uid) return;
+        setPeerOnline(Boolean(payload.online));
+      };
+
+      const onConnect = () => {
+        joinConversation(conversationId).then((res) => {
+          if (res?.peerOnline) setPeerOnline(true);
+        });
+      };
+
+      socket?.on("message:new", onNew);
+      socket?.on("messages:ack", onAck);
+      socket?.on("typing", onTyping);
+      socket?.on("presence", onPresence);
+      socket?.on("connect", onConnect);
+
+      return () => {
+        socket?.off("message:new", onNew);
+        socket?.off("messages:ack", onAck);
+        socket?.off("typing", onTyping);
+        socket?.off("presence", onPresence);
+        socket?.off("connect", onConnect);
+      };
     };
-    const timer = setInterval(pull, 2000);
+
+    let detach: (() => void) | undefined;
+    attach().then((fn) => {
+      detach = fn;
+    });
+
+    const fallback = setInterval(() => {
+      if (isSocketConnected()) return;
+      chatApi
+        .messages(conversationId)
+        .then((rows) => {
+          if (!active) return;
+          setMessages((prev) => mergeThread(prev, rows));
+        })
+        .catch(() => undefined);
+    }, 15000);
+
     return () => {
       active = false;
-      clearInterval(timer);
+      detach?.();
+      if (typingClear) clearTimeout(typingClear);
+      clearInterval(fallback);
+      leaveConversation(conversationId);
+      emitTyping(conversationId, false);
     };
   }, [conversationId, user?.uid]);
 
@@ -255,10 +367,19 @@ export default function ChatThreadScreen() {
     [conversationId, role, user?.uid],
   );
 
+  const onChangeText = (value: string) => {
+    setText(value);
+    if (!conversationId) return;
+    emitTyping(conversationId, Boolean(value.trim()));
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => emitTyping(conversationId, false), 1200);
+  };
+
   const send = () => {
     const next = text.trim();
     if (!next || !conversationId) return;
     setText("");
+    emitTyping(conversationId, false);
     sendNow(next);
   };
 
@@ -298,8 +419,18 @@ export default function ChatThreadScreen() {
           <Text style={[styles.peerName, { color: colors.text }]} numberOfLines={1}>
             {peer?.name || (isPeerChat ? "Agent" : role === "agent" ? "Client" : "Agent")}
           </Text>
-          <Text style={[styles.online, { color: "#22C55E" }]} numberOfLines={1}>
-            {peer?.phone || (isPeerChat ? "Agent" : "online")}
+          <Text
+            style={[
+              styles.online,
+              { color: peerTyping || peerOnline ? "#22C55E" : theme.meta },
+            ]}
+            numberOfLines={1}
+          >
+            {peerTyping
+              ? "typing..."
+              : peerOnline
+                ? "Active now"
+                : peer?.phone || "offline"}
           </Text>
         </View>
         {peer?.phone ? (
@@ -480,7 +611,7 @@ export default function ChatThreadScreen() {
             <TextInput
               ref={inputRef}
               value={text}
-              onChangeText={setText}
+              onChangeText={onChangeText}
               placeholder="Message"
               placeholderTextColor={theme.meta}
               style={[styles.input, { color: colors.text, backgroundColor: theme.input }]}

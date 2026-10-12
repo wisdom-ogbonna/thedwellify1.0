@@ -125,6 +125,7 @@ export default function CreateProduct() {
       formData.append("price", price);
       formData.append("location", location);
       formData.append("propertyType", propertyType);
+      formData.append("purpose", "Rent");
       formData.append("description", description);
 
       // IMAGES
