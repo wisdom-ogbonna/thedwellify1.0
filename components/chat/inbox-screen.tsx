@@ -210,7 +210,7 @@ export default function InboxScreen({
             backgroundColor: hasUnread
               ? colors.primary + "14"
               : colors.disabled + "14",
-            borderColor: hasUnread ? colors.primary + "66" : "#222226",
+            borderColor: hasUnread ? colors.primary + "66" : colors.border,
             opacity: pressed ? 0.85 : 1,
           },
         ]}
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     alignSelf: "center",
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 14,
     paddingBottom: 120,
   },
 
@@ -487,7 +487,6 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#222226",
     borderRadius: 24,
     backgroundColor: "#121214"
   },

@@ -10,6 +10,7 @@ import { listingsApi, type ListingPayload } from "@/services/listings";
 import { pickLibraryImages, pickLibraryVideo } from "@/services/media-picker";
 import * as Location from "expo-location";
 import { router, useNavigation } from "expo-router";
+import { CaretLeftIcon, XIcon } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -29,7 +30,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 const TOTAL_STEPS = 4;
 
-type LocalMedia = { uri: string; remote?: boolean; name?: string; type?: string };
+type LocalMedia = {
+  uri: string;
+  remote?: boolean;
+  name?: string;
+  type?: string;
+};
 type PurposeChoice = "Sale" | "Rent" | "";
 
 export default function ListingForm({ listingId }: { listingId?: string }) {
@@ -91,7 +97,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         setPrice(String(listing.price || "").replace(/[^\d.]/g, ""));
         setAddress(listing.location || "");
         setBedrooms(listing.bedrooms != null ? String(listing.bedrooms) : "");
-        setBathrooms(listing.bathrooms != null ? String(listing.bathrooms) : "");
+        setBathrooms(
+          listing.bathrooms != null ? String(listing.bathrooms) : "",
+        );
         setSize(listing.size || "");
         setPhotos((listing.images || []).map((uri) => ({ uri, remote: true })));
         setVideo(listing.video ? { uri: listing.video, remote: true } : null);
@@ -128,7 +136,10 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
       setLocating(true);
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Location needed", "Allow location access to pin this property.");
+        Alert.alert(
+          "Location needed",
+          "Allow location access to pin this property.",
+        );
         return;
       }
       const position = await Location.getCurrentPositionAsync({
@@ -160,7 +171,10 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
       const result = await pickLibraryImages(Math.max(1, 10 - photos.length));
       if (!result.ok) {
         if (result.reason === "permission") {
-          Alert.alert("Permission required", "Allow photo access to upload images.");
+          Alert.alert(
+            "Permission required",
+            "Allow photo access to upload images.",
+          );
         }
         return;
       }
@@ -187,12 +201,18 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
       const result = await pickLibraryVideo();
       if (!result.ok) {
         if (result.reason === "permission") {
-          Alert.alert("Permission required", "Allow video access to upload a tour.");
+          Alert.alert(
+            "Permission required",
+            "Allow video access to upload a tour.",
+          );
         }
         return;
       }
       if (result.asset.fileSize && result.asset.fileSize > MAX_VIDEO_SIZE) {
-        Alert.alert("Video too large", "Please choose an MP4 video of 50MB or less.");
+        Alert.alert(
+          "Video too large",
+          "Please choose an MP4 video of 50MB or less.",
+        );
         return;
       }
       setRemoveVideo(false);
@@ -254,7 +274,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
       }
       Alert.alert(
         listingId ? "Updated" : "Published",
-        listingId ? "Your property has been updated." : "Your property is now live.",
+        listingId
+          ? "Your property has been updated."
+          : "Your property is now live.",
         [{ text: "OK", onPress: () => router.replace("/(agent)/listings") }],
       );
     } catch (err: any) {
@@ -271,7 +293,11 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
 
   const inputStyle = [
     styles.input,
-    { borderColor: colors.border, color: colors.text, backgroundColor: colors.background },
+    {
+      borderColor: colors.border,
+      color: colors.text,
+      backgroundColor: colors.background,
+    },
   ];
 
   if (loadingListing) {
@@ -283,7 +309,10 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={["top", "bottom"]}
+    >
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -291,10 +320,13 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable
             onPress={() => (step > 1 ? setStep(step - 1) : router.back())}
-            style={[styles.roundBtn, { backgroundColor: colors.disabled + "22" }]}
+            style={[
+              styles.roundBtn,
+              { backgroundColor: colors.disabled + "22" },
+            ]}
           >
             <Text style={[styles.roundBtnText, { color: colors.text }]}>
-              {step > 1 ? "‹" : "✕"}
+              {step > 1 ? <CaretLeftIcon /> : <XIcon />}
             </Text>
           </Pressable>
           <View style={styles.headerCopy}>
@@ -346,7 +378,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                       styles.choice,
                       {
                         borderColor: active ? colors.primary : colors.border,
-                        backgroundColor: active ? colors.primary + "14" : "transparent",
+                        backgroundColor: active
+                          ? colors.primary + "14"
+                          : "transparent",
                       },
                     ]}
                   >
@@ -358,8 +392,12 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                     >
                       {type}
                     </Text>
-                    <Text style={[styles.choiceHint, { color: colors.placeholder }]}>
-                      {type === "Land" ? "Number of plots" : "Title & description"}
+                    <Text
+                      style={[styles.choiceHint, { color: colors.placeholder }]}
+                    >
+                      {type === "Land"
+                        ? "Number of plots"
+                        : "Title & description"}
                     </Text>
                   </Pressable>
                 );
@@ -373,7 +411,8 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                 Is this for sale or rent?
               </Text>
               <Text style={[styles.subheading, { color: colors.placeholder }]}>
-                {(propertyType || "This property") + " will be tagged from your choice."}
+                {(propertyType || "This property") +
+                  " will be tagged from your choice."}
               </Text>
               {(["Rent", "Sale"] as const).map((item) => {
                 const active = purpose === item;
@@ -385,7 +424,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                       styles.choice,
                       {
                         borderColor: active ? colors.primary : colors.border,
-                        backgroundColor: active ? colors.primary + "14" : "transparent",
+                        backgroundColor: active
+                          ? colors.primary + "14"
+                          : "transparent",
                       },
                     ]}
                   >
@@ -405,9 +446,12 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
 
           {step === 3 && (
             <>
-              <Text style={[styles.heading, { color: colors.text }]}>Photos & video</Text>
+              <Text style={[styles.heading, { color: colors.text }]}>
+                Photos & video
+              </Text>
               <Text style={[styles.subheading, { color: colors.placeholder }]}>
-                Add at least one photo. Video is optional and must be MP4, 50MB or less.
+                Add at least one photo. Video is optional and must be MP4, 50MB
+                or less.
               </Text>
               <View style={styles.photoGrid}>
                 {photos.map((photo, index) => (
@@ -428,8 +472,17 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                     onPress={pickPhotos}
                     style={[styles.addTile, { borderColor: colors.border }]}
                   >
-                    <Text style={[styles.addTilePlus, { color: colors.primary }]}>+</Text>
-                    <Text style={[styles.addTileLabel, { color: colors.placeholder }]}>
+                    <Text
+                      style={[styles.addTilePlus, { color: colors.primary }]}
+                    >
+                      +
+                    </Text>
+                    <Text
+                      style={[
+                        styles.addTileLabel,
+                        { color: colors.placeholder },
+                      ]}
+                    >
                       Add photos
                     </Text>
                   </Pressable>
@@ -437,7 +490,10 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
               </View>
               {video ? (
                 <View style={[styles.videoRow, { borderColor: colors.border }]}>
-                  <Text style={[styles.videoLabel, { color: colors.text }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.videoLabel, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
                     Video selected
                   </Text>
                   <Pressable
@@ -446,7 +502,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                       setVideo(null);
                     }}
                   >
-                    <Text style={{ color: colors.error, fontWeight: "800" }}>Remove</Text>
+                    <Text style={{ color: colors.error, fontWeight: "800" }}>
+                      Remove
+                    </Text>
                   </Pressable>
                 </View>
               ) : (
@@ -457,7 +515,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                   <Text style={[styles.choiceTitle, { color: colors.text }]}>
                     Add property video
                   </Text>
-                  <Text style={[styles.choiceHint, { color: colors.placeholder }]}>
+                  <Text
+                    style={[styles.choiceHint, { color: colors.placeholder }]}
+                  >
                     Optional MP4 tour
                   </Text>
                 </Pressable>
@@ -478,7 +538,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
 
               {landSelected ? (
                 <>
-                  <Text style={[styles.label, { color: colors.text }]}>Number of plots</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>
+                    Number of plots
+                  </Text>
                   <TextInput
                     value={plots}
                     onChangeText={setPlots}
@@ -490,7 +552,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                 </>
               ) : (
                 <>
-                  <Text style={[styles.label, { color: colors.text }]}>Title</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>
+                    Title
+                  </Text>
                   <TextInput
                     value={title}
                     onChangeText={setTitle}
@@ -498,7 +562,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                     placeholderTextColor={colors.placeholder}
                     style={inputStyle}
                   />
-                  <Text style={[styles.label, { color: colors.text }]}>Description</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>
+                    Description
+                  </Text>
                   <TextInput
                     value={description}
                     onChangeText={setDescription}
@@ -511,7 +577,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                 </>
               )}
 
-              <Text style={[styles.label, { color: colors.text }]}>Price (NGN)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Price (NGN)
+              </Text>
               <TextInput
                 value={price}
                 onChangeText={setPrice}
@@ -524,7 +592,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
               {needsRooms(propertyType) && (
                 <View style={styles.row}>
                   <View style={styles.flex}>
-                    <Text style={[styles.label, { color: colors.text }]}>Bedrooms</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>
+                      Bedrooms
+                    </Text>
                     <TextInput
                       value={bedrooms}
                       onChangeText={setBedrooms}
@@ -535,7 +605,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                     />
                   </View>
                   <View style={styles.flex}>
-                    <Text style={[styles.label, { color: colors.text }]}>Bathrooms</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>
+                      Bathrooms
+                    </Text>
                     <TextInput
                       value={bathrooms}
                       onChangeText={setBathrooms}
@@ -558,7 +630,12 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
               />
 
               <View style={styles.locationHeader}>
-                <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: colors.text, marginBottom: 0 },
+                  ]}
+                >
                   Location
                 </Text>
                 <Pressable onPress={useMyLocation} disabled={locating}>
@@ -597,7 +674,11 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
               ]}
             >
               <Text style={styles.ctaText}>
-                {step === 1 ? "Next: sale or rent" : step === 2 ? "Next: photos" : "Next: details"}
+                {step === 1
+                  ? "Next: sale or rent"
+                  : step === 2
+                    ? "Next: photos"
+                    : "Next: details"}
               </Text>
             </Pressable>
           ) : (
@@ -670,7 +751,12 @@ const styles = StyleSheet.create({
   },
   choiceTitle: { fontSize: 16, fontWeight: "800" },
   choiceHint: { fontSize: 12, marginTop: 4, fontWeight: "600" },
-  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
+  photoGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
+  },
   photoWrap: { width: "30%", aspectRatio: 1, position: "relative" },
   photo: { width: "100%", height: "100%", borderRadius: 16 },
   photoRemove: {
@@ -732,7 +818,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   coords: { fontSize: 12, marginTop: -8, marginBottom: 16 },
-  footer: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth },
-  cta: { height: 54, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  footer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  cta: {
+    height: 54,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   ctaText: { color: "#fff", fontSize: 16, fontWeight: "800" },
 });

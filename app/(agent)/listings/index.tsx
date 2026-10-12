@@ -107,7 +107,6 @@ export default function MyListingsScreen() {
     return matchesTab && matchesSearch;
   });
 
-
   const renderCard = ({ item }: { item: Listing }) => {
     const image = item.images?.[0];
 
@@ -127,7 +126,7 @@ export default function MyListingsScreen() {
           styles.card,
           {
             backgroundColor: colors.disabled + "0D",
-            borderColor: "#27272A",
+            borderColor: colors.border,
           },
         ]}
       >
@@ -183,7 +182,6 @@ export default function MyListingsScreen() {
         </View>
 
         <View style={styles.cardBody}>
-
           <View style={styles.titleRow}>
             <Text
               style={[
@@ -202,7 +200,7 @@ export default function MyListingsScreen() {
                 styles.statusBadge,
                 {
                   backgroundColor: "#16A34A18",
-                  borderColor: "#16A34A55",
+                  borderColor: colors.border + "70",
                 },
               ]}
             >
@@ -249,7 +247,6 @@ export default function MyListingsScreen() {
                 : item.propertyType}
             </Text>
           </View>
-
 
           <Text
             style={[
@@ -349,21 +346,9 @@ export default function MyListingsScreen() {
           >
             Listings
           </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                color: colors.placeholder,
-              },
-            ]}
-          >
-            Manage your posted properties and connect with other agents.
-          </Text>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <NotificationBell color={colors.text} size={20} />
           <Pressable
             onPress={() => router.push("/(agent)/listings/new")}
             style={[
@@ -379,6 +364,18 @@ export default function MyListingsScreen() {
           </Pressable>
         </View>
       </View>
+      <Text
+        style={[
+          styles.subtitle,
+          {
+            color: colors.placeholder,
+            paddingHorizontal: 20,
+            paddingBottom: 12,
+          },
+        ]}
+      >
+        Manage your posted properties and connect with other agents.
+      </Text>
 
       <View style={styles.searchRow}>
         <View
@@ -386,7 +383,7 @@ export default function MyListingsScreen() {
             styles.searchContainer,
             {
               backgroundColor: colors.disabled + "14",
-              borderColor: "#27272A",
+              borderColor: colors.border,
             },
           ]}
         >
@@ -418,7 +415,7 @@ export default function MyListingsScreen() {
               backgroundColor: showFilters
                 ? colors.primary
                 : colors.disabled + "14",
-              borderColor: showFilters ? colors.primary : "#27272A",
+              borderColor: showFilters ? colors.primary : colors.border,
             },
           ]}
         >
@@ -445,7 +442,7 @@ export default function MyListingsScreen() {
                     backgroundColor: active
                       ? colors.primary
                       : colors.disabled + "18",
-                    borderColor: active ? colors.primary : "#27272A",
+                    borderColor: active ? colors.primary : colors.border,
                   },
                 ]}
               >
@@ -482,7 +479,7 @@ export default function MyListingsScreen() {
             styles.sortButton,
             {
               backgroundColor: colors.disabled + "18",
-              borderColor: "#27272A",
+              borderColor: colors.border,
             },
           ]}
         >
@@ -630,7 +627,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 14,
     paddingBottom: 16,
   },
 
@@ -733,7 +730,7 @@ const styles = StyleSheet.create({
   },
 
   sortButton: {
-    height: 38,
+    height: 35,
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,

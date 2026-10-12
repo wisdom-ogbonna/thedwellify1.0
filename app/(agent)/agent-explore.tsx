@@ -339,9 +339,8 @@ export default function ExploreScreen() {
     >
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={[styles.screenTitle, { color: colors.text }]}>Explore</Text>
-          <Text style={[styles.screenSub, { color: colors.placeholder }]}>
-            Every agent listing — call, chat, or share to your contacts.
+          <Text style={[styles.screenTitle, { color: colors.text }]}>
+            Explore
           </Text>
         </View>
         <View style={styles.headerRight}>
@@ -358,7 +357,9 @@ export default function ExploreScreen() {
               style={[
                 styles.headerDot,
                 {
-                  backgroundColor: isOnline ? colors.success : colors.placeholder,
+                  backgroundColor: isOnline
+                    ? colors.success
+                    : colors.placeholder,
                   borderColor: colors.background,
                 },
               ]}
@@ -369,11 +370,17 @@ export default function ExploreScreen() {
             size={20}
             style={[
               styles.bell,
-              { backgroundColor: surface, borderColor: isDark ? "#2A2A2A" : "#E7E7EA" },
+              {
+                backgroundColor: surface,
+                borderColor: isDark ? "#2A2A2A" : "#E7E7EA",
+              },
             ]}
           />
         </View>
       </View>
+      <Text style={[styles.screenSub, { color: colors.placeholder, paddingHorizontal: 20, paddingBottom: 12 }]}>
+            Every agent listing — call, chat, or share to your contacts.
+          </Text>
 
       <View
         style={[
@@ -443,7 +450,9 @@ export default function ExploreScreen() {
             ]}
           >
             <Ionicons name="swap-vertical" size={14} color={colors.primary} />
-            <Text style={[styles.chipText, { color: colors.text }]}>{sortLabel}</Text>
+            <Text style={[styles.chipText, { color: colors.text }]}>
+              {sortLabel}
+            </Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -454,7 +463,9 @@ export default function ExploreScreen() {
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>{error}</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {error}
+          </Text>
           <Pressable
             onPress={load}
             style={[styles.retry, { backgroundColor: colors.primary }]}
@@ -511,8 +522,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 14,
+    paddingBottom: 8,
   },
   headerCopy: { flex: 1, paddingRight: 12 },
   screenTitle: { fontSize: 32, fontWeight: "800" },

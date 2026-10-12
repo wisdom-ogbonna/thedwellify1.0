@@ -5,22 +5,22 @@ import { agentApi } from "@/services/agent";
 import { pickCameraImage, pickLibraryImages } from "@/services/media-picker";
 import { router } from "expo-router";
 import {
+  ArrowLeft,
+  BadgeCheck,
   Bell,
-  Briefcase,
-  Camera,
-  Check,
+  BellRing,
+  Building2,
   ChevronRight,
-  Clock,
   HelpCircle,
-  Landmark,
+  Lock,
   LogOut,
   Mail,
   Moon,
+  Pencil,
   Phone,
-  Settings,
-  Shield,
   Sun,
   User,
+  Wallet,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -32,12 +32,19 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
-import { Switch } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// Swap for your font family (e.g. "Inter_600SemiBold") if you use per-weight fonts
+const FONT = undefined as string | undefined;
+
+type PickResult =
+  | { ok: true; assets: { uri: string; name: string; type: string }[] }
+  | { ok: true; asset: { uri: string; name: string; type: string } }
+  | { ok: false; reason: "permission" | "canceled" };
 
 export default function ProfileScreen() {
   const { logout, isOnline, goOnline, goOffline } = useAuth();
@@ -50,11 +57,12 @@ export default function ProfileScreen() {
   const [toggling, setToggling] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  const [isThemeSwitchOn, setIsThemeSwitchOn] = useState<boolean>(isDark);
-  const scheme = useColorScheme();
-
-  const surface = isDark ? "#0F1A2B" : "#FFFFFF";
-  const iconBg = isDark ? "#162235" : "#F1F5F9";
+  // ---- design tokens ----
+  const headerBg = isDark ? "#0A101B" : "#FFFFFF";
+  const surface = isDark ? "#0B111C" : "#FFFFFF";
+  const surfaceInner = isDark ? "#0E1624" : "#F8FAFC";
+  const iconBg = isDark ? "#111B2E" : "#EEF2F7";
+  const divider = isDark ? "#1A2332" : "#E8EDF3";
   const danger = "#F26B6B";
 
   const fetchProfile = async () => {
@@ -69,12 +77,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const uploadPickedAvatar = async (
-    picked:
-      | { ok: true; assets: { uri: string; name: string; type: string }[] }
-      | { ok: true; asset: { uri: string; name: string; type: string } }
-      | { ok: false; reason: "permission" | "canceled" },
-  ) => {
+  const uploadPickedAvatar = async (picked: PickResult) => {
     if (!picked.ok) {
       if (picked.reason === "permission") {
         Alert.alert(
@@ -132,24 +135,19 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleThemeChange = () => {
-    const nextTheme = isDark ? "light" : "dark";
-    Appearance.setColorScheme(nextTheme);
-    setIsThemeSwitchOn(!isDark);
+  const handleThemeChange = (value: boolean) => {
+    Appearance.setColorScheme(value ? "dark" : "light");
   };
 
   const handleLogout = () => {
-    const triggerLogout = () => {
-      showModal({
-        title: "Log Out?",
-        text: "Are you sure you want to log out?",
-        type: "logout",
-        ctaText1: "Log Out",
-        ctaText2: "Cancel",
-        onCta1: async () => await logout(),
-      });
-    };
-    triggerLogout();
+    showModal({
+      title: "Log Out?",
+      text: "Are you sure you want to log out?",
+      type: "logout",
+      ctaText1: "Log Out",
+      ctaText2: "Cancel",
+      onCta1: async () => await logout(),
+    });
   };
 
   const settingsOptions = [
@@ -158,505 +156,642 @@ export default function ProfileScreen() {
       label: "Personal Information",
       subtitle: "Name, national ID, contact details",
       icon: User,
-      path: "/profile/personal",
+      path: "/(agent)/personalInfo",
     },
     {
       id: "business",
       label: "Business Information",
       subtitle: "Agency, broker license, tax info",
-      icon: Briefcase,
-      path: "/profile/business",
+      icon: Building2,
+      path: "/(agent)/businessForm",
     },
     {
       id: "bank",
       label: "Bank Details & Payouts",
       subtitle: "Commission accounts and routing",
-      icon: Landmark,
-      path: "/profile/bank",
+      icon: Wallet,
+      path: "/(agent)/bank",
     },
     {
       id: "notifications",
       label: "Notification Settings",
       subtitle: "Push, inquiries, leads & alerts",
-      icon: Bell,
-      path: "/profile/notifications",
+      icon: BellRing,
+      path: "/(utilities)/notifications",
     },
     {
       id: "privacy",
       label: "Privacy & Security",
       subtitle: "Two-factor auth, passcodes, sessions",
-      icon: Shield,
-      path: "/profile/privacy",
+      icon: Lock,
+      path: "/(agent)/privacy",
     },
     {
       id: "help",
       label: "Help & Support",
       subtitle: "Agent concierge 24/7, FAQs",
       icon: HelpCircle,
-      path: "/profile/help",
+      path: "/(agent)/help",
     },
     {
       id: "logout",
       label: "Logout",
       subtitle: "Sign out from this device",
       icon: LogOut,
-      path: "/profile/logout",
+      path: "",
     },
   ];
 
-  if (loading)
+  if (loading) {
     return (
-      <View
-        className="flex-1 justify-center items-center"
-        style={{ backgroundColor: colors.background }}
-      >
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
+  }
+
+  const switchProps = {
+    trackColor: { false: isDark ? "#1D2C42" : "#CBD5E1", true: colors.primary },
+    thumbColor: "#FFFFFF",
+    ios_backgroundColor: isDark ? "#1D2C42" : "#CBD5E1",
+  };
 
   return (
-    <SafeAreaView
-      className="flex-1"
-      edges={["top"]}
-      style={{ backgroundColor: colors.background, flex: 1 }}
-    >
-      {/* Header Utilities */}
-      <View
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* ---------- Header ---------- */}
+      <SafeAreaView
+        edges={["top"]}
         style={{
-          backgroundColor: colors.background,
+          backgroundColor: headerBg,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: divider,
         }}
-        className="flex-row justify-between items-center px-6 py-3"
       >
-        <Text
-          style={{ color: colors.text }}
-          className="text-3xl font-bold font-['Poppins']"
-        >
-          Profile
-        </Text>
-        <Pressable
-          onPress={() => router.push("/(agent)/enquires")}
-          style={[
-            styles.headerBtn,
-            { backgroundColor: surface, borderColor: "#1D2C42" },
-          ]}
-        >
-          <Settings size={22} color={colors.text} />
-        </Pressable>
-      </View>
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => router.back()}
+            style={[
+              styles.backBtn,
+              { backgroundColor: iconBg, borderColor: divider },
+            ]}
+          >
+            <ArrowLeft size={22} color={colors.primary} />
+          </Pressable>
+
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Profile
+            </Text>
+            <Text style={[styles.headerSub, { color: colors.placeholder }]}>
+              Real estate agent account
+            </Text>
+          </View>
+
+          <Pressable
+            hitSlop={10}
+            onPress={() => router.push("/(utilities)/notifications")}
+          >
+            <Bell size={24} color={colors.text} />
+          </Pressable>
+        </View>
+      </SafeAreaView>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={fetchProfile}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchProfile();
+            }}
             tintColor={colors.primary}
           />
         }
       >
-        {/* User Badge Section */}
+        {/* ---------- Profile card ---------- */}
         <View
-          style={{
-            backgroundColor: colors.background,
-          }}
-          className="items-center pt-4 pb-6"
+          style={[
+            styles.card,
+            { backgroundColor: surface, borderColor: divider },
+          ]}
         >
-          <View style={styles.avatarWrap}>
-            <Image
-              source={{
-                uri:
-                  profile?.avatar ||
-                  "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
-              }}
-              style={[styles.avatar, { borderColor: colors.primary }]}
-            />
+          <View style={styles.profileTop}>
+            <Pressable onPress={handleAvatarUpload} style={styles.avatarWrap}>
+              <Image
+                source={{
+                  uri:
+                    profile?.avatar ||
+                    "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
+                }}
+                style={[styles.avatar, { borderColor: colors.primary }]}
+              />
+              {uploadingAvatar && (
+                <View style={styles.avatarOverlay}>
+                  <ActivityIndicator color="#FFFFFF" />
+                </View>
+              )}
+              <View
+                style={[
+                  styles.onlineDot,
+                  {
+                    backgroundColor: isOnline
+                      ? colors.success
+                      : colors.placeholder,
+                    borderColor: surface,
+                  },
+                ]}
+              />
+            </Pressable>
 
-            {/* Verified badge (top right) */}
-            <View
-              style={[
-                styles.verifiedBadge,
-                {
-                  backgroundColor: colors.primary,
-                  borderColor: colors.background,
-                },
-              ]}
-            >
-              <Check size={16} color="#FFFFFF" strokeWidth={3} />
+            <View style={styles.profileInfo}>
+              <Text
+                numberOfLines={1}
+                style={[styles.name, { color: colors.text }]}
+              >
+                {profile?.name || "Agent"}
+              </Text>
+
+              <View
+                style={[
+                  styles.verifiedPill,
+                  {
+                    backgroundColor: `${colors.success}18`,
+                    borderColor: `${colors.success}66`,
+                  },
+                ]}
+              >
+                <BadgeCheck size={15} color={colors.success} />
+                <Text style={[styles.verifiedText, { color: colors.success }]}>
+                  VERIFIED
+                </Text>
+              </View>
+
+              <Text
+                numberOfLines={1}
+                style={[styles.role, { color: colors.placeholder }]}
+              >
+                Real Estate Agent
+              </Text>
             </View>
 
-            {/* Camera button (bottom right) */}
             <Pressable
-              onPress={handleAvatarUpload}
-              disabled={uploadingAvatar}
-              style={[
-                styles.cameraBtn,
-                {
-                  backgroundColor: colors.primary,
-                  borderColor: colors.background,
-                },
-              ]}
+              onPress={() => router.push("/(agent)/personalInfo")}
+              style={[styles.editBtn, { backgroundColor: colors.primary }]}
             >
-              {uploadingAvatar ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Camera size={16} color="#FFFFFF" />
-              )}
+              <Pencil size={16} color="#FFFFFF" />
+              {/* <Text style={styles.editText}>Edit Profile</Text> */}
             </Pressable>
           </View>
 
-          <Text
-            style={{ color: colors.text }}
-            className="text-2xl font-bold font-['Poppins'] mt-3"
-          >
-            {profile?.name || "Tunde Bakare"}
+          <Text style={[styles.availableText, { color: colors.placeholder }]}>
+            {isOnline
+              ? "Available for direct buyer leads and instant client calls"
+              : "You won't receive new buyer leads or client calls"}
           </Text>
 
-          <Pressable
-            onPress={() => router.push("/(agent)/personalInfo")}
-            style={{
-              borderColor: colors.primary,
-              backgroundColor: colors.background,
-            }}
-            className="border rounded-full px-12 py-3 mt-4"
-          >
-            <Text
-              style={{ color: colors.primary }}
-              className="text-base font-semibold tracking-wide font-['Inter']"
-            >
-              Edit Profile
-            </Text>
-          </Pressable>
-
-          <View className="flex-row items-center mt-5 gap-3">
-            <Text
-              style={{ color: colors.text }}
-              className="text-base font-['Inter']"
-            >
-              Real Estate Agent
-            </Text>
-            <Text
-              style={{
-                color: colors.success,
-                backgroundColor: `${colors.success}15`,
-                borderColor: `${colors.success}60`,
-                borderWidth: 1,
-                overflow: "hidden",
-              }}
-              className="text-sm font-bold px-3 py-1 rounded-md font-['Inter'] uppercase tracking-wider"
-            >
-              Verified
-            </Text>
-          </View>
-
-          <View className="flex-row items-center mt-4 gap-2">
-            <Mail size={18} color={colors.placeholder} />
-            <Text
-              style={{ color: colors.placeholder }}
-              className="text-base font-['Inter']"
-            >
-              {profile?.email || "tundebakare@gmail.com"}
-            </Text>
-          </View>
-          <View className="flex-row items-center mt-2 gap-2">
-            <Phone size={18} color={colors.placeholder} />
-            <Text
-              style={{ color: colors.placeholder }}
-              className="text-base font-['Inter']"
-            >
-              {profile?.phone || "+234 801 234 5678"}
-            </Text>
+          <View style={styles.contactRow}>
+            <ContactTile
+              icon={<Phone size={20} color={colors.primary} />}
+              label="PHONE"
+              value={profile?.phone || "—"}
+              bg={surfaceInner}
+              border={divider}
+              iconBg={iconBg}
+              textColor={colors.text}
+              labelColor={colors.placeholder}
+            />
+            <ContactTile
+              icon={<Mail size={20} color={colors.primary} />}
+              label="EMAIL"
+              value={profile?.email || "—"}
+              bg={surfaceInner}
+              border={divider}
+              iconBg={iconBg}
+              textColor={colors.text}
+              labelColor={colors.placeholder}
+            />
           </View>
         </View>
 
-        {/* Agent Availability Card */}
-        <View className="px-5 mt-4">
-          <View
-            style={{ backgroundColor: surface, borderColor: "#1D2C42" }}
-            className="rounded-3xl border p-5"
-          >
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3 shrink">
-                <Text
-                  style={{ color: colors.placeholder }}
-                  className="text-xs font-bold font-['Inter'] uppercase tracking-widest"
-                >
-                  Agent Availability
-                </Text>
-                <View
-                  style={{
+        {/* ---------- Agent availability ---------- */}
+        <Text style={[styles.sectionLabel, { color: colors.placeholder }]}>
+          AGENT AVAILABILITY
+        </Text>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: surface, borderColor: divider },
+          ]}
+        >
+          <View style={styles.rowBetween}>
+            <View style={styles.rowCenter}>
+              <View
+                style={[
+                  styles.statusDot,
+                  {
                     backgroundColor: isOnline
-                      ? `${colors.success}15`
-                      : `${colors.placeholder}20`,
-                    borderColor: isOnline ? `${colors.success}60` : "#1D2C42",
-                  }}
-                  className="flex-row items-center gap-1.5 border rounded-full px-2.5 py-1"
-                >
-                  <View
-                    style={{
-                      backgroundColor: isOnline
-                        ? colors.success
-                        : colors.placeholder,
-                    }}
-                    className="w-2 h-2 rounded-full"
-                  />
-                  <Text
-                    style={{
-                      color: isOnline ? colors.success : colors.placeholder,
-                    }}
-                    className="text-xs font-bold font-['Inter']"
-                  >
-                    {toggling ? "Updating..." : isOnline ? "Online" : "Offline"}
-                  </Text>
-                </View>
-              </View>
-
-              <View className="flex-row items-center gap-2">
-                <Text
-                  style={{ color: colors.placeholder }}
-                  className="text-base font-['Inter']"
-                >
-                  {isOnline ? "Online: " : "Offline: "}
-                </Text>
-                <Switch
-                  trackColor={{ false: "#1D2C42", true: colors.primary }}
-                  value={isOnline}
-                  onValueChange={handleToggle}
-                  disabled={toggling}
-                  thumbColor="#ffffff"
-                />
-              </View>
+                      ? colors.success
+                      : colors.placeholder,
+                  },
+                ]}
+              />
+              <Text style={[styles.cardTitle, { color: colors.text }]}>
+                {isOnline ? "Receiving inquiries" : "Not receiving inquiries"}
+              </Text>
             </View>
 
             <View
-              style={{
-                borderColor: "#1D2C42",
-                backgroundColor: colors.background,
-              }}
-              className="flex-row items-center border rounded-2xl p-4 mt-4"
+              style={[
+                styles.statusPill,
+                {
+                  backgroundColor: isOnline
+                    ? `${colors.success}18`
+                    : `${colors.placeholder}20`,
+                  borderColor: isOnline ? `${colors.success}66` : divider,
+                },
+              ]}
             >
               <View
-                style={{
-                  backgroundColor: isOnline
-                    ? `${colors.success}20`
-                    : `${colors.placeholder}20`,
-                }}
-                className="w-12 h-12 rounded-xl items-center justify-center"
-              >
-                <Clock
-                  size={22}
-                  color={isOnline ? colors.success : colors.placeholder}
-                />
-              </View>
-              <View className="flex-1 mx-4">
-                <Text
-                  style={{ color: colors.text }}
-                  className="text-base font-bold font-['Inter']"
-                >
-                  {isOnline ? "Receiving Inquiries" : "Not Receiving Inquiries"}
-                </Text>
-                <Text
-                  style={{ color: colors.placeholder }}
-                  className="text-sm font-['Inter'] mt-0.5"
-                >
-                  {isOnline
-                    ? "Ready for direct buyer leads and instant client calls"
-                    : "You won't receive new buyer leads or client calls"}
-                </Text>
-              </View>
-              <View
-                style={{
-                  backgroundColor: isOnline
-                    ? colors.success
-                    : colors.placeholder,
-                }}
-                className="w-2.5 h-2.5 rounded-full"
+                style={[
+                  styles.pillDot,
+                  {
+                    backgroundColor: isOnline
+                      ? colors.success
+                      : colors.placeholder,
+                  },
+                ]}
               />
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: isOnline ? colors.success : colors.placeholder },
+                ]}
+              >
+                {toggling ? "Updating..." : isOnline ? "Online" : "Offline"}
+              </Text>
             </View>
+          </View>
+
+          <View style={[styles.rowBetween, { marginTop: 10 }]}>
+            <Text style={[styles.cardSub, { color: colors.placeholder }]}>
+              {isOnline
+                ? "Tap to pause incoming leads"
+                : "Tap to resume incoming leads"}
+            </Text>
+            <Switch
+              {...switchProps}
+              value={isOnline}
+              onValueChange={handleToggle}
+              disabled={toggling}
+            />
           </View>
         </View>
 
-        {/* System Theme Switcher Controls Menu */}
-        <View className="px-5 pt-5 pb-2">
-          <View
-            className="border rounded-3xl w-full p-5 flex-row items-center justify-between"
-            style={{
-              borderColor: "#1D2C42",
-              backgroundColor: surface,
-            }}
-          >
-            <View className="flex-row items-center gap-4">
-              <View
-                style={{ backgroundColor: iconBg }}
-                className="w-12 h-12 rounded-xl items-center justify-center"
-              >
+        {/* ---------- Theme ---------- */}
+        <Text style={[styles.sectionLabel, { color: colors.placeholder }]}>
+          THEME
+        </Text>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: surface, borderColor: divider },
+          ]}
+        >
+          <View style={styles.rowBetween}>
+            <View style={styles.rowCenter}>
+              <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
                 {isDark ? (
                   <Moon size={22} color={colors.primary} />
                 ) : (
                   <Sun size={22} color={colors.primary} />
                 )}
               </View>
-              <View>
-                <Text
-                  className="text-xs uppercase tracking-widest font-bold mb-1"
-                  style={{ color: colors.placeholder }}
-                >
-                  Theme
+              <View style={{ marginLeft: 14 }}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>
+                  {isDark ? "Dark Mode" : "Light Mode"}
                 </Text>
                 <Text
-                  className="font-semibold text-lg"
-                  style={{ color: colors.text }}
+                  style={[
+                    styles.cardSub,
+                    { color: colors.placeholder, marginTop: 2 },
+                  ]}
                 >
-                  {scheme === "dark"
-                    ? "Dark Mode"
-                    : scheme === "light"
-                      ? "Light Mode"
-                      : "System Default"}
+                  Current theme
                 </Text>
               </View>
             </View>
             <Switch
-              value={isThemeSwitchOn}
-              trackColor={{
-                false: "#1D2C42",
-                true: colors.primary,
-              }}
-              thumbColor="#ffffff"
+              {...switchProps}
+              value={isDark}
               onValueChange={handleThemeChange}
             />
           </View>
         </View>
 
-        {/* Settings & Security Tree */}
-        <View className="mt-4 px-5">
-          <Text
-            style={{ color: colors.placeholder }}
-            className="text-sm uppercase tracking-widest mb-3 ml-1 font-semibold font-['Inter']"
-          >
-            Settings & Security
-          </Text>
-          <View
-            style={{
+        {/* ---------- Settings & Security ---------- */}
+        <Text style={[styles.sectionLabel, { color: colors.placeholder }]}>
+          SETTINGS & SECURITY
+        </Text>
+        <View
+          style={[
+            styles.card,
+            {
               backgroundColor: surface,
-              borderColor: "#1D2C42",
-            }}
-            className="rounded-3xl border overflow-hidden"
-          >
-            {settingsOptions.map((item, index) => {
-              const IconComponent = item.icon;
-              const isLogout = item.id === "logout";
-              const isLast = index === settingsOptions.length - 1;
-              return (
+              borderColor: divider,
+              padding: 0,
+              overflow: "hidden",
+            },
+          ]}
+        >
+          {settingsOptions.map((item, index) => {
+            const Icon = item.icon;
+            const isLogout = item.id === "logout";
+            const isLast = index === settingsOptions.length - 1;
+
+            return (
+              <View key={item.id}>
                 <Pressable
-                  key={item.id}
-                  onPress={() => {
-                    if (item.id === "business") {
-                      router.push("/(agent)/businessForm");
-                    } else if (item.id === "personal") {
-                      router.push("/(agent)/personalInfo");
-                    } else if (item.id === "bank") {
-                      router.push("/(agent)/bank");
-                    } else if (item.id === "notifications") {
-                      router.push("/(utilities)/notifications");
-                    } else if (item.id === "privacy") {
-                      router.push("/(agent)/privacy" as any);
-                    } else if (item.id === "help") {
-                      router.push("/(agent)/help");
-                    } else if (item.id === "logout") {
-                      handleLogout();
-                    }
-                  }}
-                  style={{
-                    borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
-                    borderBottomColor: "#1D2C42",
-                  }}
-                  className="flex-row items-center justify-between px-5 py-5"
+                  onPress={() =>
+                    isLogout ? handleLogout() : router.push(item.path as any)
+                  }
+                  android_ripple={{ color: `${colors.primary}15` }}
+                  style={styles.settingRow}
                 >
-                  <View className="flex-row items-center flex-1 pr-3">
-                    <View
-                      style={{
-                        backgroundColor: isLogout ? `${danger}18` : iconBg,
-                      }}
-                      className="w-12 h-12 rounded-xl items-center justify-center"
-                    >
-                      <IconComponent
-                        size={20}
-                        color={isLogout ? danger : colors.placeholder}
-                      />
-                    </View>
-                    <View className="ml-4 flex-1">
-                      <Text
-                        style={{ color: isLogout ? danger : colors.text }}
-                        className="text-[17px] font-semibold font-['Inter']"
-                      >
-                        {item.label}
-                      </Text>
-                      <Text
-                        style={{
-                          color: isLogout ? `${danger}CC` : colors.placeholder,
-                        }}
-                        className="text-sm font-['Inter'] mt-1"
-                      >
-                        {item.subtitle}
-                      </Text>
-                    </View>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: isLogout ? `${danger}18` : iconBg },
+                    ]}
+                  >
+                    <Icon
+                      size={21}
+                      color={isLogout ? danger : colors.primary}
+                    />
                   </View>
+
+                  <View style={{ flex: 1, marginLeft: 14 }}>
+                    <Text
+                      style={[
+                        styles.settingTitle,
+                        { color: isLogout ? danger : colors.text },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.cardSub,
+                        {
+                          color: isLogout ? `${danger}CC` : colors.placeholder,
+                          marginTop: 2,
+                        },
+                      ]}
+                    >
+                      {item.subtitle}
+                    </Text>
+                  </View>
+
                   <ChevronRight
-                    size={18}
+                    size={20}
                     color={isLogout ? danger : colors.placeholder}
                   />
                 </Pressable>
-              );
-            })}
-          </View>
+
+                {/* inset divider, starts under the text like the design */}
+                {!isLast && (
+                  <View
+                    style={{
+                      height: StyleSheet.hairlineWidth,
+                      backgroundColor: divider,
+                      marginLeft: 70,
+                      marginRight: 16,
+                    }}
+                  />
+                )}
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function ContactTile({
+  icon,
+  label,
+  value,
+  bg,
+  border,
+  iconBg,
+  textColor,
+  labelColor,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  bg: string;
+  border: string;
+  iconBg: string;
+  textColor: string;
+  labelColor: string;
+}) {
+  return (
+    <View
+      style={[styles.contactTile, { backgroundColor: bg, borderColor: border }]}
+    >
+      <View style={[styles.contactIcon, { backgroundColor: iconBg }]}>
+        {icon}
+      </View>
+      <View style={{ flex: 1, marginLeft: 10, minWidth: 0 }}>
+        <Text style={[styles.contactLabel, { color: labelColor }]}>
+          {label}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={[styles.contactValue, { color: textColor }]}
+        >
+          {value}
+        </Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
+
+  // header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarWrap: {
-    width: 108,
-    height: 108,
+  headerTitle: { fontFamily: FONT, fontSize: 22, fontWeight: "700" },
+  headerSub: { fontFamily: FONT, fontSize: 14, marginTop: 1 },
+
+  // generic card
+  card: {
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 16,
+  },
+  rowBetween: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  rowCenter: { flexDirection: "row", alignItems: "center", flexShrink: 1 },
+  sectionLabel: {
+    fontFamily: FONT,
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginTop: 26,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  cardTitle: { fontFamily: FONT, fontSize: 18, fontWeight: "600" },
+  cardSub: { fontFamily: FONT, fontSize: 15 },
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
+
+  // profile card
+  profileTop: { flexDirection: "row", alignItems: "flex-start" },
+  avatarWrap: { width: 70, height: 70 },
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "#E2E8F0",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     borderWidth: 3,
+    backgroundColor: "#E2E8F0",
   },
-  verifiedBadge: {
-    position: "absolute",
-    right: 4,
-    top: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 35,
+    backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
   },
-  cameraBtn: {
+  onlineDot: {
     position: "absolute",
     right: 0,
     bottom: 2,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2.5,
+  },
+  profileInfo: { flex: 1, marginLeft: 16, minWidth: 0 },
+  name: { fontFamily: FONT, fontSize: 22, fontWeight: "700" },
+  verifiedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
+  },
+  verifiedText: {
+    fontFamily: FONT,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
+  role: { fontFamily: FONT, fontSize: 16, marginTop: 8 },
+  editBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    marginLeft: 8,
+  },
+  editText: {
+    fontFamily: FONT,
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  availableText: {
+    fontFamily: FONT,
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 18,
+  },
+  contactRow: { flexDirection: "row", gap: 12, marginTop: 18 },
+  contactTile: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    minWidth: 0,
+  },
+  contactIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
   },
+  contactLabel: {
+    fontFamily: FONT,
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+  },
+  contactValue: {
+    fontFamily: FONT,
+    fontSize: 15,
+    fontWeight: "600",
+    marginTop: 3,
+  },
+
+  // availability
+  statusDot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginLeft: 8,
+  },
+  pillDot: { width: 7, height: 7, borderRadius: 4 },
+  pillText: { fontFamily: FONT, fontSize: 14, fontWeight: "600" },
+
+  // settings rows
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  settingTitle: { fontFamily: FONT, fontSize: 18, fontWeight: "600" },
 });

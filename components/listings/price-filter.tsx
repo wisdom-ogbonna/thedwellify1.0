@@ -150,7 +150,7 @@ export default function PriceFilter({ purpose, value, onChange }: Props) {
           styles.chip,
           {
             backgroundColor: active ? colors.primary + "22" : colors.disabled + "14",
-            borderColor: active ? colors.primary : "#222226",
+            borderColor: active ? colors.primary : colors.border,
           },
         ]}
       >
@@ -203,7 +203,7 @@ export default function PriceFilter({ purpose, value, onChange }: Props) {
                       styles.preset,
                       {
                         backgroundColor: selected ? colors.primary : colors.disabled + "14",
-                        borderColor: selected ? colors.primary : "#222226",
+                        borderColor: selected ? colors.primary : colors.border,
                       },
                     ]}
                   >
@@ -217,7 +217,7 @@ export default function PriceFilter({ purpose, value, onChange }: Props) {
 
             <Text style={[styles.sectionLabel, { color: colors.placeholder }]}>Custom range</Text>
             <View style={styles.customRow}>
-              <View style={[styles.moneyField, { borderColor: "#222226", backgroundColor: fieldBg }]}>
+              <View style={[styles.moneyField, { borderColor: colors.border, backgroundColor: fieldBg }]}>
                 <Text style={[styles.naira, { color: colors.placeholder }]}>₦</Text>
                 <TextInput
                   value={minText}
@@ -229,7 +229,7 @@ export default function PriceFilter({ purpose, value, onChange }: Props) {
                 />
               </View>
               <View style={[styles.dash, { backgroundColor: colors.placeholder }]} />
-              <View style={[styles.moneyField, { borderColor: "#222226", backgroundColor: fieldBg }]}>
+              <View style={[styles.moneyField, { borderColor: colors.border, backgroundColor: fieldBg }]}>
                 <Text style={[styles.naira, { color: colors.placeholder }]}>₦</Text>
                 <TextInput
                   value={maxText}
