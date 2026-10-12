@@ -16,6 +16,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -102,7 +103,12 @@ const buildRows = (messages: ChatMessage[]): ThreadRow[] => {
 export default function ChatThreadScreen() {
   const { colors, isDark } = useTheme();
   const { user, role } = useAuth();
-  const params = useLocalSearchParams<{ id?: string; productId?: string }>();
+  const params = useLocalSearchParams<{
+    id?: string;
+    productId?: string;
+    requestId?: string;
+    peerAgentId?: string;
+  }>();
   const [conversationId, setConversationId] = useState(params.id || "");
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -133,6 +139,16 @@ export default function ChatThreadScreen() {
       setError("");
       setLoading(true);
       let id = String(params.id || "");
+      if (!id && params.requestId) {
+        const started = await chatApi.startFromRequest(String(params.requestId));
+        id = started.id;
+        setConversation(started);
+      }
+      if (!id && params.peerAgentId) {
+        const started = await chatApi.startPeer(String(params.peerAgentId));
+        id = started.id;
+        setConversation(started);
+      }
       if (!id && params.productId) {
         const started = await chatApi.start(String(params.productId));
         id = started.id;
@@ -144,15 +160,17 @@ export default function ChatThreadScreen() {
       }
       setConversationId(id);
       const [convo, rows] = await Promise.all([chatApi.get(id), chatApi.messages(id)]);
+      const liveId = convo?.id || id;
       setConversation(convo);
+      setConversationId(liveId);
       setMessages(rows);
-      chatApi.markRead(id).catch(() => undefined);
+      chatApi.markRead(liveId).catch(() => undefined);
     } catch (err: any) {
       setError(err?.response?.data?.error || "Could not open this chat.");
     } finally {
       setLoading(false);
     }
-  }, [params.id, params.productId]);
+  }, [params.id, params.productId, params.requestId, params.peerAgentId]);
 
   useEffect(() => {
     openConversation();
@@ -181,8 +199,10 @@ export default function ChatThreadScreen() {
     };
   }, [conversationId, user?.uid]);
 
-  const peer = role === "agent" ? conversation?.client : conversation?.agent;
+  const peer =
+    conversation?.agentId === user?.uid ? conversation?.client : conversation?.agent;
   const property = conversation?.property;
+  const isPeerChat = conversation?.kind === "agent_peer";
   const rows = useMemo(() => buildRows(messages), [messages]);
   const canSend = Boolean(text.trim() && conversationId);
 
@@ -276,19 +296,35 @@ export default function ChatThreadScreen() {
         </View>
         <View style={styles.headerCopy}>
           <Text style={[styles.peerName, { color: colors.text }]} numberOfLines={1}>
-            {peer?.name || (role === "agent" ? "Client" : "Agent")}
+            {peer?.name || (isPeerChat ? "Agent" : role === "agent" ? "Client" : "Agent")}
           </Text>
-          <Text style={[styles.online, { color: "#22C55E" }]}>online</Text>
+          <Text style={[styles.online, { color: "#22C55E" }]} numberOfLines={1}>
+            {peer?.phone || (isPeerChat ? "Agent" : "online")}
+          </Text>
         </View>
+        {peer?.phone ? (
+          <Pressable
+            onPress={() => Linking.openURL(`tel:${peer.phone}`)}
+            style={styles.headerCall}
+            hitSlop={8}
+          >
+            <Text style={[styles.headerCallText, { color: colors.primary }]}>Call</Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      {property ? (
+      {!isPeerChat && property ? (
         <Pressable
           onPress={() =>
-            router.push({
-              pathname: "/(utilities)/property-view",
-              params: { propertyId: property.id || conversation?.productId },
-            })
+            conversation?.kind === "property_request" || conversation?.requestId
+              ? router.push({
+                  pathname: "/(utilities)/property-request",
+                  params: { id: String(conversation.requestId || property.id) },
+                })
+              : router.push({
+                  pathname: "/(utilities)/property-view",
+                  params: { propertyId: property.id || conversation?.productId },
+                })
           }
           style={[styles.propertyCard, { backgroundColor: theme.chip }]}
         >
@@ -327,7 +363,9 @@ export default function ChatThreadScreen() {
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Text style={[styles.emptyThread, { color: theme.meta }]}>
-                Message this agent about the listing. Your chat stays on this property.
+                {isPeerChat
+                  ? "Chat this agent directly. You can also share listings from Explore."
+                  : "Message this agent about the listing. Your chat stays on this property."}
               </Text>
             </View>
           }
@@ -344,9 +382,18 @@ export default function ChatThreadScreen() {
 
             const mine = item.message.senderId === user?.uid;
             const failed = item.message.status === "failed";
+            const listing = item.message.listing;
+            const isShare = item.message.type === "listing_share" && listing;
             return (
               <Pressable
                 onPress={() => {
+                  if (isShare && listing?.id) {
+                    router.push({
+                      pathname: "/(utilities)/property-view",
+                      params: { propertyId: listing.id },
+                    });
+                    return;
+                  }
                   if (failed) sendNow(item.message.text, item.message.nonce || item.message.id);
                 }}
                 style={[
@@ -358,6 +405,7 @@ export default function ChatThreadScreen() {
                 <View
                   style={[
                     styles.bubble,
+                    isShare ? styles.shareBubble : null,
                     mine
                       ? {
                           backgroundColor: theme.outgoing,
@@ -369,9 +417,43 @@ export default function ChatThreadScreen() {
                         },
                   ]}
                 >
-                  <Text style={[styles.bubbleText, { color: mine ? theme.outgoingText : theme.incomingText }]}>
-                    {item.message.text}
-                  </Text>
+                  {isShare ? (
+                    <View style={styles.shareCard}>
+                      {listing?.image ? (
+                        <Image source={{ uri: listing.image }} style={styles.shareImage} />
+                      ) : (
+                        <View style={[styles.shareImage, { backgroundColor: colors.disabled + "44" }]} />
+                      )}
+                      <View style={styles.shareCopy}>
+                        <Text
+                          style={[styles.shareKicker, { color: theme.meta }]}
+                        >
+                          Shared listing
+                        </Text>
+                        <Text
+                          style={[
+                            styles.shareTitle,
+                            { color: mine ? theme.outgoingText : theme.incomingText },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {listing?.title || "Property"}
+                        </Text>
+                        {listing?.location ? (
+                          <Text style={[styles.shareMeta, { color: theme.meta }]} numberOfLines={1}>
+                            {listing.location}
+                          </Text>
+                        ) : null}
+                        <Text style={[styles.sharePrice, { color: colors.primary }]}>
+                          {listing?.price ? formatPrice(listing.price) : "Price on request"}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={[styles.bubbleText, { color: mine ? theme.outgoingText : theme.incomingText }]}>
+                      {item.message.text}
+                    </Text>
+                  )}
                   <View style={styles.metaRow}>
                     {failed ? (
                       <Text style={styles.failedHint}>Tap to retry</Text>
@@ -449,7 +531,22 @@ const styles = StyleSheet.create({
   avatarLetter: { color: "#fff", fontWeight: "800", fontSize: 16 },
   headerCopy: { flex: 1 },
   peerName: { fontSize: 17, fontWeight: "800" },
-  online: { fontSize: 12, fontWeight: "600", marginTop: 1, textTransform: "lowercase" },
+  online: { fontSize: 12, fontWeight: "600", marginTop: 1 },
+  headerCall: {
+    paddingHorizontal: 12,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerCallText: { fontSize: 15, fontWeight: "800" },
+  shareBubble: { overflow: "hidden", paddingHorizontal: 6, paddingTop: 6, maxWidth: 260 },
+  shareCard: { width: 232 },
+  shareImage: { width: "100%", height: 120, borderRadius: 12 },
+  shareCopy: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 2 },
+  shareKicker: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
+  shareTitle: { fontSize: 15, fontWeight: "800", marginTop: 2 },
+  shareMeta: { fontSize: 12, marginTop: 3 },
+  sharePrice: { fontSize: 13, fontWeight: "800", marginTop: 4 },
   propertyCard: {
     flexDirection: "row",
     marginHorizontal: 10,

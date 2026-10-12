@@ -6,6 +6,7 @@ import {
   ChatIcon,
   HouseIcon,
   UserCircleIcon,
+  CompassIcon,
 } from "phosphor-react-native";
 import React from "react";
 import { Platform } from "react-native";
@@ -86,11 +87,11 @@ export default function AgentLayout() {
         }}
       />
       <Tabs.Screen
-        name="agent-profile"
+        name="agent-explore"
         options={{
-          title: "Profile",
+          title: "Explore",
           tabBarIcon: ({ color, focused }) => (
-            <UserCircleIcon
+            <CompassIcon
               size={26}
               color={color}
               weight={focused ? "fill" : "regular"}

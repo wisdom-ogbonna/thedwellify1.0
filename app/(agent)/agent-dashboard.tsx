@@ -5,12 +5,13 @@ import * as Clipboard from "expo-clipboard";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { Bell } from "lucide-react-native";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -392,31 +393,32 @@ export default function MapScreen() {
           className="flex-row items-center p-1.5 pr-5 rounded-full shadow-lg"
           style={{ backgroundColor: "#2A2A2A" }}
         >
-          <TouchableOpacity
-            activeOpacity={0.85}
-            className="w-10 h-10 rounded-full justify-center items-center mr-3"
-            style={{ backgroundColor: colors.primary }}
-          >
-            <Bell size={18} color="#FFFFFF" />
-          </TouchableOpacity>
+          <NotificationBell
+            color="#FFFFFF"
+            size={18}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: colors.primary,
+              marginRight: 12,
+            }}
+          />
           <Text className="text-white text-base font-bold tracking-wide">
             Dwellify
           </Text>
         </View>
 
-        {/* Right Profile Avatar */}
-        <TouchableOpacity activeOpacity={0.85} className="shadow-md">
-          <Image
-            source={{
-              uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5d-Q11KjCzqjJTsFyu52nPBtSBvIIyW1-Ew8mw8ENBw&s=10",
-            }}
-            className="w-15 h-15 rounded-full"
-            style={{
-              borderWidth: 2,
-              borderColor: colors.border || "#3A3A3A",
-            }}
-          />
-        </TouchableOpacity>
+        <Pressable onPress={() => router.push("/(utilities)/agent-profile")}>
+                    <Image
+                      source={{
+                        uri:
+                          "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
+                      }}
+                      style={{ borderColor: colors.success}}
+                      className="w-13 h-13 rounded-full border-2"
+                    />
+                  </Pressable>
       </View>
 
       <MapView

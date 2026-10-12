@@ -3,8 +3,10 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import {
   ArrowClockwiseIcon,
+  BuildingsIcon,
   CalendarBlankIcon,
   CaretLeftIcon,
+  CaretRightIcon,
   ClockIcon,
   MapPinIcon,
 } from "phosphor-react-native";
@@ -17,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { API } from "../../services/api";
 
 // --- TYPES & INTERFACES ---
@@ -41,9 +44,10 @@ export interface HistoryItem {
 }
 
 interface StatusStyle {
-  bg: string;
-  text: string;
+  color: string;
 }
+
+const MUTED = "#71717a";
 
 // --- HELPER FUNCTIONS ---
 export const formatDate = (createdAt?: FirestoreTimestamp): string => {
@@ -76,104 +80,149 @@ const HistoryListItemComponent = ({
   const hasCoordinates =
     typeof item.lat === "number" && typeof item.lng === "number";
 
+  // Tinted (translucent) pills read well in both light and dark themes
   const statusStyle = useMemo((): StatusStyle => {
     switch (item.status?.toLowerCase()) {
       case "matched":
-        return { bg: colors.border, text: colors.primary };
+        return { color: colors.primary };
       case "inspection_started":
-        return { bg: "#FEF3C7", text: "#D97706" };
+        return { color: "#D97706" };
       case "inspection_completed":
-        return { bg: "#DBEAFE", text: "#2563EB" };
+        return { color: "#2563EB" };
       case "cancelled":
-        return { bg: "#FEE2E2", text: "#DC2626" };
+        return { color: "#DC2626" };
       default:
-        return { bg: colors.border, text: colors.text };
+        return { color: MUTED };
     }
   }, [item.status, colors]);
 
+  const tileBg = `${colors.primary}14`;
+
   return (
     <TouchableOpacity
+      activeOpacity={0.85}
       onPress={onPress}
-      className="p-5 mb-4 border rounded-3xl shadow-sm"
+      className="mb-4 border rounded-3xl overflow-hidden"
       style={{ backgroundColor: colors.card, borderColor: colors.border }}
     >
-      <View className="flex-row justify-between items-center">
-        <Text
-          className="text-base font-bold flex-1 mr-2"
-          style={{ color: colors.text }}
-          numberOfLines={1}
-        >
-          {item.propertyType || "Property Inspection"}
-        </Text>
+      <View className="p-5">
+        {/* Title + status */}
+        <View className="flex-row items-center">
+          <View
+            className="w-11 h-11 rounded-2xl items-center justify-center"
+            style={{ backgroundColor: tileBg }}
+          >
+            <BuildingsIcon size={22} color={colors.primary} weight="duotone" />
+          </View>
+
+          <View className="flex-1 mx-3">
+            <Text
+              className="text-base font-bold"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+            >
+              {item.propertyType || "Property Inspection"}
+            </Text>
+            <View
+              className="self-start flex-row items-center mt-1.5 px-2.5 py-1 rounded-full border"
+              style={{
+                backgroundColor: `${statusStyle.color}1A`,
+                borderColor: `${statusStyle.color}55`,
+              }}
+            >
+              <View
+                className="w-1.5 h-1.5 rounded-full mr-1.5"
+                style={{ backgroundColor: statusStyle.color }}
+              />
+              <Text
+                className="text-[10px] font-bold tracking-widest"
+                style={{ color: statusStyle.color }}
+              >
+                {(item.status || "unknown").replace(/_/g, " ").toUpperCase()}
+              </Text>
+            </View>
+          </View>
+
+          <CaretRightIcon size={18} color={MUTED} weight="bold" />
+        </View>
+
+        {/* Start / End panel */}
         <View
-          className="px-2.5 py-1 rounded-xl"
-          style={{ backgroundColor: statusStyle.bg }}
+          className="flex-row mt-5 rounded-2xl border"
+          style={{
+            backgroundColor: `${colors.primary}08`,
+            borderColor: colors.border,
+          }}
         >
-          <Text
-            className="text-[10px] font-bold tracking-wider"
-            style={{ color: statusStyle.text }}
-          >
-            {(item.status || "unknown").replace(/_/g, " ").toUpperCase()}
-          </Text>
-        </View>
-      </View>
-
-      {/* Separator Line */}
-      <View
-        className="h-px my-4 opacity-40"
-        style={{ backgroundColor: colors.border }}
-      />
-
-      <View className="flex-row justify-between">
-        {/* Start Date Field */}
-        <View className="flex-1 mr-2">
-          <View className="flex-row items-center gap-1">
-            <CalendarBlankIcon size={12} color="#71717a" weight="regular" />
-            <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
-              Inspection started at
+          <View className="flex-1 p-3.5">
+            <View className="flex-row items-center gap-1.5">
+              <CalendarBlankIcon size={13} color={MUTED} weight="regular" />
+              <Text
+                className="text-[10px] font-bold uppercase tracking-widest"
+                style={{ color: MUTED }}
+              >
+                Started
+              </Text>
+            </View>
+            <Text
+              className="text-sm font-semibold mt-1.5"
+              style={{ color: colors.text }}
+              numberOfLines={2}
+            >
+              {formatDate(item.inspectionStartedAt)}
             </Text>
           </View>
-          <Text
-            className="text-sm font-semibold mt-1 pl-4"
-            style={{ color: colors.text }}
-            numberOfLines={1}
-          >
-            {formatDate(item.inspectionStartedAt)}
-          </Text>
-        </View>
 
-        {/* End Date Field */}
-        <View className="flex-1 items-end">
-          <View className="flex-row items-center gap-1">
-            <CalendarBlankIcon size={12} color="#71717a" weight="regular" />
-            <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
-              Inspection ended at
+          <View
+            className="w-px my-3"
+            style={{ backgroundColor: colors.border }}
+          />
+
+          <View className="flex-1 p-3.5">
+            <View className="flex-row items-center gap-1.5">
+              <CalendarBlankIcon size={13} color={MUTED} weight="regular" />
+              <Text
+                className="text-[10px] font-bold uppercase tracking-widest"
+                style={{ color: MUTED }}
+              >
+                Ended
+              </Text>
+            </View>
+            <Text
+              className="text-sm font-semibold mt-1.5"
+              style={{ color: colors.text }}
+              numberOfLines={2}
+            >
+              {formatDate(item.inspectionEndedAt)}
             </Text>
           </View>
-          <Text
-            className="text-sm font-semibold mt-1"
-            style={{ color: colors.text }}
-          >
-            {formatDate(item.inspectionEndedAt)}
-          </Text>
         </View>
-      </View>
 
-      {/* Location Field */}
-      <View className="mt-4">
-        <View className="flex-row items-center gap-1">
-          <MapPinIcon size={12} color="#71717a" weight="regular" />
-          <Text className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
-            Inspection Location
-          </Text>
+        {/* Location */}
+        <View className="flex-row items-center mt-4">
+          <View
+            className="w-9 h-9 rounded-xl items-center justify-center"
+            style={{ backgroundColor: tileBg }}
+          >
+            <MapPinIcon size={17} color={colors.primary} weight="duotone" />
+          </View>
+          <View className="flex-1 ml-3">
+            <Text
+              className="text-[10px] font-bold uppercase tracking-widest"
+              style={{ color: MUTED }}
+            >
+              Inspection Location
+            </Text>
+            <Text
+              className="text-sm font-semibold mt-0.5"
+              style={{ color: colors.text }}
+              numberOfLines={2}
+            >
+              {address ||
+                (hasCoordinates ? "Loading address..." : "Address unavailable")}
+            </Text>
+          </View>
         </View>
-        <Text
-          className="text-sm font-semibold mt-1 pl-4"
-          style={{ color: colors.text }}
-        >
-          {address ||
-            (hasCoordinates ? "Loading address..." : "Address unavailable")}
-        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -186,6 +235,7 @@ HistoryListItem.displayName = "HistoryListItem";
 export default function HistoryScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [addresses, setAddresses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -325,10 +375,15 @@ export default function HistoryScreen() {
         style={{ backgroundColor: colors.background }}
       >
         <View
-          className="w-20 h-20 rounded-full border items-center justify-center mb-5"
-          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="w-24 h-24 rounded-full items-center justify-center mb-6"
+          style={{ backgroundColor: `${colors.primary}14` }}
         >
-          <ClockIcon size={36} color={colors.primary} weight="light" />
+          <View
+            className="w-16 h-16 rounded-full border items-center justify-center"
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          >
+            <ClockIcon size={30} color={colors.primary} weight="duotone" />
+          </View>
         </View>
         <Text
           className="text-xl font-bold text-center"
@@ -336,26 +391,21 @@ export default function HistoryScreen() {
         >
           No History Found
         </Text>
-        <Text className="mt-2 text-zinc-500 text-sm text-center mb-6">
+        <Text
+          className="mt-2 text-sm text-center mb-7 leading-5"
+          style={{ color: MUTED }}
+        >
           Your full history listings and status updates will be safely displayed
           here.
         </Text>
         <TouchableOpacity
+          activeOpacity={0.85}
           onPress={onRefresh}
-          className="flex-row items-center px-5 py-3 rounded-xl"
+          className="flex-row items-center justify-center h-12 px-7 rounded-2xl"
           style={{ backgroundColor: colors.primary }}
         >
-          <ArrowClockwiseIcon
-            size={14}
-            color={colors.background}
-            weight="bold"
-          />
-          <Text
-            className="text-sm font-semibold ml-2"
-            style={{ color: colors.background }}
-          >
-            Check Again
-          </Text>
+          <ArrowClockwiseIcon size={16} color="#FFFFFF" weight="bold" />
+          <Text className="text-sm font-bold ml-2 text-white">Check Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -363,21 +413,38 @@ export default function HistoryScreen() {
 
   return (
     <View
-      className="flex-1 pt-8"
-      style={{ backgroundColor: colors.background }}
+      className="flex-1"
+      style={{ backgroundColor: colors.background, paddingTop: insets.top }}
     >
-      <View className="flex-row items-center px-5 py-5" style={{ gap: 12 }}>
-        <TouchableOpacity className="p-1 -ml-1" onPress={() => router.push("/(client)/client-dashboard")}>
-          <CaretLeftIcon size={28} color={colors.text} />
+      {/* Header */}
+      <View
+        className="flex-row items-center px-5 pt-3 pb-2"
+        style={{ gap: 14 }}
+      >
+        <TouchableOpacity
+          activeOpacity={0.8}
+          hitSlop={8}
+          onPress={() => router.push("/(client)/client-dashboard")}
+          className="w-11 h-11 rounded-full border items-center justify-center"
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+        >
+          <CaretLeftIcon size={20} color={colors.text} weight="bold" />
         </TouchableOpacity>
 
-        <Text
-          style={{ color: colors.text }}
-          className="text-2xl font-black tracking-tight"
-        >
-          HISTORY
-        </Text>
+        <View className="flex-1">
+          <Text
+            style={{ color: colors.text }}
+            className="text-2xl font-black tracking-tight"
+          >
+            History
+          </Text>
+          <Text className="text-xs mt-0.5" style={{ color: MUTED }}>
+            {filteredHistory.length}{" "}
+            {filteredHistory.length === 1 ? "inspection" : "inspections"}
+          </Text>
+        </View>
       </View>
+
       <FlatList
         data={filteredHistory}
         keyExtractor={(item) => item.id}
@@ -390,7 +457,33 @@ export default function HistoryScreen() {
             colors={[colors.primary]}
           />
         }
-        contentContainerStyle={{ padding: 20 }}
+        ListEmptyComponent={
+          <View className="items-center pt-20 px-8">
+            <View
+              className="w-16 h-16 rounded-full items-center justify-center mb-4"
+              style={{ backgroundColor: `${colors.primary}14` }}
+            >
+              <ClockIcon size={28} color={colors.primary} weight="duotone" />
+            </View>
+            <Text
+              className="text-lg font-bold text-center"
+              style={{ color: colors.text }}
+            >
+              Nothing here yet
+            </Text>
+            <Text
+              className="text-sm text-center mt-2 leading-5"
+              style={{ color: MUTED }}
+            >
+              Completed and cancelled inspections will show up here.
+            </Text>
+          </View>
+        }
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: insets.bottom + 24,
+        }}
         showsVerticalScrollIndicator={false}
         initialNumToRender={10}
         maxToRenderPerBatch={10}

@@ -16,6 +16,7 @@ import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { InboxProvider } from "../context/InboxContext";
 import "../global.css";
 import { setupNotifications } from "../services/notification";
 import { playRingtone } from "../services/ringtone";
@@ -75,6 +76,14 @@ function AppContent() {
               lng: String(data.lng || ""),
             },
           });
+        }
+
+        if (
+          data?.type === "property_request" ||
+          data?.type === "property_request_sent" ||
+          data?.type === "request_missed"
+        ) {
+          router.push("/(utilities)/notifications");
         }
 
         if (
@@ -269,11 +278,13 @@ export default function RootLayout() {
       <ThemeProvider value={theme}>
         <CustomModalProvider>
           <AuthProvider>
-            <OfflineModal
-              visible={!isConnected}
-              onRetry={() => NetInfo.refresh()}
-            />
-            <AppContent />
+            <InboxProvider>
+              <OfflineModal
+                visible={!isConnected}
+                onRetry={() => NetInfo.refresh()}
+              />
+              <AppContent />
+            </InboxProvider>
           </AuthProvider>
         </CustomModalProvider>
       </ThemeProvider>
