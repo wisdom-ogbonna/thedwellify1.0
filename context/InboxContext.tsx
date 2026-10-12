@@ -1,4 +1,5 @@
 import { inboxApi } from "@/services/inbox";
+import { connectSocket, getSocket } from "@/services/socket";
 import React, {
   createContext,
   useCallback,
@@ -38,8 +39,22 @@ export function InboxProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refresh();
     if (!user) return;
+    let detach: (() => void) | undefined;
+    connectSocket()
+      .then(() => {
+        const socket = getSocket();
+        const onNew = () => {
+          refresh();
+        };
+        socket?.on("notification:new", onNew);
+        detach = () => socket?.off("notification:new", onNew);
+      })
+      .catch(() => undefined);
     const timer = setInterval(refresh, 20000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      detach?.();
+    };
   }, [refresh, user]);
 
   const value = useMemo(

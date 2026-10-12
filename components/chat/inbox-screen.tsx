@@ -2,10 +2,11 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
-import { chatApi, type Conversation } from "@/services/chat";
+import { chatApi, type ChatMessage, type Conversation } from "@/services/chat";
+import { connectSocket, getSocket, isSocketConnected } from "@/services/socket";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -63,15 +64,70 @@ export default function InboxScreen({
   useFocusEffect(
     useCallback(() => {
       load();
+      connectSocket().catch(() => undefined);
       const timer = setInterval(() => {
+        if (isSocketConnected()) return;
         chatApi
           .list()
           .then((rows) => setItems(rows))
           .catch(() => undefined);
-      }, 3000);
+      }, 15000);
       return () => clearInterval(timer);
     }, [load]),
   );
+
+  useEffect(() => {
+    let active = true;
+    const attach = async () => {
+      await connectSocket();
+      if (!active) return;
+      const socket = getSocket();
+
+      const onUpdated = (row: Conversation) => {
+        if (!row?.id) return;
+        setItems((prev) => {
+          const rest = prev.filter((item) => item.id !== row.id);
+          return [row, ...rest];
+        });
+      };
+
+      const onNew = (message: ChatMessage) => {
+        if (!message?.conversationId) return;
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === message.conversationId
+              ? {
+                  ...item,
+                  lastMessage: message.text,
+                  lastMessageAt: message.createdAt,
+                  lastSenderId: message.senderId,
+                  unreadCount:
+                    message.senderId === user?.uid
+                      ? item.unreadCount
+                      : (item.unreadCount || 0) + 1,
+                }
+              : item,
+          ),
+        );
+      };
+
+      socket?.on("conversation:updated", onUpdated);
+      socket?.on("message:new", onNew);
+      return () => {
+        socket?.off("conversation:updated", onUpdated);
+        socket?.off("message:new", onNew);
+      };
+    };
+
+    let detach: (() => void) | undefined;
+    attach().then((fn) => {
+      detach = fn;
+    });
+    return () => {
+      active = false;
+      detach?.();
+    };
+  }, [user?.uid]);
 
   const threads = useMemo(() => {
     const byPeer = new Map<string, Conversation>();
