@@ -3,18 +3,20 @@ import { auth } from "../config/firebase";
 
 // ✅ Create Axios instance
 export const API = axios.create({
-  baseURL: "https://1045-102-90-102-9.ngrok-free.app/api",
+  baseURL: "https://dwellify-backend-six.vercel.app/api",
   timeout: 120000,
 });
-
+ 
 
 // ✅ Attach Firebase token automatically (AUTO REFRESH 🔥)
 API.interceptors.request.use(
   async (config) => {
     try {
+      config.headers = config.headers || {};
+      config.headers["ngrok-skip-browser-warning"] = "true";
       const user = auth.currentUser;
       if (user) {
-        const token = await user.getIdToken(); // 🔥https://dwellify-backend-bq39.onrender.com AUTO REFRESH HERE
+        const token = await user.getIdToken();
         config.headers.Authorization = `Bearer ${token}`;
       }
 

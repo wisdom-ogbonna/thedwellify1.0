@@ -8,10 +8,13 @@ export type ListingAgent = {
   name: string;
   agencyName?: string;
   phone?: string;
+  avatar?: string;
+  address?: string;
 };
 
 export type PublicListing = Listing & {
   agent?: ListingAgent | null;
+  mine?: boolean;
 };
 
 export type ListingPayload = {
@@ -98,9 +101,31 @@ export const listingsApi = {
     purpose?: string;
     sort?: "newest" | "price_asc" | "price_desc";
     q?: string;
+    minPrice?: number;
+    maxPrice?: number;
   } = {}) => {
     const res = await API.get<{ products: PublicListing[]; total: number }>(
       "/products/available",
+      { params },
+    );
+    return {
+      products: res.data?.products || [],
+      total: res.data?.total || 0,
+    };
+  },
+
+  explore: async (
+    params: {
+      propertyType?: string;
+      purpose?: string;
+      sort?: "newest" | "price_asc" | "price_desc";
+      q?: string;
+      minPrice?: number;
+      maxPrice?: number;
+    } = {},
+  ) => {
+    const res = await API.get<{ products: PublicListing[]; total: number }>(
+      "/products/explore",
       { params },
     );
     return {
