@@ -6,7 +6,13 @@ import { chatApi } from "@/services/chat";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -29,18 +35,19 @@ const CONTENT_MAX_WIDTH = 640;
 const SHEET_OVERLAP = 24; // how far the content card overlaps the hero
 const DESCRIPTION_PREVIEW_CHARS = 280;
 
+type MediaItem = { type: "image" | "video"; uri: string };
+
 export default function PropertyView() {
   const { colors } = useTheme();
   const { role, user } = useAuth();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { propertyId } = useLocalSearchParams<{ propertyId?: string }>();
-  const videoRef = useRef<Video>(null);
 
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeImage, setActiveImage] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -60,6 +67,20 @@ export default function PropertyView() {
   useEffect(() => {
     if (propertyId) fetchProperty();
   }, [fetchProperty, propertyId]);
+
+  // Images first, then the video as the last slide.
+  // (Put the video spread before the images to make it the first slide.)
+  const media = useMemo<MediaItem[]>(() => {
+    const imgs: string[] = Array.isArray(property?.images)
+      ? property.images.filter(Boolean)
+      : [];
+    return [
+      ...imgs.map((uri): MediaItem => ({ type: "image", uri })),
+      ...(property?.video
+        ? [{ type: "video", uri: property.video } as MediaItem]
+        : []),
+    ];
+  }, [property?.images, property?.video]);
 
   const openChat = async () => {
     if (!property?.id) return;
@@ -86,7 +107,8 @@ export default function PropertyView() {
   };
 
   const onGalleryScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setActiveImage(Math.round(e.nativeEvent.contentOffset.x / width));
+    const i = Math.round(e.nativeEvent.contentOffset.x / width);
+    setActiveIndex(Math.max(0, Math.min(i, media.length - 1)));
   };
 
   /* ------------------------------ Loading / error ------------------------------ */
@@ -130,11 +152,9 @@ export default function PropertyView() {
   const isOwner = Boolean(user?.uid && property.agentId === user.uid);
   const canChat = !isOwner && Boolean(role === "client" || role === "agent");
   const agentPhone = property.agent?.phone;
-  const images: string[] = Array.isArray(property.images)
-    ? property.images.filter(Boolean)
-    : [];
   const label = purposeLabel(property.purpose, property.tag);
   const heroHeight = Math.min(Math.round(width * 0.85), 440);
+  const heroItemHeight = heroHeight + SHEET_OVERLAP;
   const description = property.description || "No description available";
   const isLongDescription = description.length > DESCRIPTION_PREVIEW_CHARS;
 
@@ -145,29 +165,46 @@ export default function PropertyView() {
         contentContainerStyle={styles.scroll}
       >
         {/* ---------------------------- Hero gallery ---------------------------- */}
-        <View style={{ height: heroHeight + SHEET_OVERLAP }}>
-          {images.length > 0 ? (
+        <View style={{ height: heroItemHeight }}>
+          {media.length > 0 ? (
             <FlatList
-              data={images}
-              keyExtractor={(uri, index) => `${index}-${uri}`}
+              data={media}
+              keyExtractor={(item, index) =>
+                `${item.type}-${index}-${item.uri}`
+              }
               horizontal
               pagingEnabled
+              nestedScrollEnabled
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={onGalleryScrollEnd}
-              renderItem={({ item }) => (
-                <Image
-                  source={{ uri: item }}
-                  style={{ width, height: heroHeight + SHEET_OVERLAP }}
-                  resizeMode="cover"
-                />
-              )}
+              getItemLayout={(_, index) => ({
+                length: width,
+                offset: width * index,
+                index,
+              })}
+              renderItem={({ item, index }) =>
+                item.type === "video" ? (
+                  <HeroVideo
+                    uri={item.uri}
+                    active={activeIndex === index}
+                    width={width}
+                    height={heroItemHeight}
+                  />
+                ) : (
+                  <Image
+                    source={{ uri: item.uri }}
+                    style={{ width, height: heroItemHeight }}
+                    resizeMode="cover"
+                  />
+                )
+              }
             />
           ) : (
             <View
               style={[
                 styles.heroFallback,
                 {
-                  height: heroHeight + SHEET_OVERLAP,
+                  height: heroItemHeight,
                   backgroundColor: colors.disabled + "33",
                 },
               ]}
@@ -183,11 +220,22 @@ export default function PropertyView() {
             </View>
           )}
 
-          {images.length > 1 && (
-            <View style={[styles.counter, { bottom: SHEET_OVERLAP + 12 }]}>
-              <Ionicons name="images-outline" size={14} color="#fff" />
+          {media.length > 1 && (
+            <View
+              pointerEvents="none"
+              style={[styles.counter, { bottom: SHEET_OVERLAP + 12 }]}
+            >
+              <Ionicons
+                name={
+                  media[activeIndex]?.type === "video"
+                    ? "videocam-outline"
+                    : "images-outline"
+                }
+                size={14}
+                color="#fff"
+              />
               <Text style={styles.counterText}>
-                {activeImage + 1} / {images.length}
+                {activeIndex + 1} / {media.length}
               </Text>
             </View>
           )}
@@ -283,7 +331,9 @@ export default function PropertyView() {
                     numberOfLines={1}
                   >
                     {property.agent.agencyName || "Listing agent"}
-                    {property.agent.address ? ` · ${property.agent.address}` : ""}
+                    {property.agent.address
+                      ? ` · ${property.agent.address}`
+                      : ""}
                   </Text>
                   {agentPhone ? (
                     <Text
@@ -320,26 +370,6 @@ export default function PropertyView() {
                 </Pressable>
               )}
             </View>
-
-            {/* Virtual tour */}
-            {property.video ? (
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Virtual tour
-                </Text>
-                <View style={styles.videoWrap}>
-                  <Video
-                    ref={videoRef}
-                    source={{ uri: property.video }}
-                    style={styles.video}
-                    resizeMode={ResizeMode.COVER}
-                    shouldPlay={false}
-                    isLooping
-                    useNativeControls
-                  />
-                </View>
-              </View>
-            ) : null}
           </View>
         </View>
       </ScrollView>
@@ -369,18 +399,31 @@ export default function PropertyView() {
                 onPress={() => Linking.openURL(`tel:${agentPhone}`)}
                 style={[
                   styles.sideBtn,
-                  { borderColor: colors.border, backgroundColor: colors.disabled + "18" },
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.disabled + "18",
+                  },
                 ]}
               >
-                <Ionicons name="call-outline" size={18} color={colors.success} />
-                <Text style={[styles.sideBtnText, { color: colors.text }]}>Call</Text>
+                <Ionicons
+                  name="call-outline"
+                  size={18}
+                  color={colors.success}
+                />
+                <Text style={[styles.sideBtnText, { color: colors.text }]}>
+                  Call
+                </Text>
               </Pressable>
             ) : null}
             <Pressable
               onPress={openChat}
               accessibilityRole="button"
               accessibilityLabel="Message agent"
-              style={[styles.primaryBtn, styles.footerMain, { backgroundColor: colors.primary }]}
+              style={[
+                styles.primaryBtn,
+                styles.footerMain,
+                { backgroundColor: colors.primary },
+              ]}
             >
               <Ionicons
                 name="chatbubble-ellipses-outline"
@@ -396,17 +439,28 @@ export default function PropertyView() {
                 onPress={() => setShareOpen(true)}
                 style={[
                   styles.sideBtn,
-                  { borderColor: colors.border, backgroundColor: colors.disabled + "18" },
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.disabled + "18",
+                  },
                 ]}
               >
-                <Ionicons name="share-outline" size={18} color={colors.primary} />
-                <Text style={[styles.sideBtnText, { color: colors.text }]}>Share</Text>
+                <Ionicons
+                  name="share-outline"
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text style={[styles.sideBtnText, { color: colors.text }]}>
+                  Share
+                </Text>
               </Pressable>
             ) : null}
           </View>
         ) : (
           <Pressable
-            onPress={() => (isOwner && role === "agent" ? setShareOpen(true) : router.back())}
+            onPress={() =>
+              isOwner && role === "agent" ? setShareOpen(true) : router.back()
+            }
             accessibilityRole="button"
             style={[
               styles.primaryBtn,
@@ -417,7 +471,12 @@ export default function PropertyView() {
               },
             ]}
           >
-            <Text style={[styles.primaryBtnText, { color: isOwner ? "#fff" : colors.text }]}>
+            <Text
+              style={[
+                styles.primaryBtnText,
+                { color: isOwner ? "#fff" : colors.text },
+              ]}
+            >
               {isOwner ? "Share listing" : "Close"}
             </Text>
           </Pressable>
@@ -432,6 +491,43 @@ export default function PropertyView() {
         onShared={(id) =>
           router.push({ pathname: "/(utilities)/chats", params: { id } })
         }
+      />
+    </View>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* HERO VIDEO                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function HeroVideo({
+  uri,
+  active,
+  width,
+  height,
+}: {
+  uri: string;
+  active: boolean;
+  width: number;
+  height: number;
+}) {
+  const ref = useRef<Video>(null);
+
+  // Pause when the user swipes away from the video slide
+  useEffect(() => {
+    if (!active) ref.current?.pauseAsync().catch(() => {});
+  }, [active]);
+
+  return (
+    <View style={{ width, height, backgroundColor: "#000" }}>
+      <Video
+        ref={ref}
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay={false}
+        isLooping
+        useNativeControls
       />
     </View>
   );
@@ -587,13 +683,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: "800", marginBottom: 10 },
   description: { fontSize: 15, lineHeight: 24 },
   readMore: { fontSize: 14, fontWeight: "700", marginTop: 8 },
-  videoWrap: {
-    aspectRatio: 16 / 9,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: "#000",
-  },
-  video: { flex: 1 },
 
   // Footer
   footer: {
