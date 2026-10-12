@@ -73,11 +73,33 @@ export default function InboxScreen({
     }, [load]),
   );
 
+  const threads = useMemo(() => {
+    const byPeer = new Map<string, Conversation>();
+    items.forEach((item) => {
+      const key =
+        (item.agentId === user?.uid ? item.clientId : item.agentId) || item.id;
+      const prev = byPeer.get(key);
+      if (!prev) {
+        byPeer.set(key, item);
+        return;
+      }
+      const prevTime = prev.lastMessageAt ? new Date(prev.lastMessageAt).getTime() : 0;
+      const nextTime = item.lastMessageAt ? new Date(item.lastMessageAt).getTime() : 0;
+      const winner = nextTime >= prevTime ? item : prev;
+      byPeer.set(key, {
+        ...winner,
+        unreadCount: (prev.unreadCount || 0) + (item.unreadCount || 0),
+      });
+    });
+    return [...byPeer.values()];
+  }, [items, user?.uid]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) => {
-      const peer = role === "agent" ? item.client?.name : item.agent?.name;
+    if (!q) return threads;
+    return threads.filter((item) => {
+      const peer =
+        item.agentId === user?.uid ? item.client?.name : item.agent?.name;
       const hay = [
         peer,
         item.property?.title,
@@ -89,16 +111,16 @@ export default function InboxScreen({
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [items, query, role]);
+  }, [threads, query, user?.uid]);
 
-  const unreadTotal = items.reduce(
+  const unreadTotal = threads.reduce(
     (sum, item) => sum + (item.unreadCount || 0),
     0,
   );
 
   const renderItem = ({ item }: { item: Conversation }) => {
-    const peer = role === "agent" ? item.client : item.agent;
-    const image = item.property?.image;
+    const peer = item.agentId === user?.uid ? item.client : item.agent;
+    const image = item.property?.image || peer?.avatar;
     const hasUnread = (item.unreadCount || 0) > 0;
     const mine = item.lastSenderId && item.lastSenderId === user?.uid;
     const hasMessage = Boolean(item.lastMessage);
@@ -106,11 +128,13 @@ export default function InboxScreen({
 
     // "Shortlet Home - For Sale • ₦15,000"
     const propertyLine =
-      (item.property?.title || "Property enquiry") +
-      (item.property?.purpose
-        ? ` - ${purposeLabel(item.property.purpose)}`
-        : "") +
-      (item.property?.price ? ` • ${formatPrice(item.property.price)}` : "");
+      item.kind === "agent_peer"
+        ? peer?.agencyName || "Direct agent chat"
+        : (item.property?.title || "Property enquiry") +
+          (item.property?.purpose
+            ? ` - ${purposeLabel(item.property.purpose)}`
+            : "") +
+          (item.property?.price ? ` • ${formatPrice(item.property.price)}` : "");
 
     return (
       <Pressable
@@ -158,7 +182,7 @@ export default function InboxScreen({
               style={[styles.name, { color: colors.text }]}
               numberOfLines={1}
             >
-              {peer?.name || (role === "agent" ? "Client" : "Agent")}
+              {peer?.name || (item.kind === "agent_peer" ? "Agent" : role === "agent" ? "Client" : "Agent")}
             </Text>
             <Text
               style={[
@@ -221,7 +245,7 @@ export default function InboxScreen({
 
       <Text style={[styles.sub, { color: colors.placeholder }]}>
         {role === "agent"
-          ? "Reply to clients asking about your listings."
+          ? "Chat clients, other agents, and shared listings."
           : "Chat agents about homes you want to rent or buy."}
       </Text>
 

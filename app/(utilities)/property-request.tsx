@@ -1,5 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
+import { chatApi } from "@/services/chat";
 import {
   getPropertyRequest,
   type PropertyRequest,
@@ -12,6 +13,7 @@ import {
   DollarSign,
   FileText,
   MapPin,
+  MessageCircle,
   ShieldCheck,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
@@ -48,6 +50,8 @@ export default function PropertyRequestDetail() {
   const [item, setItem] = useState<PropertyRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [openingChat, setOpeningChat] = useState(false);
+  const [chatError, setChatError] = useState("");
 
   const card = isDark ? "#101826" : "#FFFFFF";
   const border = isDark ? "#1E293B" : "#E5E7EB";
@@ -71,6 +75,28 @@ export default function PropertyRequestDetail() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const openChat = async () => {
+    const requestId = item?.requestId || item?.id || id;
+    if (!requestId || openingChat) return;
+    setChatError("");
+    setOpeningChat(true);
+    try {
+      const conversation = await chatApi.startFromRequest(requestId);
+      router.push({
+        pathname: "/(utilities)/chats",
+        params: { id: conversation.id, requestId },
+      });
+    } catch (err: any) {
+      setChatError(
+        err?.response?.data?.error ||
+          err?.message ||
+          "Could not start this chat.",
+      );
+    } finally {
+      setOpeningChat(false);
+    }
+  };
 
   return (
     <View
@@ -187,24 +213,44 @@ export default function PropertyRequestDetail() {
           />
         </ScrollView>
       )}
-      <View>
-        <Pressable
-          onPress={() => router.push({ pathname: "/(utilities)/chats", params: { id: String(item?.id) } })}
-          style={{ backgroundColor: colors.primary }}
+
+      {role === "agent" && item && !loading && !error ? (
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: colors.background,
+              borderTopColor: border,
+              paddingBottom: Math.max(insets.bottom, 16),
+            },
+          ]}
         >
-          <Text
-            style={{
-              backgroundColor: colors.primary,
-              color: "#FFFFFF",
-              textAlign: "center",
-              padding: 16,
-              fontWeight: "700",
-            }}
+          {chatError ? (
+            <Text style={{ color: colors.error, textAlign: "center", marginBottom: 8 }}>
+              {chatError}
+            </Text>
+          ) : null}
+          <Pressable
+            onPress={openChat}
+            disabled={openingChat}
+            style={[
+              styles.chatBtn,
+              { backgroundColor: colors.primary, opacity: openingChat ? 0.7 : 1 },
+            ]}
           >
-            Chat with {item?.clientName || "client"}
-          </Text>
-        </Pressable>
-      </View>
+            {openingChat ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <MessageCircle size={20} color="#FFFFFF" />
+            )}
+            <Text style={styles.chatBtnText}>
+              {openingChat
+                ? "Opening chat..."
+                : `Message ${item.clientName?.split(" ")[0] || "client"}`}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -289,5 +335,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  chatBtn: {
+    height: 54,
+    borderRadius: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  chatBtnText: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
   },
 });

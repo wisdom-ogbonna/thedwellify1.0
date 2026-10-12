@@ -1,14 +1,18 @@
+import ShareListingSheet from "@/components/listings/share-listing-sheet";
 import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
+import { chatApi } from "@/services/chat";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
+  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -38,6 +42,7 @@ export default function PropertyView() {
   const [error, setError] = useState("");
   const [activeImage, setActiveImage] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const fetchProperty = useCallback(async () => {
     try {
@@ -56,8 +61,24 @@ export default function PropertyView() {
     if (propertyId) fetchProperty();
   }, [fetchProperty, propertyId]);
 
-  const openChat = () => {
+  const openChat = async () => {
     if (!property?.id) return;
+    const peerId = property.agent?.id || property.agentId;
+    if (role === "agent" && peerId && peerId !== user?.uid) {
+      try {
+        const started = await chatApi.startPeer(String(peerId));
+        router.push({
+          pathname: "/(utilities)/chats",
+          params: { id: started.id, peerAgentId: String(peerId) },
+        });
+      } catch (err: any) {
+        Alert.alert(
+          "Could not start chat",
+          err?.response?.data?.error || "Try again in a moment.",
+        );
+      }
+      return;
+    }
     router.push({
       pathname: "/(utilities)/chats",
       params: { productId: String(property.id) },
@@ -107,7 +128,8 @@ export default function PropertyView() {
   /* --------------------------------- Content ---------------------------------- */
 
   const isOwner = Boolean(user?.uid && property.agentId === user.uid);
-  const canChat = role === "client" && !isOwner;
+  const canChat = !isOwner && Boolean(role === "client" || role === "agent");
+  const agentPhone = property.agent?.phone;
   const images: string[] = Array.isArray(property.images)
     ? property.images.filter(Boolean)
     : [];
@@ -261,7 +283,16 @@ export default function PropertyView() {
                     numberOfLines={1}
                   >
                     {property.agent.agencyName || "Listing agent"}
+                    {property.agent.address ? ` · ${property.agent.address}` : ""}
                   </Text>
+                  {agentPhone ? (
+                    <Text
+                      style={[styles.agentMeta, { color: colors.success }]}
+                      numberOfLines={1}
+                    >
+                      {agentPhone}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
             ) : null}
@@ -332,38 +363,76 @@ export default function PropertyView() {
         ]}
       >
         {canChat ? (
-          <Pressable
-            onPress={openChat}
-            accessibilityRole="button"
-            accessibilityLabel="Message agent"
-            style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={20}
-              color="#fff"
-            />
-            <Text style={styles.primaryBtnText}>Message agent</Text>
-          </Pressable>
+          <View style={styles.footerRow}>
+            {agentPhone ? (
+              <Pressable
+                onPress={() => Linking.openURL(`tel:${agentPhone}`)}
+                style={[
+                  styles.sideBtn,
+                  { borderColor: colors.border, backgroundColor: colors.disabled + "18" },
+                ]}
+              >
+                <Ionicons name="call-outline" size={18} color={colors.success} />
+                <Text style={[styles.sideBtnText, { color: colors.text }]}>Call</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={openChat}
+              accessibilityRole="button"
+              accessibilityLabel="Message agent"
+              style={[styles.primaryBtn, styles.footerMain, { backgroundColor: colors.primary }]}
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={20}
+                color="#fff"
+              />
+              <Text style={styles.primaryBtnText}>
+                {role === "agent" ? "Chat agent" : "Message agent"}
+              </Text>
+            </Pressable>
+            {role === "agent" ? (
+              <Pressable
+                onPress={() => setShareOpen(true)}
+                style={[
+                  styles.sideBtn,
+                  { borderColor: colors.border, backgroundColor: colors.disabled + "18" },
+                ]}
+              >
+                <Ionicons name="share-outline" size={18} color={colors.primary} />
+                <Text style={[styles.sideBtnText, { color: colors.text }]}>Share</Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : (
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => (isOwner && role === "agent" ? setShareOpen(true) : router.back())}
             accessibilityRole="button"
             style={[
               styles.primaryBtn,
               {
-                backgroundColor: "transparent",
-                borderWidth: 1,
+                backgroundColor: isOwner ? colors.primary : "transparent",
+                borderWidth: isOwner ? 0 : 1,
                 borderColor: colors.border,
               },
             ]}
           >
-            <Text style={[styles.primaryBtnText, { color: colors.text }]}>
-              {isOwner ? "This is your listing" : "Close"}
+            <Text style={[styles.primaryBtnText, { color: isOwner ? "#fff" : colors.text }]}>
+              {isOwner ? "Share listing" : "Close"}
             </Text>
           </Pressable>
         )}
       </View>
+
+      <ShareListingSheet
+        visible={shareOpen}
+        productId={String(property.id || "")}
+        productTitle={property.title}
+        onClose={() => setShareOpen(false)}
+        onShared={(id) =>
+          router.push({ pathname: "/(utilities)/chats", params: { id } })
+        }
+      />
     </View>
   );
 }
@@ -533,6 +602,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     alignItems: "center",
   },
+  footerRow: {
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  footerMain: { flex: 1, width: undefined, maxWidth: undefined },
+  sideBtn: {
+    height: 52,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  sideBtnText: { fontSize: 11, fontWeight: "800" },
   primaryBtn: {
     width: "100%",
     maxWidth: CONTENT_MAX_WIDTH,

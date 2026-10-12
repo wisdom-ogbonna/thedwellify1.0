@@ -4,6 +4,8 @@ export type ChatPerson = {
   id: string;
   name: string;
   agencyName?: string;
+  phone?: string;
+  avatar?: string;
 };
 
 export type ChatProperty = {
@@ -18,6 +20,8 @@ export type ChatProperty = {
 
 export type Conversation = {
   id: string;
+  kind?: string;
+  requestId?: string;
   productId: string;
   agentId: string;
   clientId: string;
@@ -34,6 +38,14 @@ export type Conversation = {
 
 export type ChatMessageStatus = "pending" | "sent" | "delivered" | "read" | "failed";
 
+export type SharedListing = ChatProperty & {
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  agentId?: string;
+  agentName?: string;
+  agentPhone?: string;
+};
+
 export type ChatMessage = {
   id: string;
   conversationId: string;
@@ -41,6 +53,7 @@ export type ChatMessage = {
   senderRole: "agent" | "client" | string;
   text: string;
   type?: string;
+  listing?: SharedListing | null;
   nonce?: string | null;
   status?: ChatMessageStatus;
   deliveredAt?: string | null;
@@ -51,6 +64,16 @@ export type ChatMessage = {
 export const chatApi = {
   start: async (productId: string) => {
     const res = await API.post<Conversation>("/chat/conversations", { productId });
+    return res.data;
+  },
+
+  startFromRequest: async (requestId: string) => {
+    const res = await API.post<Conversation>("/chat/conversations", { requestId });
+    return res.data;
+  },
+
+  startPeer: async (peerAgentId: string) => {
+    const res = await API.post<Conversation>("/chat/conversations", { peerAgentId });
     return res.data;
   },
 
@@ -78,6 +101,14 @@ export const chatApi = {
       text,
       nonce,
     });
+    return res.data;
+  },
+
+  shareListing: async (conversationId: string, productId: string) => {
+    const res = await API.post<ChatMessage>(
+      `/chat/conversations/${conversationId}/share`,
+      { productId },
+    );
     return res.data;
   },
 
