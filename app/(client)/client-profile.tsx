@@ -308,7 +308,7 @@ export default function PremiumProfileScreen() {
             <View
               className="border rounded-3xl w-full p-6 mb-8 flex-row items-center justify-between"
               style={{
-                borderColor: colors.placeholder,
+                borderColor: colors.border,
               }}
             >
               <View>
