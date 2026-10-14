@@ -1,11 +1,11 @@
 import BottomModal from "@/components/dialogs/bottom-modal";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { NotificationBell } from "@/components/notifications/notification-bell";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -41,6 +41,152 @@ interface LocationObj {
   latitude: number;
   longitude: number;
 }
+
+type ThemeColors = ReturnType<typeof useTheme>["colors"];
+
+/* -------------------------------------------------------------------------- */
+/* SMALL UI PIECES                                                            */
+/* -------------------------------------------------------------------------- */
+
+function StatusPill({ label, color }: { label: string; color: string }) {
+  return (
+    <View
+      style={{ backgroundColor: color + "1A", borderColor: color + "40" }}
+      className="flex-row items-center border px-3 py-1.5 rounded-full gap-1.5"
+    >
+      <View
+        style={{ backgroundColor: color }}
+        className="w-1.5 h-1.5 rounded-full"
+      />
+      <Text
+        style={{ color }}
+        className="text-[11px] font-extrabold tracking-wider"
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function InfoCard({
+  icon,
+  label,
+  value,
+  copyable,
+  onPress,
+  colors,
+  mono,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  copyable: boolean;
+  onPress: () => void;
+  colors: ThemeColors;
+  mono?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onPress}
+      style={{
+        backgroundColor: colors.disabled + "14",
+        borderColor: colors.border,
+      }}
+      className="flex-1 border rounded-2xl p-3.5"
+    >
+      <View className="flex-row items-center justify-between mb-2">
+        <View className="flex-row items-center gap-1.5 flex-1">
+          <Ionicons name={icon} size={13} color={colors.placeholder} />
+          <Text
+            style={{ color: colors.placeholder }}
+            className="text-[10px] font-bold uppercase tracking-wider"
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+        </View>
+        {copyable ? (
+          <Ionicons name="copy-outline" size={13} color={colors.placeholder} />
+        ) : null}
+      </View>
+      <Text
+        style={{ color: colors.text }}
+        className={`text-sm font-bold ${mono ? "font-mono" : ""}`}
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+function ActionButton({
+  label,
+  icon,
+  onPress,
+  disabled,
+  loading,
+  colors,
+  variant,
+  trailingIcon,
+}: {
+  label: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  colors: ThemeColors;
+  variant: "primary" | "danger";
+  trailingIcon?: boolean;
+}) {
+  const isPrimary = variant === "primary";
+  const fg = isPrimary ? "#FFFFFF" : colors.error;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      disabled={disabled}
+      onPress={onPress}
+      style={[
+        {
+          backgroundColor: isPrimary ? colors.primary : colors.error + "14",
+          borderColor: isPrimary ? colors.primary : colors.error + "50",
+          opacity: disabled && !loading ? 0.6 : 1,
+        },
+        isPrimary && {
+          shadowColor: colors.primary,
+          shadowOpacity: 0.3,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 4,
+        },
+      ]}
+      className="flex-1 h-14 border rounded-2xl flex-row justify-center items-center gap-2"
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={fg} />
+      ) : (
+        <>
+          {icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
+          <Text
+            style={{ color: fg }}
+            className="text-xs font-extrabold uppercase tracking-wider"
+          >
+            {label}
+          </Text>
+          {trailingIcon ? (
+            <Ionicons name="arrow-forward" size={16} color={fg} />
+          ) : null}
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* SCREEN                                                                     */
+/* -------------------------------------------------------------------------- */
 
 export default function MapScreen() {
   const mapRef = useRef<MapView | null>(null);
@@ -326,6 +472,16 @@ export default function MapScreen() {
     );
   };
 
+  const currentStatus = agentStatus || agent?.status;
+
+  const isSheetVisible = Boolean(
+    currentStatus &&
+    ["matched", "inspection_started", "suspended"].includes(currentStatus),
+  );
+
+  const isMatchedOrStarted =
+    currentStatus === "matched" || currentStatus === "inspection_started";
+
   useEffect(() => {
     if (!mapRef.current || !agent?.isOnline || !agent?.lat || !agent?.lng) {
       return;
@@ -363,15 +519,28 @@ export default function MapScreen() {
     });
   };
 
-  const currentStatus = agentStatus || agent?.status;
+  /* ------------------------------ Derived UI ------------------------------ */
 
-  const isSheetVisible = Boolean(
-    currentStatus &&
-    ["matched", "inspection_started", "suspended"].includes(currentStatus),
-  );
+  const statusMeta = (() => {
+    switch (currentStatus) {
+      case "suspended":
+        return { label: "SUSPENDED", color: colors.error };
+      case "matched":
+        return { label: "MATCHED", color: colors.success };
+      case "inspection_started":
+        return { label: "IN PROGRESS", color: colors.primary };
+      default:
+        return { label: "AVAILABLE", color: colors.primary };
+    }
+  })();
 
-  const isMatchedOrStarted =
-    currentStatus === "matched" || currentStatus === "inspection_started";
+  const isAwaiting = !isMatchedOrStarted && currentStatus !== "suspended";
+
+  const title = isMatchedOrStarted
+    ? `You're matched with ${agent?.clientName || "Client"}`
+    : currentStatus === "suspended"
+      ? "Account Suspended"
+      : "Awaiting match...";
 
   if (loading) {
     return (
@@ -385,13 +554,21 @@ export default function MapScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      {/* Header */}
       {/* Header Overlay */}
       <View className="absolute top-12 left-0 right-0 z-50 flex-row items-center justify-between px-4 py-2">
-        {/* Left Pill Container (Brand & Notification) */}
+        {/* Left Pill (Notification & Brand) */}
         <View
-          className="flex-row items-center p-1.5 pr-5 rounded-full shadow-lg"
-          style={{ backgroundColor: "#2A2A2A" }}
+          className="flex-row items-center p-1.5 pr-5 rounded-full"
+          style={{
+            backgroundColor: colors.background,
+            borderWidth: 1,
+            borderColor: colors.border,
+            shadowColor: "#000",
+            shadowOpacity: 0.12,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 4,
+          }}
         >
           <NotificationBell
             color="#FFFFFF"
@@ -404,21 +581,28 @@ export default function MapScreen() {
               marginRight: 12,
             }}
           />
-          <Text className="text-white text-base font-bold tracking-wide">
+          <Text
+            style={{ color: colors.text }}
+            className="text-base font-bold tracking-wide"
+          >
             Dwellify
           </Text>
         </View>
 
         <Pressable onPress={() => router.push("/(utilities)/agent-profile")}>
-                    <Image
-                      source={{
-                        uri:
-                          "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
-                      }}
-                      style={{ borderColor: colors.success}}
-                      className="w-13 h-13 rounded-full border-2"
-                    />
-                  </Pressable>
+          <Image
+            source={{
+              uri: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
+            }}
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 26,
+              borderWidth: 2,
+              borderColor: colors.success,
+            }}
+          />
+        </Pressable>
       </View>
 
       <MapView
@@ -471,7 +655,7 @@ export default function MapScreen() {
         <Ionicons name="locate" size={22} color={colors.text} />
       </TouchableOpacity>
 
-      {/* BOTTOM MODAL DISPLAY LOGIC */}
+      {/* BOTTOM MODAL */}
       <View pointerEvents="box-none" style={styles.sheetOverlayContainer}>
         <BottomModal
           visible={isSheetVisible}
@@ -487,152 +671,75 @@ export default function MapScreen() {
               overScrollMode="never"
               contentContainerClassName="pb-6 px-4 pt-2 gap-4"
             >
-              {/* Top Status Card */}
-              <View
-                style={{
-                  backgroundColor: colors.text,
-                  borderColor: colors.border,
-                }}
-                className="border rounded-3xl p-4 shadow-sm"
-              >
-                <View className="flex-row items-center justify-between mb-1">
+              {/* Header: label + status pill, then title and message */}
+              <View>
+                <View className="flex-row items-center justify-between mb-2">
                   <Text
                     style={{ color: colors.placeholder }}
                     className="text-[10px] font-bold uppercase tracking-widest"
                   >
                     Status
                   </Text>
-                  <View className="flex-row items-center bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full gap-1.5">
-                    <View className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <Text className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider">
-                      AVAILABLE
-                    </Text>
-                  </View>
+                  <StatusPill
+                    label={statusMeta.label}
+                    color={statusMeta.color}
+                  />
                 </View>
 
                 <Text
                   style={{ color: colors.text }}
-                  className="text-base font-extrabold tracking-tight mb-4"
+                  className="text-xl font-extrabold tracking-tight"
                   numberOfLines={1}
                 >
-                  {isMatchedOrStarted
-                    ? `You're matched with ${agent?.clientName || "Client"}`
-                    : currentStatus === "suspended"
-                      ? "Account Suspended"
-                      : "Awaiting match..."}
+                  {title}
                 </Text>
-
-                {/* Client Info Grid */}
-                <View className="flex-row gap-3">
-                  {/* Client Name */}
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() =>
-                      copyToClipboard(
-                        agent?.clientName || "Not matched yet",
-                        "Client Name",
-                      )
-                    }
-                    style={{
-                      backgroundColor: colors.background,
-                      borderColor: colors.border,
-                    }}
-                    className="flex-1 border rounded-2xl p-3 justify-between"
+                {message ? (
+                  <Text
+                    style={{ color: colors.placeholder }}
+                    className="text-xs mt-1"
+                    numberOfLines={2}
                   >
-                    <View className="flex-row items-center justify-between mb-1">
-                      <Text
-                        style={{ color: colors.placeholder }}
-                        className="text-[9px] font-bold uppercase tracking-wider"
-                      >
-                        Client Name
-                      </Text>
-                      {agent?.clientName && isMatchedOrStarted && (
-                        <Ionicons
-                          name="copy-outline"
-                          size={12}
-                          color={colors.placeholder}
-                        />
-                      )}
-                    </View>
-                    <Text
-                      style={{ color: colors.text }}
-                      className="text-xs font-bold"
-                      numberOfLines={1}
-                    >
-                      {isMatchedOrStarted
-                        ? agent?.clientName || "Client"
-                        : "Not matched yet"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Client Phone */}
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() =>
-                      copyToClipboard(
-                        agent?.clientPhone || "Not matched yet",
-                        "Phone number",
-                      )
-                    }
-                    style={{
-                      backgroundColor: colors.background,
-                      borderColor: colors.border,
-                    }}
-                    className="flex-1 border rounded-2xl p-3 justify-between"
-                  >
-                    <View className="flex-row items-center justify-between mb-1">
-                      <Text
-                        style={{ color: colors.placeholder }}
-                        className="text-[9px] font-bold uppercase tracking-wider"
-                      >
-                        Phone
-                      </Text>
-                      {agent?.clientPhone && isMatchedOrStarted && (
-                        <Ionicons
-                          name="copy-outline"
-                          size={12}
-                          color={colors.placeholder}
-                        />
-                      )}
-                    </View>
-                    <Text
-                      style={{ color: colors.text }}
-                      className="text-xs font-bold font-mono"
-                      numberOfLines={1}
-                    >
-                      {isMatchedOrStarted
-                        ? agent?.clientPhone || "Client"
-                        : "Not matched yet"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    {message}
+                  </Text>
+                ) : null}
               </View>
 
-              {/* Current Location Card */}
+              {/* Current location card */}
               <View
                 style={{
-                  backgroundColor: colors.background,
+                  backgroundColor: colors.disabled + "14",
                   borderColor: colors.border,
                 }}
-                className="border rounded-3xl p-4 flex-row items-center justify-between shadow-sm"
+                className="border rounded-3xl p-3.5 flex-row items-center justify-between"
               >
                 <View className="flex-row items-center flex-1 pr-3">
                   <View
-                    style={{ backgroundColor: colors.primary }}
-                    className="w-9 h-9 rounded-2xl justify-center items-center shadow-sm mr-3"
+                    style={{
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                    }}
+                    className="w-11 h-11 rounded-2xl border justify-center items-center mr-3"
                   >
-                    <Ionicons name="location" size={18} color="#FFFFFF" />
+                    {isAwaiting ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Ionicons
+                        name="location"
+                        size={20}
+                        color={colors.primary}
+                      />
+                    )}
                   </View>
                   <View className="flex-1">
                     <Text
                       style={{ color: colors.placeholder }}
-                      className="text-[9px] font-bold uppercase tracking-wider mb-0.5"
+                      className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
                     >
                       Current Location
                     </Text>
                     <Text
                       style={{ color: colors.text }}
-                      className="text-xs font-bold"
+                      className="text-sm font-bold"
                       numberOfLines={1}
                     >
                       {agent?.location ||
@@ -642,124 +749,110 @@ export default function MapScreen() {
                 </View>
                 <TouchableOpacity
                   onPress={fetchAgentStatus}
-                  style={{ backgroundColor: colors.disabled }}
-                  className="w-8 h-8 rounded-full justify-center items-center"
+                  style={{ backgroundColor: colors.disabled + "26" }}
+                  className="w-9 h-9 rounded-full justify-center items-center"
                 >
                   <Ionicons
                     name="refresh-outline"
-                    size={14}
+                    size={16}
                     color={colors.text}
                   />
                 </TouchableOpacity>
               </View>
 
-              {/* Dynamic Buttons Based on Current State */}
-              <View className="gap-3 pt-1">
-                {/* STATE 1: MATCHED STATE -> Decline & Start Inspection Buttons Side by Side */}
-                {currentStatus === "matched" && (
-                  <View className="flex-row gap-3">
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      disabled={btnLoading}
-                      onPress={declineRequest}
-                      style={{
-                        backgroundColor: colors.background,
-                        borderColor: colors.error,
-                      }}
-                      className="flex-1 h-14 border rounded-2xl flex-row justify-center items-center gap-2"
-                    >
-                      <Ionicons name="close" size={18} color={colors.error} />
-                      <Text
-                        style={{ color: colors.error }}
-                        className="text-xs font-extrabold uppercase tracking-wider"
-                      >
-                        Decline
-                      </Text>
-                    </TouchableOpacity>
+              {/* Client info (hidden while suspended) */}
+              {currentStatus !== "suspended" && (
+                <View className="flex-row gap-3">
+                  <InfoCard
+                    icon="person-outline"
+                    label="Client Name"
+                    value={
+                      isMatchedOrStarted
+                        ? agent?.clientName || "Client"
+                        : "Not matched yet"
+                    }
+                    copyable={Boolean(agent?.clientName && isMatchedOrStarted)}
+                    onPress={() =>
+                      copyToClipboard(
+                        agent?.clientName || "Not matched yet",
+                        "Client Name",
+                      )
+                    }
+                    colors={colors}
+                  />
+                  <InfoCard
+                    icon="call-outline"
+                    label="Phone"
+                    value={
+                      isMatchedOrStarted
+                        ? agent?.clientPhone || "Client"
+                        : "Not matched yet"
+                    }
+                    copyable={Boolean(agent?.clientPhone && isMatchedOrStarted)}
+                    onPress={() =>
+                      copyToClipboard(
+                        agent?.clientPhone || "Not matched yet",
+                        "Phone number",
+                      )
+                    }
+                    colors={colors}
+                    mono
+                  />
+                </View>
+              )}
 
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      disabled={btnLoading}
-                      onPress={startInspection}
-                      style={{
-                        backgroundColor: colors.background,
-                        borderColor: colors.border,
-                      }}
-                      className="flex-1 h-14 border rounded-2xl flex-row justify-center items-center gap-2"
-                    >
-                      {btnLoading ? (
-                        <ActivityIndicator size="small" color={colors.text} />
-                      ) : (
-                        <>
-                          <Ionicons
-                            name="time-outline"
-                            size={16}
-                            color={colors.text}
-                          />
-                          <Text
-                            style={{ color: colors.text }}
-                            className="text-xs font-extrabold uppercase tracking-wider"
-                          >
-                            Start Inspection
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* STATE 2: INSPECTION STARTED -> Full Width END INSPECTION Button */}
-                {currentStatus === "inspection_started" && (
-                  <TouchableOpacity
-                    activeOpacity={0.9}
+              {/* Actions per state */}
+              {currentStatus === "matched" && (
+                <View className="flex-row gap-3 pt-1">
+                  <ActionButton
+                    label="Decline"
+                    icon="close"
+                    variant="danger"
                     disabled={btnLoading}
-                    onPress={endInspection}
-                    style={{ backgroundColor: colors.primary }}
-                    className="w-full h-14 rounded-2xl flex-row justify-center items-center gap-2 shadow-lg"
-                  >
-                    {btnLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <Text className="text-white text-xs font-extrabold uppercase tracking-tight">
-                          END INSPECTION
-                        </Text>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={16}
-                          color="#FFFFFF"
-                        />
-                      </>
-                    )}
-                  </TouchableOpacity>
-                )}
+                    onPress={declineRequest}
+                    colors={colors}
+                  />
+                  <ActionButton
+                    label="Start Inspection"
+                    icon="play-circle-outline"
+                    variant="primary"
+                    disabled={btnLoading}
+                    loading={btnLoading}
+                    onPress={startInspection}
+                    colors={colors}
+                  />
+                </View>
+              )}
 
-                {/* STATE 3: SUSPENDED STATE -> Full Width Pay Now Button */}
-                {currentStatus === "suspended" && (
-                  <TouchableOpacity
-                    activeOpacity={0.9}
+              {currentStatus === "inspection_started" && (
+                <View className="flex-row gap-3 pt-1">
+                  <ActionButton
+                    label="End Inspection"
+                    icon="checkmark-circle-outline"
+                    variant="primary"
+                    trailingIcon
+                    disabled={btnLoading}
+                    loading={btnLoading}
+                    onPress={endInspection}
+                    colors={colors}
+                  />
+                </View>
+              )}
+
+              {currentStatus === "suspended" && (
+                <View className="flex-row gap-3 pt-1">
+                  <ActionButton
+                    label="Pay Now"
+                    icon="card-outline"
+                    variant="primary"
+                    trailingIcon
                     disabled={paying}
+                    loading={paying}
                     onPress={triggerPayment}
-                    style={{ backgroundColor: colors.primary }}
-                    className="w-full h-14 rounded-2xl flex-row justify-center items-center gap-2 shadow-lg"
-                  >
-                    {paying ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <Text className="text-white text-xs font-extrabold tracking-tight">
-                          Pay Now
-                        </Text>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={16}
-                          color="#FFFFFF"
-                        />
-                      </>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
+                    colors={colors}
+                  />
+                </View>
+              )}
             </ScrollView>
           </View>
         </BottomModal>
@@ -800,5 +893,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 99,
+  },
+  accentBar: {
+    height: 4,
+    borderRadius: 2,
+    width: "100%",
   },
 });

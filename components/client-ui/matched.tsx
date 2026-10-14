@@ -34,6 +34,12 @@ interface MatchedProps {
   setMatchData?: (data: any) => void;
 }
 
+// Accent colors that read well on both light and dark backgrounds.
+const DANGER = "#EF4444";
+const STAR = "#F59E0B";
+const COMPLETED = "#7C3AED";
+const WAITING = "#D97706";
+
 function Matched({
   agent,
   request,
@@ -41,8 +47,12 @@ function Matched({
   matchData,
   setMatchData,
 }: MatchedProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
+
+  // Theme-derived surfaces (same alpha-suffix pattern as PropertyView)
+  const surface = colors.disabled + "14"; // card background
+  const surfaceStrong = colors.disabled + "26"; // avatar / icon buttons
 
   const name = agent?.name ? `AGENT: ${agent.name}` : "AGENT: Benjamin Y.";
   const phone = agent?.phone || "Not Available";
@@ -54,32 +64,16 @@ function Matched({
     agent?.avatar ||
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150";
 
-  const getStatus = () => {
+  const getStatus = (): { label: string; color: string } => {
     switch (requestStatus) {
       case "inspection_started":
-        return {
-          label: "INSPECTION IN PROGRESS",
-          bg: "bg-blue-100",
-          text: "text-blue-700",
-        };
+        return { label: "INSPECTION IN PROGRESS", color: colors.primary };
       case "matched":
-        return {
-          label: "MATCHED",
-          bg: "bg-emerald-100",
-          text: "text-emerald-700",
-        };
+        return { label: "MATCHED", color: colors.success };
       case "completed":
-        return {
-          label: "COMPLETED",
-          bg: "bg-purple-100",
-          text: "text-purple-700",
-        };
+        return { label: "COMPLETED", color: COMPLETED };
       default:
-        return {
-          label: "WAITING",
-          bg: "bg-amber-100",
-          text: "text-amber-700",
-        };
+        return { label: "WAITING", color: WAITING };
     }
   };
 
@@ -155,11 +149,23 @@ function Matched({
   };
 
   return (
-    <View className="p-4 flex-1 bg-black justify-start">
+    <View
+      style={{ backgroundColor: colors.background }}
+      className="p-4 flex-1 justify-start"
+    >
       {/* STATUS BADGE */}
       <View className="flex-row items-center mb-2">
-        <View className="bg-[#22C55E]/20 px-3 py-1 rounded-full border border-[#22C55E]/30">
-          <Text className="text-[#4ADE80] font-bold text-xs tracking-wider">
+        <View
+          style={{
+            backgroundColor: status.color + "22",
+            borderColor: status.color + "55",
+          }}
+          className="px-3 py-1 rounded-full border"
+        >
+          <Text
+            style={{ color: status.color }}
+            className="font-bold text-xs tracking-wider"
+          >
             {status.label}
           </Text>
         </View>
@@ -168,8 +174,8 @@ function Matched({
       {/* STATUS MESSAGE */}
       <View className="mb-6">
         <Text
-          style={{ color: colors.text }}
-          className="text-left text-sm opacity-70"
+          style={{ color: colors.placeholder }}
+          className="text-left text-sm"
         >
           {requestStatus === "inspection_started"
             ? "Your agent is on the way and inspection has started."
@@ -181,34 +187,55 @@ function Matched({
 
       {/* AGENT CARD */}
       <View
-        style={{ backgroundColor: "#161616", borderColor: "#262626" }}
-        className="p-5 rounded-3xl border shadow-2xl mb-6"
+        style={{
+          backgroundColor: isDark ? surface : colors.background,
+          borderColor: colors.border,
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 2,
+        }}
+        className="p-5 rounded-3xl border mb-6"
       >
         <View className="flex-row items-center">
           {/* Avatar */}
           <Image
             source={{ uri: avatar }}
-            className="w-16 h-16 rounded-full mr-4 bg-gray-700"
+            style={{ backgroundColor: surfaceStrong }}
+            className="w-16 h-16 rounded-full mr-4"
           />
 
           {/* Details */}
           <View className="flex-1 justify-center">
             <View className="flex-row justify-between items-start">
-              <Text className="text-[10px] uppercase tracking-widest text-gray-400 font-medium mb-0.5">
+              <Text
+                style={{ color: colors.placeholder }}
+                className="text-[10px] uppercase tracking-widest font-medium mb-0.5"
+              >
                 AGENT NAME
               </Text>
 
               {/* Rating Badge */}
-              <View className="bg-[#2A261B] px-2 py-0.5 rounded-md flex-row items-center border border-[#4B401B]">
-                <Text className="text-yellow-400 text-xs mr-1">★</Text>
-                <Text className="text-yellow-400 font-bold text-xs">
+              <View
+                style={{
+                  backgroundColor: STAR + "22",
+                  borderColor: STAR + "55",
+                }}
+                className="px-2 py-0.5 rounded-md flex-row items-center border"
+              >
+                <Text style={{ color: STAR }} className="text-xs mr-1">
+                  ★
+                </Text>
+                <Text style={{ color: STAR }} className="font-bold text-xs">
                   {rating}
                 </Text>
               </View>
             </View>
 
             <Text
-              className="text-white text-base font-bold tracking-tight mb-3"
+              style={{ color: colors.text }}
+              className="text-base font-bold tracking-tight mb-3"
               numberOfLines={1}
             >
               {name}
@@ -216,19 +243,31 @@ function Matched({
 
             <View className="flex-row justify-between items-center pr-2">
               <View>
-                <Text className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">
+                <Text
+                  style={{ color: colors.placeholder }}
+                  className="text-[10px] uppercase tracking-widest font-medium"
+                >
                   DISTANCE
                 </Text>
-                <Text className="text-white font-semibold text-sm">
+                <Text
+                  style={{ color: colors.text }}
+                  className="font-semibold text-sm"
+                >
                   {distance}
                 </Text>
               </View>
 
               <View>
-                <Text className="text-[10px] uppercase tracking-widest text-gray-400 font-medium text-right">
+                <Text
+                  style={{ color: colors.placeholder }}
+                  className="text-[10px] uppercase tracking-widest font-medium text-right"
+                >
                   LAST SEEN
                 </Text>
-                <Text className="text-gray-300 font-semibold text-xs mt-0.5">
+                <Text
+                  style={{ color: colors.placeholder }}
+                  className="font-semibold text-xs mt-0.5"
+                >
                   {lastSeen}
                 </Text>
               </View>
@@ -260,15 +299,18 @@ function Matched({
         <View className="mt-2 flex-row gap-3 items-center">
           <TouchableOpacity
             onPress={handleCancel}
-            style={{ backgroundColor: "#161616", borderColor: "#262626" }}
+            style={{
+              backgroundColor: surface,
+              borderColor: colors.border,
+            }}
             className="w-16 h-14 rounded-2xl items-center justify-center border"
           >
-            <CaretLeft color="#9CA3AF" size={24} />
+            <CaretLeft color={colors.placeholder} size={24} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={{ backgroundColor: "#0055FF" }}
-            className="flex-1 h-14 rounded-2xl items-center justify-center shadow-lg"
+            style={{ backgroundColor: colors.primary }}
+            className="flex-1 h-14 rounded-2xl items-center justify-center"
             onPress={handlePropertyView}
           >
             <Text className="text-white font-bold text-base tracking-wide">
@@ -280,10 +322,14 @@ function Matched({
 
       {requestStatus === "matched" ? (
         <TouchableOpacity
-          className="w-full h-14 rounded-2xl items-center justify-center border border-red-500/40 bg-red-500/10 mt-4"
+          style={{
+            backgroundColor: DANGER + "1A",
+            borderColor: DANGER + "66",
+          }}
+          className="w-full h-14 rounded-2xl items-center justify-center border mt-4"
           onPress={() => cancelRequest(resolvedRequestId || "")}
         >
-          <Text className="text-base font-semibold text-red-400">
+          <Text style={{ color: DANGER }} className="text-base font-semibold">
             Cancel Match
           </Text>
         </TouchableOpacity>
