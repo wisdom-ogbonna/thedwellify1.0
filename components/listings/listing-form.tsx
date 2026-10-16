@@ -15,6 +15,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -63,6 +64,21 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
   const [removeVideo, setRemoveVideo] = useState(false);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (saving) return true;
+
+      if (step > 1) {
+        setStep((currentStep) => currentStep - 1);
+        return true;
+      }
+
+      return false;
+    });
+
+    return () => sub.remove();
+  }, [step, saving]);
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -264,14 +280,64 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
   });
 
   const handleSubmit = async () => {
+    // Prevent duplicate requests, including taps that happen before the UI updates.
+    if (saving) return;
+
+    // Validate again at submission time so the request cannot bypass the UI checks.
+    if (!propertyType) {
+      Alert.alert("Missing information", "Choose a property type.");
+      setStep(1);
+      return;
+    }
+
+    if (purpose !== "Sale" && purpose !== "Rent") {
+      Alert.alert(
+        "Missing information",
+        "Choose whether the property is for sale or rent.",
+      );
+      setStep(2);
+      return;
+    }
+
+    if (photos.length === 0) {
+      Alert.alert("Missing photos", "Add at least one property photo.");
+      setStep(3);
+      return;
+    }
+
+    const validPrice =
+      price.trim() !== "" &&
+      Number.isFinite(Number(price)) &&
+      Number(price) > 0;
+    const validDetails = landSelected
+      ? Number.isInteger(Number(plots)) && Number(plots) > 0
+      : title.trim().length > 2 && description.trim().length > 5;
+
+    if (!validPrice || address.trim().length <= 2 || !validDetails) {
+      Alert.alert(
+        "Check your details",
+        !validDetails
+          ? landSelected
+            ? "Enter a valid number of plots (at least 1)."
+            : "Enter a title (at least 3 characters) and description (at least 6 characters)."
+          : !validPrice
+            ? "Enter a valid price greater than zero."
+            : "Enter a location with at least 3 characters.",
+      );
+      setStep(4);
+      return;
+    }
+
     try {
       setSaving(true);
       const payload = buildPayload();
+
       if (listingId) {
         await listingsApi.update(listingId, payload);
       } else {
         await listingsApi.create(payload);
       }
+
       Alert.alert(
         listingId ? "Updated" : "Published",
         listingId
@@ -280,12 +346,15 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         [{ text: "OK", onPress: () => router.replace("/(agent)/listings") }],
       );
     } catch (err: any) {
-      Alert.alert(
-        "Error",
-        err?.response?.data?.error ||
-          err?.response?.data?.details ||
-          "Could not save this property.",
-      );
+      const responseData = err?.response?.data;
+      const message =
+        (typeof responseData?.error === "string" && responseData.error) ||
+        (typeof responseData?.message === "string" && responseData.message) ||
+        (typeof responseData?.details === "string" && responseData.details) ||
+        (typeof err?.message === "string" && err.message) ||
+        "Could not save this property. Check your connection and try again.";
+
+      Alert.alert("Error", message);
     } finally {
       setSaving(false);
     }

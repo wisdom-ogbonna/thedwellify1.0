@@ -1,47 +1,40 @@
 import axios from "axios";
 import { auth } from "../config/firebase";
 
-// ✅ Create Axios instance
 export const API = axios.create({
   baseURL: "https://dwellify-backend-six.vercel.app/api",
   timeout: 120000,
 });
- 
 
-// ✅ Attach Firebase token automatically (AUTO REFRESH 🔥)
 API.interceptors.request.use(
   async (config) => {
-    try {
-      config.headers = config.headers || {};
-      config.headers["ngrok-skip-browser-warning"] = "true";
-      const user = auth.currentUser;
-      if (user) {
-        const token = await user.getIdToken();
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    const user = auth.currentUser;
 
-      return config;
-    } catch (error) {
-      console.log("Request interceptor error:", error);
-      return config;
+    if (user) {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
     }
+
+    return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
 
-// ✅ Handle global response errors
 API.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error) => {
+    console.error("API request failed:", {
+      message: error.message,
+      code: error.code,
+      baseURL: error.config?.baseURL,
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      response: error.response?.data,
+    });
+
     if (error.response?.status === 401) {
-      console.log("Unauthorized - user may be logged out");
-
-      // ❗ DO NOT clear AsyncStorage blindly anymore
-      // Firebase manages session, not you
-
-      // OPTIONAL: you can trigger logout from context if needed
+      console.warn("Unauthorized: check Firebase authentication.");
     }
 
     return Promise.reject(error);
