@@ -152,9 +152,7 @@ const ClientPaymentStartInspection: React.FC = () => {
     setError(null);
 
     try {
-      await API.post("/notifications/request", {
-        requestId,
-      });
+      await API.post(`/match/confirm/${requestId}`);
 
       if (!mountedRef.current) return;
 

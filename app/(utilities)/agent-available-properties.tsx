@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Text,
   TouchableOpacity,
@@ -18,7 +17,15 @@ import PropertyCard from "../../components/client-ui/agent-view-property-card";
 import { API } from "../../services/api";
 import ConfirmBookingModal from "../modal";
 
-const CATEGORIES = ["All", "Land", "House", "Apartment", "Hotel", "Shortlet", "Other"];
+const CATEGORIES = [
+  "All",
+  "Land",
+  "House",
+  "Apartment",
+  "Hotel",
+  "Shortlet",
+  "Other",
+];
 
 const AvailableProperties: React.FC = () => {
   const { colors } = useTheme();
@@ -43,9 +50,6 @@ const AvailableProperties: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [error, setError] = useState("");
-  const [explored, setExplored] = useState(false);
-  const [matching, setMatching] = useState(false);
-  const canMatch = status === "preview";
 
   const fetchProperties = useCallback(async () => {
     if (!agentId) return;
@@ -92,27 +96,6 @@ const AvailableProperties: React.FC = () => {
       })),
     ];
   }, [filteredProperties]);
-
-  const handleMatchAgent = async () => {
-    if (!requestId || matching) return;
-
-    try {
-      setMatching(true);
-      await API.post(`/match/confirm/${requestId}`);
-      Alert.alert(
-        "Request sent",
-        "This agent has been notified and can accept or decline.",
-      );
-      router.replace("/(client)/client-map");
-    } catch (err: any) {
-      Alert.alert(
-        "Match",
-        err?.response?.data?.error || "Could not match this agent.",
-      );
-    } finally {
-      setMatching(false);
-    }
-  };
 
   const handleBooking = () => {
     router.replace({
@@ -216,12 +199,7 @@ const AvailableProperties: React.FC = () => {
 
             return (
               <View className="px-4 mb-4">
-                <PropertyCard
-                  item={item}
-                  requestId={requestId}
-                  canMatch={canMatch}
-                  onOpened={() => setExplored(true)}
-                />
+                <PropertyCard item={item} />
               </View>
             );
           }}
@@ -265,30 +243,10 @@ const AvailableProperties: React.FC = () => {
           <CaretLeft size={22} color={colors.text} />
         </TouchableOpacity>
 
-        {canMatch && explored ? (
-          <TouchableOpacity
-            onPress={handleMatchAgent}
-            disabled={matching}
-            style={{
-              flex: 0.7,
-              backgroundColor: colors.primary,
-              opacity: matching ? 0.7 : 1,
-            }}
-            className="items-center justify-center rounded-2xl py-5"
-          >
-            <Text className="text-lg font-bold text-white">
-              {matching ? "Sending..." : "Match Agent"}
-            </Text>
-          </TouchableOpacity>
-        ) : canMatch ? (
-          <View
-            style={{ flex: 0.7, justifyContent: "center", paddingHorizontal: 8 }}
-          >
-            <Text style={{ color: colors.placeholder }} className="text-sm font-semibold">
-              Open a property, then you can match this agent.
-            </Text>
-          </View>
-        ) : requestId || status === "inspection_started" || status === "matched" || status === "offered" ? null : (
+        {/* Book Button - 70% */}
+        {status === "inspection_started" ||
+        status === "matched" ||
+        status === "offered" ? null : (
           <TouchableOpacity
             onPress={() => setBookingModalOpen(true)}
             style={{
