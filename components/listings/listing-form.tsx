@@ -207,7 +207,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
     } catch {
       Alert.alert(
         "Photo error",
-        "Could not read that photo. Try another image, or pick one already saved on this iPhone.",
+        "Could not read that photo. Try another image, or pick one already saved on this phone.",
       );
     }
   };
@@ -331,6 +331,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
     try {
       setSaving(true);
       const payload = buildPayload();
+      console.log(payload);
 
       if (listingId) {
         await listingsApi.update(listingId, payload);

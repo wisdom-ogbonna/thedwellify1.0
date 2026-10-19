@@ -148,7 +148,11 @@ export const listingsApi = {
   },
 
   create: async (payload: ListingPayload) => {
-    const res = await API.post("/products/add-rental-product", toFormData(payload));
+    const res = await API.post("/products/add-rental-product", toFormData(payload), {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return res.data;
   },
 
@@ -156,6 +160,11 @@ export const listingsApi = {
     const res = await API.put(
       `/products/update-rental-product/${id}`,
       toFormData(payload, true),
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
     );
     return res.data;
   },
