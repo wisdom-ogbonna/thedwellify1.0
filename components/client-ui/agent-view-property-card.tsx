@@ -4,7 +4,17 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-const PropertyCard = ({ item }: { item: any }) => {
+const PropertyCard = ({
+  item,
+  requestId,
+  canMatch,
+  onOpened,
+}: {
+  item: any;
+  requestId?: string;
+  canMatch?: boolean;
+  onOpened?: () => void;
+}) => {
   const { colors } = useTheme();
   const router = useRouter();
   const image = item.images?.[0] || item.image;
@@ -13,12 +23,18 @@ const PropertyCard = ({ item }: { item: any }) => {
   return (
     <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
     <Pressable
-      onPress={() =>
+      onPress={() => {
+        onOpened?.();
         router.push({
           pathname: "/(utilities)/property-view",
-          params: { propertyId: item.id },
-        })
-      }
+          params: {
+            propertyId: item.id,
+            ...(requestId
+              ? { requestId, canMatch: canMatch ? "1" : "0" }
+              : {}),
+          },
+        });
+      }}
     >
       {image ? (
         <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />

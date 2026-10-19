@@ -414,8 +414,11 @@ export default function MapScreen() {
         fetchAgentStatus();
       }, 3000);
     } catch (err: any) {
+      const reason =
+        err.response?.data?.error || "Payment failed. Try again.";
       console.log("Payment error:", err.response?.data || err.message);
-      setMessage("Payment failed. Try again.");
+      setMessage(reason);
+      Alert.alert("Payment", reason);
     } finally {
       setPaying(false);
     }

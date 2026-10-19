@@ -68,6 +68,8 @@ function Matched({
     switch (requestStatus) {
       case "inspection_started":
         return { label: "INSPECTION IN PROGRESS", color: colors.primary };
+      case "preview":
+        return { label: "AGENT FOUND", color: colors.primary };
       case "matched":
         return { label: "MATCHED", color: colors.success };
       case "completed":
@@ -181,7 +183,9 @@ function Matched({
             ? "Your agent is on the way and inspection has started."
             : requestStatus === "matched"
               ? "An agent accepted your request."
-              : "Waiting for an agent to accept your request."}
+              : requestStatus === "preview"
+                ? "This agent is nearby. Open one of their properties, then match them."
+                : "Waiting for the agent to accept or decline."}
         </Text>
       </View>
 
@@ -314,7 +318,9 @@ function Matched({
             onPress={handlePropertyView}
           >
             <Text className="text-white font-bold text-base tracking-wide">
-              Explore Property Details
+              {requestStatus === "preview"
+                ? "View agent properties"
+                : "Explore Property Details"}
             </Text>
           </TouchableOpacity>
         </View>

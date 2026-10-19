@@ -42,7 +42,11 @@ export default function PropertyView() {
   const { role, user } = useAuth();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { propertyId } = useLocalSearchParams<{ propertyId?: string }>();
+  const { propertyId, requestId, canMatch } = useLocalSearchParams<{
+    propertyId?: string;
+    requestId?: string;
+    canMatch?: string;
+  }>();
 
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +54,28 @@ export default function PropertyView() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [matching, setMatching] = useState(false);
+  const showMatch = canMatch === "1" && Boolean(requestId);
+
+  const matchAgent = async () => {
+    if (!requestId || matching) return;
+    try {
+      setMatching(true);
+      await API.post(`/match/confirm/${requestId}`);
+      Alert.alert(
+        "Request sent",
+        "This agent has been notified and can accept or decline.",
+      );
+      router.replace("/(client)/client-map");
+    } catch (err: any) {
+      Alert.alert(
+        "Match",
+        err?.response?.data?.error || "Could not match this agent.",
+      );
+    } finally {
+      setMatching(false);
+    }
+  };
 
   const fetchProperty = useCallback(async () => {
     try {
@@ -412,6 +438,23 @@ export default function PropertyView() {
                 />
                 <Text style={[styles.sideBtnText, { color: colors.text }]}>
                   Call
+                </Text>
+              </Pressable>
+            ) : null}
+            {showMatch ? (
+              <Pressable
+                onPress={matchAgent}
+                disabled={matching}
+                accessibilityRole="button"
+                accessibilityLabel="Match agent"
+                style={[
+                  styles.primaryBtn,
+                  styles.footerMain,
+                  { backgroundColor: colors.primary, opacity: matching ? 0.7 : 1 },
+                ]}
+              >
+                <Text style={styles.primaryBtnText}>
+                  {matching ? "Sending..." : "Match Agent"}
                 </Text>
               </Pressable>
             ) : null}
