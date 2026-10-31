@@ -110,7 +110,7 @@ export default function MyListingsScreen() {
         style={[
           styles.card,
           {
-            backgroundColor: colors.card || "#FFFFFF",
+            backgroundColor: colors.background || "#FFFFFF",
             borderColor: colors.border + "50",
           },
         ]}

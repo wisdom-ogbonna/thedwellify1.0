@@ -9,7 +9,6 @@ import {
   BellRing,
   Building2,
   Camera,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   LockKeyhole,
@@ -39,24 +38,36 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type PickResult =
-  | { ok: true; assets: { uri: string; name: string; type: string }[] }
-  | { ok: true; asset: { uri: string; name: string; type: string } }
-  | { ok: false; reason: "permission" | "canceled" };
+  | {
+      ok: true;
+      assets: { uri: string; name: string; type: string }[];
+    }
+  | {
+      ok: true;
+      asset: { uri: string; name: string; type: string };
+    }
+  | {
+      ok: false;
+      reason: "permission" | "canceled";
+    };
 
-const C = {
-  background: "#000000",
-  surface: "#0B0F14",
-  surfaceLight: "#101722",
-  border: "#1C2A3B",
-  divider: "#202B3B",
+const getColors = (isDark: boolean) => ({
+  background: isDark ? "#000000" : "#FFFFFF",
+  surface: isDark ? "#0B0F14" : "#F8FAFC",
+  surfaceLight: isDark ? "#101722" : "#F1F5F9",
+  border: isDark ? "#1C2A3B" : "#E2E8F0",
+  divider: isDark ? "#202B3B" : "#E2E8F0",
+
   primary: "#1687FF",
-  blueSoft: "#101B2B",
-  text: "#F8FAFC",
-  secondary: "#A0AEC0",
-  muted: "#788493",
+  blueSoft: isDark ? "#101B2B" : "#EFF6FF",
+
+  text: isDark ? "#F8FAFC" : "#0F172A",
+  secondary: isDark ? "#A0AEC0" : "#64748B",
+  muted: isDark ? "#788493" : "#94A3B8",
+
   danger: "#F04444",
   white: "#FFFFFF",
-};
+});
 
 const FONT = undefined as string | undefined;
 
@@ -64,6 +75,8 @@ export default function ProfileScreen() {
   const { logout, isOnline, goOnline, goOffline } = useAuth();
   const { isDark } = useTheme();
   const { showModal } = useModal();
+
+  const C = getColors(isDark);
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +130,7 @@ export default function ProfileScreen() {
         error?.response?.data?.error ||
           "Could not update your profile picture.",
       );
+
       void fetchProfile();
     } finally {
       setUploadingAvatar(false);
@@ -135,7 +149,10 @@ export default function ProfileScreen() {
         text: "Choose from library",
         onPress: async () => uploadPickedAvatar(await pickLibraryImages(1)),
       },
-      { text: "Cancel", style: "cancel" },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
     ]);
   };
 
@@ -217,25 +234,33 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <StatusBar backgroundColor={C.background} barStyle="light-content" />
+      <View
+        style={[styles.loadingContainer, { backgroundColor: C.background }]}
+      >
+        <StatusBar
+          backgroundColor={C.background}
+          barStyle={isDark ? "light-content" : "dark-content"}
+        />
         <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: C.background }]}>
       <StatusBar
         backgroundColor={C.background}
-        barStyle="light-content"
+        barStyle={isDark ? "light-content" : "dark-content"}
         translucent={false}
       />
 
-      <SafeAreaView edges={["top"]} style={styles.safeArea}>
+      <SafeAreaView
+        edges={["top"]}
+        style={[styles.safeArea, { backgroundColor: C.background }]}
+      >
         {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={[styles.headerTitle, { color: C.text }]}>Profile</Text>
 
           <Pressable
             onPress={handleThemeChange}
@@ -247,7 +272,6 @@ export default function ProfileScreen() {
             ) : (
               <Sun size={19} color={C.primary} />
             )}
-            <ChevronDown size={13} color={C.secondary} />
           </Pressable>
         </View>
 
@@ -262,6 +286,7 @@ export default function ProfileScreen() {
                 void fetchProfile();
               }}
               tintColor={C.primary}
+              colors={[C.primary]}
             />
           }
         >
@@ -278,28 +303,36 @@ export default function ProfileScreen() {
                       profile?.avatar ||
                       "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
                   }}
-                  style={styles.avatar}
+                  style={[
+                    styles.avatar,
+                    {
+                      borderColor: C.primary,
+                      backgroundColor: C.surface,
+                    },
+                  ]}
                 />
 
                 {uploadingAvatar && (
-                  <View style={styles.avatarLoading}>
+                  <View
+                    style={[
+                      styles.avatarLoading,
+                      { backgroundColor: "rgba(0,0,0,0.5)" },
+                    ]}
+                  >
                     <ActivityIndicator color={C.white} />
                   </View>
                 )}
               </Pressable>
 
-              {/* EDIT BUTTON */}
-              {/* <Pressable
-                onPress={() => router.push("/(agent)/personalInfo")}
-                style={styles.editButton}
-              >
-                <Pencil size={17} color={C.white} />
-              </Pressable> */}
-
-              {/* CAMERA BUTTON */}
               <Pressable
                 onPress={handleAvatarUpload}
-                style={styles.cameraButton}
+                style={[
+                  styles.cameraButton,
+                  {
+                    backgroundColor: C.primary,
+                    borderColor: C.background,
+                  },
+                ]}
               >
                 <Camera size={18} color={C.white} />
               </Pressable>
@@ -307,7 +340,10 @@ export default function ProfileScreen() {
 
             <View style={styles.identity}>
               <View style={styles.nameRow}>
-                <Text style={styles.name} numberOfLines={1}>
+                <Text
+                  style={[styles.name, { color: C.text }]}
+                  numberOfLines={1}
+                >
                   {profile?.name || "Agent"}
                 </Text>
 
@@ -321,14 +357,20 @@ export default function ProfileScreen() {
 
               <View style={styles.contactLine}>
                 <Mail size={14} color={C.muted} />
-                <Text style={styles.contactText} numberOfLines={1}>
+                <Text
+                  style={[styles.contactText, { color: C.secondary }]}
+                  numberOfLines={1}
+                >
                   {profile?.email || "No email available"}
                 </Text>
               </View>
 
               <View style={styles.contactLine}>
                 <Phone size={14} color={C.muted} />
-                <Text style={styles.contactText} numberOfLines={1}>
+                <Text
+                  style={[styles.contactText, { color: C.secondary }]}
+                  numberOfLines={1}
+                >
                   {profile?.phone || "No phone available"}
                 </Text>
               </View>
@@ -336,8 +378,18 @@ export default function ProfileScreen() {
           </View>
 
           {/* AGENT AVAILABILITY */}
-          <View style={styles.availabilityCard}>
-            <Text style={styles.availabilityLabel}>AGENT AVAILABILITY</Text>
+          <View
+            style={[
+              styles.availabilityCard,
+              {
+                backgroundColor: C.surface,
+                borderColor: C.border,
+              },
+            ]}
+          >
+            <Text style={[styles.availabilityLabel, { color: C.secondary }]}>
+              AGENT AVAILABILITY
+            </Text>
 
             <View style={styles.availabilityRight}>
               <Text
@@ -354,20 +406,30 @@ export default function ProfileScreen() {
                 onValueChange={handleToggle}
                 disabled={toggling}
                 trackColor={{
-                  false: "#293445",
+                  false: isDark ? "#293445" : "#CBD5E1",
                   true: "#155AA0",
                 }}
                 thumbColor={C.white}
-                ios_backgroundColor="#293445"
+                ios_backgroundColor={isDark ? "#293445" : "#CBD5E1"}
                 style={styles.switch}
               />
             </View>
           </View>
 
           {/* SETTINGS SECTION */}
-          <Text style={styles.sectionLabel}>SETTINGS & SECURITY</Text>
+          <Text style={[styles.sectionLabel, { color: C.secondary }]}>
+            SETTINGS & SECURITY
+          </Text>
 
-          <View style={styles.settingsCard}>
+          <View
+            style={[
+              styles.settingsCard,
+              {
+                backgroundColor: C.surface,
+                borderColor: C.border,
+              },
+            ]}
+          >
             {settingsOptions.map((item, index) => {
               const Icon = item.icon;
 
@@ -376,18 +438,30 @@ export default function ProfileScreen() {
                   <Pressable
                     onPress={() => router.push(item.path as any)}
                     android_ripple={{
-                      color: "rgba(22,135,255,0.08)",
+                      color: isDark
+                        ? "rgba(22,135,255,0.08)"
+                        : "rgba(22,135,255,0.12)",
                     }}
                     style={styles.settingRow}
                   >
-                    <View style={styles.settingIcon}>
+                    <View
+                      style={[
+                        styles.settingIcon,
+                        { backgroundColor: C.surfaceLight },
+                      ]}
+                    >
                       <Icon size={20} color={C.primary} />
                     </View>
 
                     <View style={styles.settingContent}>
-                      <Text style={styles.settingTitle}>{item.label}</Text>
+                      <Text style={[styles.settingTitle, { color: C.text }]}>
+                        {item.label}
+                      </Text>
 
-                      <Text style={styles.settingSubtitle} numberOfLines={1}>
+                      <Text
+                        style={[styles.settingSubtitle, { color: C.muted }]}
+                        numberOfLines={1}
+                      >
                         {item.subtitle}
                       </Text>
                     </View>
@@ -396,14 +470,19 @@ export default function ProfileScreen() {
                   </Pressable>
 
                   {index !== settingsOptions.length - 1 && (
-                    <View style={styles.rowDivider} />
+                    <View
+                      style={[
+                        styles.rowDivider,
+                        { backgroundColor: C.divider },
+                      ]}
+                    />
                   )}
                 </View>
               );
             })}
 
             {/* LOGOUT */}
-            <View style={styles.rowDivider} />
+            <View style={[styles.rowDivider, { backgroundColor: C.divider }]} />
 
             <Pressable
               onPress={handleLogout}
@@ -412,7 +491,14 @@ export default function ProfileScreen() {
               }}
               style={styles.settingRow}
             >
-              <View style={styles.logoutIcon}>
+              <View
+                style={[
+                  styles.logoutIcon,
+                  {
+                    backgroundColor: isDark ? "#18283F" : "#FEF2F2",
+                  },
+                ]}
+              >
                 <LogOut size={20} color={C.danger} />
               </View>
 
@@ -438,19 +524,16 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
 
   container: {
     flex: 1,
-    backgroundColor: C.background,
   },
 
   safeArea: {
     flex: 1,
-    backgroundColor: C.background,
   },
 
   scrollContent: {
@@ -459,7 +542,6 @@ const styles = StyleSheet.create({
     paddingBottom: 35,
   },
 
-  // HEADER
   header: {
     height: 55,
     paddingHorizontal: 20,
@@ -469,7 +551,6 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: C.white,
     fontFamily: FONT,
     fontSize: 23,
     fontWeight: "700",
@@ -483,7 +564,6 @@ const styles = StyleSheet.create({
     padding: 5,
   },
 
-  // PROFILE
   profileSection: {
     alignItems: "center",
     paddingTop: 9,
@@ -509,26 +589,11 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 2,
-    borderColor: C.primary,
-    backgroundColor: C.surface,
   },
 
   avatarLoading: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 50,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  editButton: {
-    position: "absolute",
-    top: 15,
-    right: -125,
-    width: 40,
-    height: 24,
-    borderRadius: 20,
-    backgroundColor: C.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -540,9 +605,7 @@ const styles = StyleSheet.create({
     width: 37,
     height: 37,
     borderRadius: 19,
-    backgroundColor: C.primary,
     borderWidth: 2,
-    borderColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -562,7 +625,6 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: C.white,
     fontFamily: FONT,
     fontSize: 21,
     fontWeight: "800",
@@ -579,19 +641,15 @@ const styles = StyleSheet.create({
   },
 
   contactText: {
-    color: C.secondary,
     fontFamily: FONT,
     fontSize: 13,
     fontWeight: "400",
   },
 
-  // AVAILABILITY
   availabilityCard: {
     minHeight: 59,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -599,7 +657,6 @@ const styles = StyleSheet.create({
   },
 
   availabilityLabel: {
-    color: C.secondary,
     fontFamily: FONT,
     fontSize: 11,
     fontWeight: "700",
@@ -622,9 +679,7 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: 0.91 }, { scaleY: 0.91 }],
   },
 
-  // SETTINGS
   sectionLabel: {
-    color: C.secondary,
     fontFamily: FONT,
     fontSize: 11,
     fontWeight: "500",
@@ -635,10 +690,8 @@ const styles = StyleSheet.create({
   },
 
   settingsCard: {
-    backgroundColor: C.surface,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: C.border,
     paddingHorizontal: 0,
     overflow: "hidden",
   },
@@ -655,7 +708,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: C.surfaceLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -664,7 +716,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#18283F",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -676,7 +727,6 @@ const styles = StyleSheet.create({
   },
 
   settingTitle: {
-    color: C.text,
     fontFamily: FONT,
     fontSize: 14,
     fontWeight: "600",
@@ -684,7 +734,6 @@ const styles = StyleSheet.create({
   },
 
   settingSubtitle: {
-    color: C.muted,
     fontFamily: FONT,
     fontSize: 11.5,
     fontWeight: "400",
@@ -693,7 +742,6 @@ const styles = StyleSheet.create({
 
   rowDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: C.divider,
     marginLeft: 64,
     marginRight: 16,
   },
