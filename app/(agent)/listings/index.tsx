@@ -1,4 +1,3 @@
-import { NotificationBell } from "@/components/notifications/notification-bell";
 import { formatPrice, purposeLabel, type Listing } from "@/constants/listings";
 import { useTheme } from "@/hooks/use-theme";
 import { listingsApi } from "@/services/listings";
@@ -25,21 +24,17 @@ export default function MyListingsScreen() {
   const { colors } = useTheme();
 
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("All");
-
   const [searchQuery, setSearchQuery] = useState("");
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-
   const [showFilters, setShowFilters] = useState(false);
 
   const fetchListings = useCallback(async () => {
     try {
       setError("");
-
       const products = await listingsApi.list();
-
       setListings(products);
     } catch (err: any) {
       setError(
@@ -61,17 +56,13 @@ export default function MyListingsScreen() {
 
   const handleDelete = (id: string) => {
     Alert.alert("Delete property", "This cannot be undone.", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+      { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
           try {
             await listingsApi.remove(id);
-
             setListings((prev) => prev.filter((item) => item.id !== id));
           } catch {
             Alert.alert("Error", "Failed to delete this property.");
@@ -94,11 +85,8 @@ export default function MyListingsScreen() {
           item.purpose === "Rent"));
 
     const q = searchQuery.trim().toLowerCase();
-
     const title = String(item.title || "").toLowerCase();
-
     const location = String(item.location || "").toLowerCase();
-
     const type = String(item.propertyType || "").toLowerCase();
 
     const matchesSearch =
@@ -109,7 +97,6 @@ export default function MyListingsScreen() {
 
   const renderCard = ({ item }: { item: Listing }) => {
     const image = item.images?.[0];
-
     const label = purposeLabel(item.purpose, item.tag);
 
     return (
@@ -117,16 +104,14 @@ export default function MyListingsScreen() {
         onPress={() =>
           router.push({
             pathname: "/(agent)/listings/[id]",
-            params: {
-              id: item.id,
-            },
+            params: { id: item.id },
           })
         }
         style={[
           styles.card,
           {
-            backgroundColor: colors.disabled + "0D",
-            borderColor: colors.border,
+            backgroundColor: colors.card || "#FFFFFF",
+            borderColor: colors.border + "50",
           },
         ]}
       >
@@ -142,157 +127,97 @@ export default function MyListingsScreen() {
               style={[
                 styles.image,
                 styles.imageFallback,
-                {
-                  backgroundColor: colors.disabled + "33",
-                },
+                { backgroundColor: colors.disabled + "33" },
               ]}
             >
               <Ionicons
                 name="image-outline"
-                size={30}
+                size={26}
                 color={colors.placeholder}
               />
-
-              <Text
-                style={{
-                  color: colors.placeholder,
-                }}
-              >
+              <Text style={{ color: colors.placeholder, fontSize: 11 }}>
                 No photo
               </Text>
             </View>
           )}
 
           <View
-            style={[
-              styles.purposeBadge,
-              {
-                backgroundColor: colors.primary,
-              },
-            ]}
+            style={[styles.purposeBadge, { backgroundColor: colors.primary }]}
           >
+            <Ionicons
+              name="home"
+              size={10}
+              color="#FFFFFF"
+              style={{ marginRight: 3 }}
+            />
             <Text style={styles.purposeBadgeText}>{label}</Text>
-          </View>
-
-          {/* HEART */}
-
-          <View style={styles.favoriteButton}>
-            <Ionicons name="heart-outline" size={21} color="#FFFFFF" />
           </View>
         </View>
 
         <View style={styles.cardBody}>
-          <View style={styles.titleRow}>
-            <Text
-              style={[
-                styles.title,
-                {
-                  color: colors.text,
-                },
-              ]}
-              numberOfLines={2}
-            >
-              {item.title || "Untitled property"}
-            </Text>
-
+          <View style={styles.statusRow}>
             <View
               style={[
                 styles.statusBadge,
                 {
                   backgroundColor: "#16A34A18",
-                  borderColor: colors.border + "70",
+                  borderColor: "#16A34A30",
                 },
               ]}
             >
               <View
-                style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor: "#16A34A",
-                  },
-                ]}
+                style={[styles.statusDot, { backgroundColor: "#16A34A" }]}
               />
-
-              <Text
-                style={[
-                  styles.statusText,
-                  {
-                    color: "#16A34A",
-                  },
-                ]}
-              >
+              <Text style={[styles.statusText, { color: "#16A34A" }]}>
                 Active
               </Text>
             </View>
           </View>
 
-          <View style={styles.metaRow}>
-            <Ionicons
-              name="location-outline"
-              size={16}
-              color={colors.placeholder}
-            />
-
-            <Text
-              style={[
-                styles.meta,
-                {
-                  color: colors.placeholder,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {item.location
-                ? `${item.propertyType} · ${item.location}`
-                : item.propertyType}
-            </Text>
-          </View>
-
           <Text
-            style={[
-              styles.price,
-              {
-                color: colors.primary,
-              },
-            ]}
+            style={[styles.price, { color: colors.primary }]}
+            numberOfLines={1}
           >
             {item.price ? formatPrice(item.price) : "Price on request"}
           </Text>
+
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {item.title || item.propertyType || "Untitled property"}
+          </Text>
+
+          <View style={styles.metaRow}>
+            <Ionicons name="location-sharp" size={13} color={colors.primary} />
+            <Text
+              style={[styles.meta, { color: colors.placeholder }]}
+              numberOfLines={1}
+            >
+              {item.location || item.propertyType}
+            </Text>
+          </View>
 
           <View style={styles.actions}>
             <Pressable
               onPress={() =>
                 router.push({
                   pathname: "/(agent)/listings/edit",
-                  params: {
-                    id: item.id,
-                  },
+                  params: { id: item.id },
                 })
               }
               style={[
                 styles.actionBtn,
                 {
-                  backgroundColor: colors.primary + "16",
-                  borderColor: colors.primary + "70",
+                  backgroundColor: colors.primary + "12",
                 },
               ]}
             >
               <Ionicons
                 name="create-outline"
-                size={18}
+                size={16}
                 color={colors.primary}
               />
-
-              <Text
-                style={[
-                  styles.actionText,
-                  {
-                    color: colors.primary,
-                  },
-                ]}
-              >
-                Edit
-              </Text>
             </Pressable>
 
             <Pressable
@@ -300,23 +225,11 @@ export default function MyListingsScreen() {
               style={[
                 styles.actionBtn,
                 {
-                  backgroundColor: colors.error + "16",
-                  borderColor: colors.error + "70",
+                  backgroundColor: "#EF444412",
                 },
               ]}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.error} />
-
-              <Text
-                style={[
-                  styles.actionText,
-                  {
-                    color: colors.error,
-                  },
-                ]}
-              >
-                Delete
-              </Text>
+              <Ionicons name="trash-outline" size={16} color="#EF4444" />
             </Pressable>
           </View>
         </View>
@@ -326,84 +239,42 @@ export default function MyListingsScreen() {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safe,
-        {
-          backgroundColor: colors.background,
-        },
-      ]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
       <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text
-            style={[
-              styles.heading,
-              {
-                color: colors.text,
-              },
-            ]}
-          >
-            Listings
-          </Text>
-        </View>
+        <Text style={[styles.heading, { color: colors.text }]}>Listings</Text>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pressable
-            onPress={() => router.push("/(agent)/listings/new")}
-            style={[
-              styles.addButton,
-              {
-                backgroundColor: colors.primary,
-              },
-            ]}
-          >
-            <Ionicons name="add" size={21} color="#FFFFFF" />
-
-            <Text style={styles.addButtonText}>Add Property</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => router.push("/(agent)/listings/new")}
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+        >
+          <Ionicons name="add" size={18} color="#FFFFFF" />
+          <Text style={styles.addButtonText}>Add Property</Text>
+        </Pressable>
       </View>
-      <Text
-        style={[
-          styles.subtitle,
-          {
-            color: colors.placeholder,
-            paddingHorizontal: 20,
-            paddingBottom: 12,
-          },
-        ]}
-      >
-        Manage your posted properties and connect with other agents.
-      </Text>
 
       <View style={styles.searchRow}>
         <View
           style={[
             styles.searchContainer,
             {
-              backgroundColor: colors.disabled + "14",
-              borderColor: colors.border,
+              backgroundColor: colors.disabled + "10",
+              borderColor: colors.border + "60",
             },
           ]}
         >
           <Ionicons
             name="search-outline"
-            size={21}
+            size={18}
             color={colors.placeholder}
           />
-
           <TextInput
             placeholder="Search by title, location..."
             placeholderTextColor={colors.placeholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={[
-              styles.searchInput,
-              {
-                color: colors.text,
-              },
-            ]}
+            style={[styles.searchInput, { color: colors.text }]}
           />
         </View>
 
@@ -414,14 +285,14 @@ export default function MyListingsScreen() {
             {
               backgroundColor: showFilters
                 ? colors.primary
-                : colors.disabled + "14",
-              borderColor: showFilters ? colors.primary : colors.border,
+                : colors.disabled + "10",
+              borderColor: showFilters ? colors.primary : colors.border + "60",
             },
           ]}
         >
           <Ionicons
             name="options-outline"
-            size={21}
+            size={18}
             color={showFilters ? "#FFFFFF" : colors.text}
           />
         </Pressable>
@@ -431,7 +302,6 @@ export default function MyListingsScreen() {
         <View style={styles.filterPanel}>
           {TABS.map((tab) => {
             const active = activeTab === tab;
-
             return (
               <Pressable
                 key={tab}
@@ -441,7 +311,7 @@ export default function MyListingsScreen() {
                   {
                     backgroundColor: active
                       ? colors.primary
-                      : colors.disabled + "18",
+                      : colors.disabled + "14",
                     borderColor: active ? colors.primary : colors.border,
                   },
                 ]}
@@ -449,9 +319,7 @@ export default function MyListingsScreen() {
                 <Text
                   style={[
                     styles.filterChipText,
-                    {
-                      color: active ? "#FFFFFF" : colors.text,
-                    },
+                    { color: active ? "#FFFFFF" : colors.text },
                   ]}
                 >
                   {tab}
@@ -463,49 +331,21 @@ export default function MyListingsScreen() {
       )}
 
       <View style={styles.sortRow}>
-        <Text
-          style={[
-            styles.sortLabel,
-            {
-              color: colors.placeholder,
-            },
-          ]}
-        >
-          Sort by
-        </Text>
-
         <View
           style={[
             styles.sortButton,
             {
-              backgroundColor: colors.disabled + "18",
-              borderColor: colors.border,
+              backgroundColor: colors.disabled + "10",
+              borderColor: colors.border + "60",
             },
           ]}
         >
-          <Text
-            style={[
-              styles.sortText,
-              {
-                color: colors.text,
-              },
-            ]}
-          >
-            Newest
-          </Text>
-
-          <Ionicons name="chevron-down" size={16} color={colors.placeholder} />
+          <Text style={[styles.sortText, { color: colors.text }]}>Newest</Text>
+          <Ionicons name="chevron-down" size={14} color={colors.placeholder} />
         </View>
 
-        <Text
-          style={[
-            styles.resultCount,
-            {
-              color: colors.placeholder,
-            },
-          ]}
-        >
-          {filteredListings.length}
+        <Text style={[styles.resultCount, { color: colors.placeholder }]}>
+          {filteredListings.length} listings
         </Text>
       </View>
 
@@ -515,40 +355,17 @@ export default function MyListingsScreen() {
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <View
-            style={[
-              styles.errorIcon,
-              {
-                backgroundColor: colors.error + "16",
-              },
-            ]}
-          >
-            <Ionicons
-              name="alert-circle-outline"
-              size={28}
-              color={colors.error}
-            />
-          </View>
-
-          <Text
-            style={[
-              styles.emptyTitle,
-              {
-                color: colors.text,
-              },
-            ]}
-          >
+          <Ionicons
+            name="alert-circle-outline"
+            size={32}
+            color={colors.error}
+          />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {error}
           </Text>
-
           <Pressable
             onPress={fetchListings}
-            style={[
-              styles.retry,
-              {
-                backgroundColor: colors.primary,
-              },
-            ]}
+            style={[styles.retry, { backgroundColor: colors.primary }]}
           >
             <Text style={styles.addButtonText}>Retry</Text>
           </Pressable>
@@ -558,6 +375,8 @@ export default function MyListingsScreen() {
           data={filteredListings}
           keyExtractor={(item) => item.id}
           renderItem={renderCard}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
           refreshControl={
@@ -572,40 +391,15 @@ export default function MyListingsScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <View
-                style={[
-                  styles.emptyIcon,
-                  {
-                    backgroundColor: colors.primary + "16",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="business-outline"
-                  size={30}
-                  color={colors.primary}
-                />
-              </View>
-
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-              >
+              <Ionicons
+                name="business-outline"
+                size={36}
+                color={colors.primary}
+              />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
                 No properties yet
               </Text>
-
-              <Text
-                style={[
-                  styles.emptyCopy,
-                  {
-                    color: colors.placeholder,
-                  },
-                ]}
-              >
+              <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
                 Add a property and it will show here with photo, title, and sale
                 or rent.
               </Text>
@@ -618,321 +412,212 @@ export default function MyListingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-
+  safe: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
-
-  headerText: {
-    flex: 1,
-    paddingRight: 12,
-  },
-
   heading: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "900",
-    letterSpacing: -0.8,
+    letterSpacing: -0.6,
   },
-
-  subtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-
   addButton: {
-    height: 42,
-    paddingHorizontal: 16,
-    borderRadius: 22,
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
   },
-
   addButtonText: {
     color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "800",
-    marginLeft: 5,
+    fontSize: 12,
+    fontWeight: "700",
+    marginLeft: 4,
   },
-
   searchRow: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 12,
-  },
-
-  searchContainer: {
-    flex: 1,
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    marginLeft: 10,
-  },
-
-  filterButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  filterPanel: {
     flexDirection: "row",
     paddingHorizontal: 20,
     gap: 8,
     marginBottom: 10,
   },
-
-  filterChip: {
-    height: 36,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+  searchContainer: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    marginLeft: 8,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "800",
+  filterPanel: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    gap: 6,
+    marginBottom: 8,
   },
-
+  filterChip: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterChipText: { fontSize: 11, fontWeight: "700" },
   sortRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  sortButton: {
+    height: 32,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  sortText: { fontSize: 12, fontWeight: "600" },
+  resultCount: { marginLeft: "auto", fontSize: 12, fontWeight: "500" },
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  columnWrapper: {
+    justifyContent: "space-between",
     marginBottom: 14,
   },
-
-  sortLabel: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-
-  sortButton: {
-    height: 35,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-
-  sortText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  resultCount: {
-    marginLeft: "auto",
-    fontSize: 11,
-  },
-
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-  },
-
   card: {
+    width: "48%",
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 18,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-
   imageContainer: {
     width: "100%",
-    height: 205,
+    height: 125,
     position: "relative",
   },
-
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-
-  imageFallback: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
+  image: { width: "100%", height: "100%" },
+  imageFallback: { alignItems: "center", justifyContent: "center" },
   purposeBadge: {
     position: "absolute",
-    top: 14,
-    left: 14,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 17,
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
   },
-
   purposeBadgeText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: "800",
   },
-
-  favoriteButton: {
-    position: "absolute",
-    top: 14,
-    right: 14,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(0,0,0,0.48)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
   cardBody: {
-    padding: 18,
+    padding: 10,
   },
-
-  titleRow: {
+  statusRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    marginBottom: 4,
   },
-
-  title: {
-    flex: 1,
-    fontSize: 20,
-    lineHeight: 26,
-    fontWeight: "800",
-    paddingRight: 10,
-  },
-
   statusBadge: {
-    minHeight: 28,
-    paddingHorizontal: 10,
-    borderRadius: 15,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
   },
-
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 6,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginRight: 4,
   },
-
-  statusText: {
-    fontSize: 11,
-    fontWeight: "800",
+  statusText: { fontSize: 10, fontWeight: "700" },
+  price: {
+    fontSize: 15,
+    fontWeight: "900",
+    marginTop: 2,
   },
-
+  title: {
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 2,
+  },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
-
   meta: {
     flex: 1,
-    fontSize: 14,
-    marginLeft: 5,
+    fontSize: 11,
+    marginLeft: 3,
   },
-
-  price: {
-    fontSize: 21,
-    fontWeight: "900",
-    marginTop: 14,
-  },
-
   actions: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 18,
+    gap: 6,
+    marginTop: 10,
   },
-
   actionBtn: {
     flex: 1,
-    height: 50,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
+    height: 32,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
-
-  actionText: {
-    fontSize: 14,
-    fontWeight: "800",
-    marginLeft: 7,
-  },
-
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
-
-  errorIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-
-  empty: {
-    alignItems: "center",
-    paddingTop: 65,
-    paddingHorizontal: 24,
-  },
-
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-
+  empty: { alignItems: "center", paddingTop: 50, paddingHorizontal: 24 },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
     textAlign: "center",
+    marginTop: 10,
   },
-
   emptyCopy: {
-    fontSize: 14,
+    fontSize: 12,
     textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
-    maxWidth: 300,
+    marginTop: 6,
+    lineHeight: 18,
   },
-
   retry: {
-    marginTop: 16,
-    paddingHorizontal: 22,
-    height: 44,
-    borderRadius: 12,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    height: 38,
+    borderRadius: 10,
     justifyContent: "center",
   },
 });

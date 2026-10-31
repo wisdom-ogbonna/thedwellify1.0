@@ -96,65 +96,9 @@ export default function Request({
         contentContainerStyle={{
           paddingBottom: 105,
         }}
-      >
-        {/* LOCATION */}
-        <View className="px-6 mt-5 mb-7">
-          <TouchableOpacity
-            onPress={getLocation}
-            activeOpacity={0.7}
-            style={{
-              backgroundColor: cardBg,
-              borderColor: borderColor,
-              borderWidth: 1,
-            }}
-            className="flex-row items-center rounded-3xl p-3 pr-5 shadow-sm shadow-black/5"
-          >
-            <View
-              className="w-12 h-12 rounded-full items-center justify-center mr-4"
-              style={{ backgroundColor: mutedBg }}
-            >
-              <Ionicons name="location" size={22} color={primaryColor} />
-            </View>
-
-            <View className="flex-1 justify-center">
-              <Text
-                style={{ color: secondaryText }}
-                className="text-[11px] uppercase font-bold tracking-wider"
-              >
-                Current Location
-              </Text>
-              {locationLoading ? (
-                <ActivityIndicator
-                  color={primaryColor}
-                  size="small"
-                  style={{ alignSelf: "flex-start" }}
-                />
-              ) : (
-                <Text
-                  style={{ color: colors.text }}
-                  className="text-[15px] font-semibold"
-                  numberOfLines={1}
-                >
-                  {address || "Tap to detect your location..."}
-                </Text>
-              )}
-            </View>
-
-            <View
-              className="w-8 h-8 rounded-full items-center justify-center"
-              style={{ backgroundColor: isDark ? "#27272A" : "#F8FAFC" }}
-            >
-              <Ionicons
-                name="refresh"
-                size={16}
-                color={isDark ? "#E4E4E7" : "#475569"}
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
-
+      > 
         {/* BUY / RENT SWITCH */}
-        <View className="px-6 mb-7">
+        <View className="px-6 mb-7 mt-5">
           <View
             className="w-full h-13 rounded-full p-1 flex-row"
             style={{

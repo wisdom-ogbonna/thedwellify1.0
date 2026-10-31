@@ -10,8 +10,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -414,8 +412,7 @@ export default function MapScreen() {
         fetchAgentStatus();
       }, 3000);
     } catch (err: any) {
-      const reason =
-        err.response?.data?.error || "Payment failed. Try again.";
+      const reason = err.response?.data?.error || "Payment failed. Try again.";
       console.log("Payment error:", err.response?.data || err.message);
       setMessage(reason);
       Alert.alert("Payment", reason);
@@ -558,54 +555,24 @@ export default function MapScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       {/* Header Overlay */}
-      <View className="absolute top-12 left-0 right-0 z-50 flex-row items-center justify-between px-4 py-2">
+      <View className="absolute top-12 left-3 right-0 z-50 flex-row items-center justify-between px-4 py-2">
         {/* Left Pill (Notification & Brand) */}
-        <View
-          className="flex-row items-center p-1.5 pr-5 rounded-full"
+
+        <NotificationBell
+          color="#111827"
+          size={20}
           style={{
-            backgroundColor: colors.background,
-            borderWidth: 1,
-            borderColor: colors.border,
+            width: 46,
+            height: 46,
+            borderRadius: 23,
+            backgroundColor: "#FFFFFF",
             shadowColor: "#000",
-            shadowOpacity: 0.12,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 3 },
             elevation: 4,
           }}
-        >
-          <NotificationBell
-            color="#FFFFFF"
-            size={18}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: colors.primary,
-              marginRight: 12,
-            }}
-          />
-          <Text
-            style={{ color: colors.text }}
-            className="text-base font-bold tracking-wide"
-          >
-            Dwellify
-          </Text>
-        </View>
-
-        <Pressable onPress={() => router.push("/(utilities)/agent-profile")}>
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
-            }}
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 26,
-              borderWidth: 2,
-              borderColor: colors.success,
-            }}
-          />
-        </Pressable>
+        />
       </View>
 
       <MapView

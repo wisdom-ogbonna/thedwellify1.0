@@ -5,21 +5,20 @@ import { agentApi } from "@/services/agent";
 import { pickCameraImage, pickLibraryImages } from "@/services/media-picker";
 import { router } from "expo-router";
 import {
-  ArrowLeft,
   BadgeCheck,
-  Bell,
   BellRing,
   Building2,
+  Camera,
+  ChevronDown,
   ChevronRight,
-  HelpCircle,
-  Lock,
+  CircleHelp,
+  LockKeyhole,
   LogOut,
   Mail,
   Moon,
-  Pencil,
   Phone,
   Sun,
-  User,
+  UserRound,
   Wallet,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -31,6 +30,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Switch,
   Text,
@@ -38,17 +38,31 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Swap for your font family (e.g. "Inter_600SemiBold") if you use per-weight fonts
-const FONT = undefined as string | undefined;
-
 type PickResult =
   | { ok: true; assets: { uri: string; name: string; type: string }[] }
   | { ok: true; asset: { uri: string; name: string; type: string } }
   | { ok: false; reason: "permission" | "canceled" };
 
+const C = {
+  background: "#000000",
+  surface: "#0B0F14",
+  surfaceLight: "#101722",
+  border: "#1C2A3B",
+  divider: "#202B3B",
+  primary: "#1687FF",
+  blueSoft: "#101B2B",
+  text: "#F8FAFC",
+  secondary: "#A0AEC0",
+  muted: "#788493",
+  danger: "#F04444",
+  white: "#FFFFFF",
+};
+
+const FONT = undefined as string | undefined;
+
 export default function ProfileScreen() {
   const { logout, isOnline, goOnline, goOffline } = useAuth();
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { showModal } = useModal();
 
   const [profile, setProfile] = useState<any>(null);
@@ -57,25 +71,21 @@ export default function ProfileScreen() {
   const [toggling, setToggling] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  // ---- design tokens ----
-  const headerBg = isDark ? "#0A101B" : "#FFFFFF";
-  const surface = isDark ? "#0B111C" : "#FFFFFF";
-  const surfaceInner = isDark ? "#0E1624" : "#F8FAFC";
-  const iconBg = isDark ? "#111B2E" : "#EEF2F7";
-  const divider = isDark ? "#1A2332" : "#E8EDF3";
-  const danger = "#F26B6B";
-
   const fetchProfile = async () => {
     try {
       const data = await agentApi.profile();
       setProfile(data);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error("Profile fetch failed:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    void fetchProfile();
+  }, []);
 
   const uploadPickedAvatar = async (picked: PickResult) => {
     if (!picked.ok) {
@@ -87,19 +97,27 @@ export default function ProfileScreen() {
       }
       return;
     }
+
     const file = "assets" in picked ? picked.assets[0] : picked.asset;
     if (!file) return;
+
     setUploadingAvatar(true);
     setProfile((prev: any) => ({ ...prev, avatar: file.uri }));
+
     try {
-      const res = await agentApi.uploadAvatar(file);
-      setProfile((prev: any) => ({ ...prev, avatar: res.avatar || file.uri }));
-    } catch (err: any) {
+      const response = await agentApi.uploadAvatar(file);
+
+      setProfile((prev: any) => ({
+        ...prev,
+        avatar: response.avatar || file.uri,
+      }));
+    } catch (error: any) {
       Alert.alert(
         "Upload failed",
-        err?.response?.data?.error || "Could not update your profile picture.",
+        error?.response?.data?.error ||
+          "Could not update your profile picture.",
       );
-      fetchProfile();
+      void fetchProfile();
     } finally {
       setUploadingAvatar(false);
     }
@@ -107,7 +125,8 @@ export default function ProfileScreen() {
 
   const handleAvatarUpload = () => {
     if (uploadingAvatar) return;
-    Alert.alert("Profile photo", "This photo is shown on your agent profile.", [
+
+    Alert.alert("Profile photo", "Update your agent profile picture.", [
       {
         text: "Take photo",
         onPress: async () => uploadPickedAvatar(await pickCameraImage()),
@@ -120,23 +139,24 @@ export default function ProfileScreen() {
     ]);
   };
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
   const handleToggle = async (value: boolean) => {
     setToggling(true);
+
     try {
-      value ? await goOnline() : await goOffline();
-    } catch (e) {
+      if (value) {
+        await goOnline();
+      } else {
+        await goOffline();
+      }
+    } catch {
       Alert.alert("Error", "Status update failed");
     } finally {
       setToggling(false);
     }
   };
 
-  const handleThemeChange = (value: boolean) => {
-    Appearance.setColorScheme(value ? "dark" : "light");
+  const handleThemeChange = () => {
+    Appearance.setColorScheme(isDark ? "light" : "dark");
   };
 
   const handleLogout = () => {
@@ -155,7 +175,7 @@ export default function ProfileScreen() {
       id: "personal",
       label: "Personal Information",
       subtitle: "Name, national ID, contact details",
-      icon: User,
+      icon: UserRound,
       path: "/(agent)/personalInfo",
     },
     {
@@ -183,615 +203,498 @@ export default function ProfileScreen() {
       id: "privacy",
       label: "Privacy & Security",
       subtitle: "Two-factor auth, passcodes, sessions",
-      icon: Lock,
+      icon: LockKeyhole,
       path: "/(agent)/privacy",
     },
     {
       id: "help",
       label: "Help & Support",
       subtitle: "Agent concierge 24/7, FAQs",
-      icon: HelpCircle,
+      icon: CircleHelp,
       path: "/(agent)/help",
-    },
-    {
-      id: "logout",
-      label: "Logout",
-      subtitle: "Sign out from this device",
-      icon: LogOut,
-      path: "",
     },
   ];
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.primary} size="large" />
+      <View style={styles.loadingContainer}>
+        <StatusBar backgroundColor={C.background} barStyle="light-content" />
+        <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
   }
 
-  const switchProps = {
-    trackColor: { false: isDark ? "#1D2C42" : "#CBD5E1", true: colors.primary },
-    thumbColor: "#FFFFFF",
-    ios_backgroundColor: isDark ? "#1D2C42" : "#CBD5E1",
-  };
-
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* ---------- Header ---------- */}
-      <SafeAreaView
-        edges={["top"]}
-        style={{
-          backgroundColor: headerBg,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: divider,
-        }}
-      >
+    <View style={styles.container}>
+      <StatusBar
+        backgroundColor={C.background}
+        barStyle="light-content"
+        translucent={false}
+      />
+
+      <SafeAreaView edges={["top"]} style={styles.safeArea}>
+        {/* HEADER */}
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={[
-              styles.backBtn,
-              { backgroundColor: iconBg, borderColor: divider },
-            ]}
-          >
-            <ArrowLeft size={22} color={colors.primary} />
-          </Pressable>
-
-          <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Profile
-            </Text>
-            <Text style={[styles.headerSub, { color: colors.placeholder }]}>
-              Real estate agent account
-            </Text>
-          </View>
+          <Text style={styles.headerTitle}>Profile</Text>
 
           <Pressable
+            onPress={handleThemeChange}
+            style={styles.themeButton}
             hitSlop={10}
-            onPress={() => router.push("/(utilities)/notifications")}
           >
-            <Bell size={24} color={colors.text} />
+            {isDark ? (
+              <Moon size={19} color={C.primary} />
+            ) : (
+              <Sun size={19} color={C.primary} />
+            )}
+            <ChevronDown size={13} color={C.secondary} />
           </Pressable>
         </View>
-      </SafeAreaView>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              fetchProfile();
-            }}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        {/* ---------- Profile card ---------- */}
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: surface, borderColor: divider },
-          ]}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                void fetchProfile();
+              }}
+              tintColor={C.primary}
+            />
+          }
         >
-          <View style={styles.profileTop}>
-            <Pressable onPress={handleAvatarUpload} style={styles.avatarWrap}>
-              <Image
-                source={{
-                  uri:
-                    profile?.avatar ||
-                    "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
-                }}
-                style={[styles.avatar, { borderColor: colors.primary }]}
-              />
-              {uploadingAvatar && (
-                <View style={styles.avatarOverlay}>
-                  <ActivityIndicator color="#FFFFFF" />
-                </View>
-              )}
-              <View
-                style={[
-                  styles.onlineDot,
-                  {
-                    backgroundColor: isOnline
-                      ? colors.success
-                      : colors.placeholder,
-                    borderColor: surface,
-                  },
-                ]}
-              />
-            </Pressable>
-
-            <View style={styles.profileInfo}>
-              <Text
-                numberOfLines={1}
-                style={[styles.name, { color: colors.text }]}
+          {/* PROFILE IDENTITY */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarArea}>
+              <Pressable
+                onPress={handleAvatarUpload}
+                style={styles.avatarPressable}
               >
-                {profile?.name || "Agent"}
-              </Text>
+                <Image
+                  source={{
+                    uri:
+                      profile?.avatar ||
+                      "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
+                  }}
+                  style={styles.avatar}
+                />
 
-              <View
-                style={[
-                  styles.verifiedPill,
-                  {
-                    backgroundColor: `${colors.success}18`,
-                    borderColor: `${colors.success}66`,
-                  },
-                ]}
+                {uploadingAvatar && (
+                  <View style={styles.avatarLoading}>
+                    <ActivityIndicator color={C.white} />
+                  </View>
+                )}
+              </Pressable>
+
+              {/* EDIT BUTTON */}
+              {/* <Pressable
+                onPress={() => router.push("/(agent)/personalInfo")}
+                style={styles.editButton}
               >
-                <BadgeCheck size={15} color={colors.success} />
-                <Text style={[styles.verifiedText, { color: colors.success }]}>
-                  VERIFIED
+                <Pencil size={17} color={C.white} />
+              </Pressable> */}
+
+              {/* CAMERA BUTTON */}
+              <Pressable
+                onPress={handleAvatarUpload}
+                style={styles.cameraButton}
+              >
+                <Camera size={18} color={C.white} />
+              </Pressable>
+            </View>
+
+            <View style={styles.identity}>
+              <View style={styles.nameRow}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {profile?.name || "Agent"}
+                </Text>
+
+                <BadgeCheck
+                  size={21}
+                  color={C.primary}
+                  fill={C.primary}
+                  stroke={C.background}
+                />
+              </View>
+
+              <View style={styles.contactLine}>
+                <Mail size={14} color={C.muted} />
+                <Text style={styles.contactText} numberOfLines={1}>
+                  {profile?.email || "No email available"}
                 </Text>
               </View>
 
-              <Text
-                numberOfLines={1}
-                style={[styles.role, { color: colors.placeholder }]}
-              >
-                Real Estate Agent
-              </Text>
+              <View style={styles.contactLine}>
+                <Phone size={14} color={C.muted} />
+                <Text style={styles.contactText} numberOfLines={1}>
+                  {profile?.phone || "No phone available"}
+                </Text>
+              </View>
             </View>
+          </View>
+
+          {/* AGENT AVAILABILITY */}
+          <View style={styles.availabilityCard}>
+            <Text style={styles.availabilityLabel}>AGENT AVAILABILITY</Text>
+
+            <View style={styles.availabilityRight}>
+              <Text
+                style={[
+                  styles.availabilityStatus,
+                  { color: isOnline ? C.primary : C.secondary },
+                ]}
+              >
+                {toggling ? "Updating..." : isOnline ? "Online:" : "Offline:"}
+              </Text>
+
+              <Switch
+                value={isOnline}
+                onValueChange={handleToggle}
+                disabled={toggling}
+                trackColor={{
+                  false: "#293445",
+                  true: "#155AA0",
+                }}
+                thumbColor={C.white}
+                ios_backgroundColor="#293445"
+                style={styles.switch}
+              />
+            </View>
+          </View>
+
+          {/* SETTINGS SECTION */}
+          <Text style={styles.sectionLabel}>SETTINGS & SECURITY</Text>
+
+          <View style={styles.settingsCard}>
+            {settingsOptions.map((item, index) => {
+              const Icon = item.icon;
+
+              return (
+                <View key={item.id}>
+                  <Pressable
+                    onPress={() => router.push(item.path as any)}
+                    android_ripple={{
+                      color: "rgba(22,135,255,0.08)",
+                    }}
+                    style={styles.settingRow}
+                  >
+                    <View style={styles.settingIcon}>
+                      <Icon size={20} color={C.primary} />
+                    </View>
+
+                    <View style={styles.settingContent}>
+                      <Text style={styles.settingTitle}>{item.label}</Text>
+
+                      <Text style={styles.settingSubtitle} numberOfLines={1}>
+                        {item.subtitle}
+                      </Text>
+                    </View>
+
+                    <ChevronRight size={20} color={C.muted} />
+                  </Pressable>
+
+                  {index !== settingsOptions.length - 1 && (
+                    <View style={styles.rowDivider} />
+                  )}
+                </View>
+              );
+            })}
+
+            {/* LOGOUT */}
+            <View style={styles.rowDivider} />
 
             <Pressable
-              onPress={() => router.push("/(agent)/personalInfo")}
-              style={[styles.editBtn, { backgroundColor: colors.primary }]}
+              onPress={handleLogout}
+              android_ripple={{
+                color: "rgba(240,68,68,0.08)",
+              }}
+              style={styles.settingRow}
             >
-              <Pencil size={16} color="#FFFFFF" />
-              {/* <Text style={styles.editText}>Edit Profile</Text> */}
+              <View style={styles.logoutIcon}>
+                <LogOut size={20} color={C.danger} />
+              </View>
+
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: C.danger }]}>
+                  Logout
+                </Text>
+
+                <Text style={[styles.settingSubtitle, { color: C.muted }]}>
+                  Sign out from this device
+                </Text>
+              </View>
+
+              <ChevronRight size={20} color={C.danger} />
             </Pressable>
           </View>
-
-          <Text style={[styles.availableText, { color: colors.placeholder }]}>
-            {isOnline
-              ? "Available for direct buyer leads and instant client calls"
-              : "You won't receive new buyer leads or client calls"}
-          </Text>
-
-          <View style={styles.contactRow}>
-            <ContactTile
-              icon={<Phone size={20} color={colors.primary} />}
-              label="PHONE"
-              value={profile?.phone || "—"}
-              bg={surfaceInner}
-              border={divider}
-              iconBg={iconBg}
-              textColor={colors.text}
-              labelColor={colors.placeholder}
-            />
-            <ContactTile
-              icon={<Mail size={20} color={colors.primary} />}
-              label="EMAIL"
-              value={profile?.email || "—"}
-              bg={surfaceInner}
-              border={divider}
-              iconBg={iconBg}
-              textColor={colors.text}
-              labelColor={colors.placeholder}
-            />
-          </View>
-        </View>
-
-        {/* ---------- Agent availability ---------- */}
-        <Text style={[styles.sectionLabel, { color: colors.placeholder }]}>
-          AGENT AVAILABILITY
-        </Text>
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: surface, borderColor: divider },
-          ]}
-        >
-          <View style={styles.rowBetween}>
-            <View style={styles.rowCenter}>
-              <View
-                style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor: isOnline
-                      ? colors.success
-                      : colors.placeholder,
-                  },
-                ]}
-              />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                {isOnline ? "Receiving inquiries" : "Not receiving inquiries"}
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.statusPill,
-                {
-                  backgroundColor: isOnline
-                    ? `${colors.success}18`
-                    : `${colors.placeholder}20`,
-                  borderColor: isOnline ? `${colors.success}66` : divider,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.pillDot,
-                  {
-                    backgroundColor: isOnline
-                      ? colors.success
-                      : colors.placeholder,
-                  },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.pillText,
-                  { color: isOnline ? colors.success : colors.placeholder },
-                ]}
-              >
-                {toggling ? "Updating..." : isOnline ? "Online" : "Offline"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.rowBetween, { marginTop: 10 }]}>
-            <Text style={[styles.cardSub, { color: colors.placeholder }]}>
-              {isOnline
-                ? "Tap to pause incoming leads"
-                : "Tap to resume incoming leads"}
-            </Text>
-            <Switch
-              {...switchProps}
-              value={isOnline}
-              onValueChange={handleToggle}
-              disabled={toggling}
-            />
-          </View>
-        </View>
-
-        {/* ---------- Theme ---------- */}
-        <Text style={[styles.sectionLabel, { color: colors.placeholder }]}>
-          THEME
-        </Text>
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: surface, borderColor: divider },
-          ]}
-        >
-          <View style={styles.rowBetween}>
-            <View style={styles.rowCenter}>
-              <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-                {isDark ? (
-                  <Moon size={22} color={colors.primary} />
-                ) : (
-                  <Sun size={22} color={colors.primary} />
-                )}
-              </View>
-              <View style={{ marginLeft: 14 }}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>
-                  {isDark ? "Dark Mode" : "Light Mode"}
-                </Text>
-                <Text
-                  style={[
-                    styles.cardSub,
-                    { color: colors.placeholder, marginTop: 2 },
-                  ]}
-                >
-                  Current theme
-                </Text>
-              </View>
-            </View>
-            <Switch
-              {...switchProps}
-              value={isDark}
-              onValueChange={handleThemeChange}
-            />
-          </View>
-        </View>
-
-        {/* ---------- Settings & Security ---------- */}
-        <Text style={[styles.sectionLabel, { color: colors.placeholder }]}>
-          SETTINGS & SECURITY
-        </Text>
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: surface,
-              borderColor: divider,
-              padding: 0,
-              overflow: "hidden",
-            },
-          ]}
-        >
-          {settingsOptions.map((item, index) => {
-            const Icon = item.icon;
-            const isLogout = item.id === "logout";
-            const isLast = index === settingsOptions.length - 1;
-
-            return (
-              <View key={item.id}>
-                <Pressable
-                  onPress={() =>
-                    isLogout ? handleLogout() : router.push(item.path as any)
-                  }
-                  android_ripple={{ color: `${colors.primary}15` }}
-                  style={styles.settingRow}
-                >
-                  <View
-                    style={[
-                      styles.iconBox,
-                      { backgroundColor: isLogout ? `${danger}18` : iconBg },
-                    ]}
-                  >
-                    <Icon
-                      size={21}
-                      color={isLogout ? danger : colors.primary}
-                    />
-                  </View>
-
-                  <View style={{ flex: 1, marginLeft: 14 }}>
-                    <Text
-                      style={[
-                        styles.settingTitle,
-                        { color: isLogout ? danger : colors.text },
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.cardSub,
-                        {
-                          color: isLogout ? `${danger}CC` : colors.placeholder,
-                          marginTop: 2,
-                        },
-                      ]}
-                    >
-                      {item.subtitle}
-                    </Text>
-                  </View>
-
-                  <ChevronRight
-                    size={20}
-                    color={isLogout ? danger : colors.placeholder}
-                  />
-                </Pressable>
-
-                {/* inset divider, starts under the text like the design */}
-                {!isLast && (
-                  <View
-                    style={{
-                      height: StyleSheet.hairlineWidth,
-                      backgroundColor: divider,
-                      marginLeft: 70,
-                      marginRight: 16,
-                    }}
-                  />
-                )}
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
-
-function ContactTile({
-  icon,
-  label,
-  value,
-  bg,
-  border,
-  iconBg,
-  textColor,
-  labelColor,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  bg: string;
-  border: string;
-  iconBg: string;
-  textColor: string;
-  labelColor: string;
-}) {
-  return (
-    <View
-      style={[styles.contactTile, { backgroundColor: bg, borderColor: border }]}
-    >
-      <View style={[styles.contactIcon, { backgroundColor: iconBg }]}>
-        {icon}
-      </View>
-      <View style={{ flex: 1, marginLeft: 10, minWidth: 0 }}>
-        <Text style={[styles.contactLabel, { color: labelColor }]}>
-          {label}
-        </Text>
-        <Text
-          numberOfLines={1}
-          style={[styles.contactValue, { color: textColor }]}
-        >
-          {value}
-        </Text>
-      </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
-
-  // header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: { fontFamily: FONT, fontSize: 22, fontWeight: "700" },
-  headerSub: { fontFamily: FONT, fontSize: 14, marginTop: 1 },
 
-  // generic card
-  card: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 16,
+  container: {
+    flex: 1,
+    backgroundColor: C.background,
   },
-  rowBetween: {
+
+  safeArea: {
+    flex: 1,
+    backgroundColor: C.background,
+  },
+
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 35,
+  },
+
+  // HEADER
+  header: {
+    height: 55,
+    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  rowCenter: { flexDirection: "row", alignItems: "center", flexShrink: 1 },
-  sectionLabel: {
+
+  headerTitle: {
+    color: C.white,
     fontFamily: FONT,
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 1,
-    marginTop: 26,
-    marginBottom: 10,
-    marginLeft: 4,
+    fontSize: 23,
+    fontWeight: "700",
+    letterSpacing: -0.5,
   },
-  cardTitle: { fontFamily: FONT, fontSize: 18, fontWeight: "600" },
-  cardSub: { fontFamily: FONT, fontSize: 15 },
-  iconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+
+  themeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    padding: 5,
+  },
+
+  // PROFILE
+  profileSection: {
+    alignItems: "center",
+    paddingTop: 9,
+    paddingBottom: 31,
+  },
+
+  avatarArea: {
+    width: 110,
+    height: 110,
+    position: "relative",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  // profile card
-  profileTop: { flexDirection: "row", alignItems: "flex-start" },
-  avatarWrap: { width: 70, height: 70 },
-  avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 3,
-    backgroundColor: "#E2E8F0",
+  avatarPressable: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
-  avatarOverlay: {
+
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: C.primary,
+    backgroundColor: C.surface,
+  },
+
+  avatarLoading: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 35,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 50,
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
   },
-  onlineDot: {
+
+  editButton: {
     position: "absolute",
-    right: 0,
-    bottom: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2.5,
+    top: 15,
+    right: -125,
+    width: 40,
+    height: 24,
+    borderRadius: 20,
+    backgroundColor: C.primary,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  profileInfo: { flex: 1, marginLeft: 16, minWidth: 0 },
-  name: { fontFamily: FONT, fontSize: 22, fontWeight: "700" },
-  verifiedPill: {
+
+  cameraButton: {
+    position: "absolute",
+    bottom: -1,
+    right: -26,
+    width: 37,
+    height: 37,
+    borderRadius: 19,
+    backgroundColor: C.primary,
+    borderWidth: 2,
+    borderColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  identity: {
+    alignItems: "center",
+    marginTop: 12,
+    width: "100%",
+  },
+
+  nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginTop: 6,
+    justifyContent: "center",
+    gap: 7,
+    marginBottom: 3,
   },
-  verifiedText: {
+
+  name: {
+    color: C.white,
     fontFamily: FONT,
-    fontSize: 12,
+    fontSize: 21,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    maxWidth: "85%",
+  },
+
+  contactLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    marginTop: 4,
+  },
+
+  contactText: {
+    color: C.secondary,
+    fontFamily: FONT,
+    fontSize: 13,
+    fontWeight: "400",
+  },
+
+  // AVAILABILITY
+  availabilityCard: {
+    minHeight: 59,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surface,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  availabilityLabel: {
+    color: C.secondary,
+    fontFamily: FONT,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
   },
-  role: { fontFamily: FONT, fontSize: 16, marginTop: 8 },
-  editBtn: {
+
+  availabilityRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    marginLeft: 8,
+    gap: 9,
   },
-  editText: {
+
+  availabilityStatus: {
     fontFamily: FONT,
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "500",
   },
-  availableText: {
+
+  switch: {
+    transform: [{ scaleX: 0.91 }, { scaleY: 0.91 }],
+  },
+
+  // SETTINGS
+  sectionLabel: {
+    color: C.secondary,
     fontFamily: FONT,
-    fontSize: 16,
-    lineHeight: 24,
-    marginTop: 18,
+    fontSize: 11,
+    fontWeight: "500",
+    letterSpacing: 0.7,
+    marginTop: 17,
+    marginBottom: 10,
+    marginLeft: 4,
   },
-  contactRow: { flexDirection: "row", gap: 12, marginTop: 18 },
-  contactTile: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+
+  settingsCard: {
+    backgroundColor: C.surface,
+    borderRadius: 17,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 12,
-    minWidth: 0,
+    borderColor: C.border,
+    paddingHorizontal: 0,
+    overflow: "hidden",
   },
-  contactIcon: {
+
+  settingRow: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+
+  settingIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
+    backgroundColor: C.surfaceLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  contactLabel: {
-    fontFamily: FONT,
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.8,
-  },
-  contactValue: {
-    fontFamily: FONT,
-    fontSize: 15,
-    fontWeight: "600",
-    marginTop: 3,
+
+  logoutIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#18283F",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  // availability
-  statusDot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginLeft: 8,
+  settingContent: {
+    flex: 1,
+    marginLeft: 14,
+    minWidth: 0,
   },
-  pillDot: { width: 7, height: 7, borderRadius: 4 },
-  pillText: { fontFamily: FONT, fontSize: 14, fontWeight: "600" },
 
-  // settings rows
-  settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  settingTitle: {
+    color: C.text,
+    fontFamily: FONT,
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.15,
   },
-  settingTitle: { fontFamily: FONT, fontSize: 18, fontWeight: "600" },
+
+  settingSubtitle: {
+    color: C.muted,
+    fontFamily: FONT,
+    fontSize: 11.5,
+    fontWeight: "400",
+    marginTop: 4,
+  },
+
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: C.divider,
+    marginLeft: 64,
+    marginRight: 16,
+  },
 });

@@ -1,34 +1,36 @@
 import ClientEvent from "@/components/client-event";
 import BottomModal from "@/components/dialogs/bottom-modal";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import Sidebar from "@/components/sidebar/sidebar";
 import { useTheme } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Animated, Dimensions, Easing, View } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
+import MapView, {
+  Marker,
+  PROVIDER_GOOGLE,
+  type Region,
+} from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MapPinIcon } from "lucide-react-native";
 import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notification";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PROPERTY_TYPES = [
-  "Hotel",
-  "Apartment",
-  "Shortlet",
-  "Land",
-] as const;
+const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet", "Land"] as const;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
 
-// How long after the map stops moving before the sheet pops back up
 const SHEET_RAISE_DELAY_MS = 600;
-// Safety net in case the map never reports that it stopped (e.g. a tiny drag)
 const SHEET_RAISE_FALLBACK_MS = 2000;
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Agent = {
   agentId: string;
@@ -84,57 +86,149 @@ type ApiError = {
   message: string;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getRealAddress = async (lat: number, lng: number): Promise<string> => {
+async function getRealAddress(lat: number, lng: number): Promise<string> {
   try {
-    const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
+    const key = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
+    if (!key) return "Address unavailable";
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}`,
     );
-    const data = await res.json();
-    return data.results?.[0]?.formatted_address ?? "Address not found";
+
+    if (!response.ok) return "Address unavailable";
+
+    const data = await response.json();
+
+    return data.status === "OK"
+      ? (data.results?.[0]?.formatted_address ?? "Address not found")
+      : "Address not found";
   } catch {
     return "Address unavailable";
   }
-};
+}
 
-// ─── Component ────────────────────────────────────────────────────────────────
+async function getCoordsFromAddress(query: string): Promise<Coords | null> {
+  try {
+    const key = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
+    if (!key) return null;
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        query,
+      )}&key=${key}`,
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const location =
+      data.status === "OK" ? data.results?.[0]?.geometry?.location : null;
+
+    return location ? { lat: location.lat, lng: location.lng } : null;
+  } catch {
+    return null;
+  }
+}
+
+function getAreaName(address: string): string {
+  if (
+    !address ||
+    address === "Address unavailable" ||
+    address === "Address not found"
+  ) {
+    return "Selected location";
+  }
+
+  const parts = address
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length > 1 ? parts[1] : parts[0];
+}
+
+function PropertyPin({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={pinStyles.wrapper}>
+      <View
+        style={[
+          pinStyles.head,
+          {
+            backgroundColor: color,
+          },
+        ]}
+      >
+        {/* Small house symbol */}
+        <View style={pinStyles.house}>
+          <View style={[pinStyles.roofLeft, { backgroundColor: "#FFFFFF" }]} />
+          <View style={[pinStyles.roofRight, { backgroundColor: "#FFFFFF" }]} />
+          <View style={pinStyles.houseBody}>
+            <View style={pinStyles.door} />
+          </View>
+        </View>
+      </View>
+
+      <View
+        style={[
+          pinStyles.tip,
+          {
+            backgroundColor: color,
+          },
+        ]}
+      />
+
+      <View style={pinStyles.shadow} />
+    </View>
+  );
+}
 
 export default function RequestMatchScreen() {
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(true);
-  const [lat, setLat] = useState<number | null>(null);
-  const [lng, setLng] = useState<number | null>(null);
+
+  const [gpsCoords, setGpsCoords] = useState<Coords | null>(null);
+  const [selectedCoords, setSelectedCoords] = useState<Coords | null>(null);
+
   const [address, setAddress] = useState("");
+  const [areaName, setAreaName] = useState("Finding your location...");
+  const [addressLoading, setAddressLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<PropertyType>("Hotel");
+
+  const [searchText, setSearchText] = useState("Finding your location...");
+  const [isEditingSearch, setIsEditingSearch] = useState(false);
+  const [searching, setSearching] = useState(false);
+
   const [matchData, setMatchData] = useState<MatchData | null>(null);
   const [liveData, setLiveData] = useState<LiveData | null>(null);
   const [agentLocation, setAgentLocation] = useState<Coords | null>(null);
-  const [requestStatus, setRequestStatus] = useState<string | null>(null);
-  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [lastKnownLocation, setLastKnownLocation] = useState<Coords | null>(
     null,
   );
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+
+  const [requestStatus, setRequestStatus] = useState<string | null>(null);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [sheetCollapsed, setSheetCollapsed] = useState(false);
+
   const mapRef = useRef<MapView | null>(null);
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { width } = Dimensions.get("window");
-  const sidebarX = useRef(new Animated.Value(-width)).current;
 
-  // Map-interaction tracking (refs so they never cause re-renders or stale closures)
+  const selectedCoordsRef = useRef<Coords | null>(null);
+  const gpsCoordsRef = useRef<Coords | null>(null);
+  const agentLocationRef = useRef<Coords | null>(null);
+  const lastKnownLocationRef = useRef<Coords | null>(null);
+
   const userInteractingRef = useRef(false);
   const raiseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ─── Sheet follows map interaction ────────────────────────────────────────
+  const addressRequestRef = useRef(0);
+  const locationRequestRef = useRef(0);
 
   const clearSheetTimers = useCallback(() => {
     if (raiseTimerRef.current) clearTimeout(raiseTimerRef.current);
     if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+
     raiseTimerRef.current = null;
     fallbackTimerRef.current = null;
   }, []);
@@ -145,237 +239,294 @@ export default function RequestMatchScreen() {
     setSheetCollapsed(false);
   }, [clearSheetTimers]);
 
-  // Called while the user is dragging / pinching the map
   const handleMapGesture = useCallback(() => {
     userInteractingRef.current = true;
     setSheetCollapsed(true);
 
-    // A new gesture cancels any pending "pop back up"
     clearSheetTimers();
-    fallbackTimerRef.current = setTimeout(releaseMap, SHEET_RAISE_FALLBACK_MS);
+
+    // Safety net for gestures that don't trigger region-complete normally.
+    fallbackTimerRef.current = setTimeout(() => {
+      releaseMap();
+    }, SHEET_RAISE_FALLBACK_MS);
   }, [clearSheetTimers, releaseMap]);
 
-  // Called whenever the map comes to rest. Only user gestures matter here;
-  // programmatic moves (animateToRegion / fitToCoordinates) are ignored.
-  const handleRegionChangeComplete = useCallback(() => {
-    if (!userInteractingRef.current) return;
-    clearSheetTimers();
-    raiseTimerRef.current = setTimeout(releaseMap, SHEET_RAISE_DELAY_MS);
-  }, [clearSheetTimers, releaseMap]);
+  const updateSelectedLocation = useCallback(
+    async (coords: Coords, isGpsLocation = false) => {
+      const requestNumber = ++addressRequestRef.current;
 
-  // onRegionChange also fires for programmatic moves, so only react to gestures
+      selectedCoordsRef.current = coords;
+      setSelectedCoords(coords);
+      setAddressLoading(true);
+
+      const fullAddress = await getRealAddress(coords.lat, coords.lng);
+
+      if (requestNumber !== addressRequestRef.current) return;
+
+      setAddress(fullAddress);
+      setAddressLoading(false);
+
+      if (isGpsLocation) {
+        setAreaName("Your current location");
+      } else {
+        setAreaName(getAreaName(fullAddress));
+      }
+    },
+    [],
+  );
+
+  const handleRegionChangeComplete = useCallback(
+    (region: Region) => {
+      if (!userInteractingRef.current) return;
+
+      void updateSelectedLocation({
+        lat: region.latitude,
+        lng: region.longitude,
+      });
+
+      clearSheetTimers();
+
+      raiseTimerRef.current = setTimeout(() => {
+        releaseMap();
+      }, SHEET_RAISE_DELAY_MS);
+    },
+    [clearSheetTimers, releaseMap, updateSelectedLocation],
+  );
+
   const handleRegionChange = useCallback(
-    (_region: unknown, details?: { isGesture?: boolean }) => {
+    (_region: Region, details?: { isGesture?: boolean }) => {
       if (details?.isGesture) handleMapGesture();
     },
     [handleMapGesture],
   );
 
-  useEffect(() => clearSheetTimers, [clearSheetTimers]);
-
-  // ─── Preserve last known agent location ───────────────────────────────────
-
   useEffect(() => {
-    if (agentLocation?.lat != null && agentLocation?.lng != null) {
-      setLastKnownLocation(agentLocation);
-    }
-  }, [agentLocation]);
+    if (isEditingSearch) return;
 
-  // ─── Sidebar ──────────────────────────────────────────────────────────────
-
-  const toggleSidebar = () => {
-    const toOpen = !isSidebarVisible;
-    if (toOpen) setIsSidebarVisible(true);
-
-    Animated.timing(sidebarX, {
-      toValue: toOpen ? 0 : -width,
-      duration: 250,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
-      if (!toOpen) setIsSidebarVisible(false);
-    });
-  };
-
-  const sidebarItems = [
-    {
-      label: "Home",
-      icon: "House" as const,
-      onPress: () => {
-        toggleSidebar();
-        router.push("/(client)/client-dashboard");
-      },
-      isActive: true,
-    },
-    {
-      label: "History",
-      icon: "ClockCounterClockwise" as const,
-      onPress: () => {
-        toggleSidebar();
-        router.push("/(client)/history");
-      },
-    },
-    {
-      label: "Profile",
-      icon: "UserCircle" as const,
-      onPress: () => {
-        toggleSidebar();
-        router.push("/(client)/profile");
-      },
-    },
-  ];
-
-  // ─── Push Token Sync ──────────────────────────────────────────────────────
-
-  const syncPushToken = async (): Promise<void> => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        console.log("[Push Sync]: Deferred — no authenticated user context");
-        return;
-      }
-
-      const pushData = await registerForPushNotificationsAsync();
-      if (!pushData) return;
-
-      const payload = {
-        platform: pushData.platform,
-        expoPushToken: pushData.token,
-      };
-
-      const token = await user.getIdToken();
-      await API.post("/notifications/client", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log("✅ Client device registered and token synced");
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      console.log(
-        "❌ Push token sync failed:",
-        error?.response?.data ?? error.message,
-      );
-    }
-  };
-
-  // ─── Location ─────────────────────────────────────────────────────────────
+    setSearchText(addressLoading ? "Updating address…" : areaName);
+  }, [areaName, addressLoading, isEditingSearch]);
 
   const getLocation = async (): Promise<void> => {
+    const requestNumber = ++locationRequestRef.current;
+
     try {
       setLocationLoading(true);
 
       let { status } = await Location.getForegroundPermissionsAsync();
 
       if (status !== "granted") {
-        const res = await Location.requestForegroundPermissionsAsync();
-        status = res.status;
+        const permission = await Location.requestForegroundPermissionsAsync();
+
+        status = permission.status;
       }
 
       if (status !== "granted") {
-        Alert.alert("Permission required", "Enable location to continue");
+        Alert.alert(
+          "Permission required",
+          "Enable location to find your current position. You can still select a location by moving the map.",
+        );
         return;
       }
 
-      const loc = await Location.getCurrentPositionAsync({
+      const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
 
-      const { latitude, longitude } = loc.coords;
-      setLat(latitude);
-      setLng(longitude);
+      if (requestNumber !== locationRequestRef.current) return;
 
-      mapRef.current?.animateToRegion(
-        { latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 },
-        800,
-      );
+      const coords = {
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+      };
 
-      const realAddress = await getRealAddress(latitude, longitude);
-      setAddress(realAddress);
+      gpsCoordsRef.current = coords;
+      setGpsCoords(coords);
+
+      await updateSelectedLocation(coords, true);
+
+      if (!userInteractingRef.current) {
+        mapRef.current?.animateToRegion(
+          {
+            latitude: coords.lat,
+            longitude: coords.lng,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          },
+          650,
+        );
+      }
     } catch (error: unknown) {
       Alert.alert("Error", "Failed to get location");
       console.error(error);
     } finally {
-      setLocationLoading(false);
+      if (requestNumber === locationRequestRef.current) {
+        setLocationLoading(false);
+      }
     }
   };
 
-  // ─── Map fit helper ───────────────────────────────────────────────────────
+  const returnToCurrentLocation = async () => {
+    const currentGps = gpsCoordsRef.current;
 
-  const fitMapToMarkers = (
-    clientLat: number,
-    clientLng: number,
-    agentLat: number,
-    agentLng: number,
-  ): void => {
-    mapRef.current?.fitToCoordinates(
-      [
-        { latitude: clientLat, longitude: clientLng },
-        { latitude: agentLat, longitude: agentLng },
-      ],
+    if (currentGps) {
+      await updateSelectedLocation(currentGps, true);
+
+      mapRef.current?.animateToRegion(
+        {
+          latitude: currentGps.lat,
+          longitude: currentGps.lng,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        650,
+      );
+
+      return;
+    }
+
+    await getLocation();
+  };
+
+  const handleSearchSubmit = async () => {
+    const query = searchText.trim();
+
+    setIsEditingSearch(false);
+
+    if (!query) {
+      setSearchText(areaName);
+      return;
+    }
+
+    setSearching(true);
+    const coords = await getCoordsFromAddress(query);
+    setSearching(false);
+
+    if (!coords) {
+      Alert.alert("Location not found", "Try a different search.");
+      setSearchText(areaName);
+      return;
+    }
+
+    await updateSelectedLocation(coords);
+
+    mapRef.current?.animateToRegion(
       {
-        edgePadding: { top: 100, right: 100, bottom: 300, left: 100 },
-        animated: true,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
       },
+      650,
     );
   };
 
-  // ─── Polling ──────────────────────────────────────────────────────────────
+  const syncPushToken = async (): Promise<void> => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
 
-  // Wrapped in useCallback so the interval effect doesn't get a stale closure
+      const pushData = await registerForPushNotificationsAsync();
+      if (!pushData) return;
+
+      const token = await user.getIdToken();
+
+      await API.post(
+        "/notifications/client",
+        {
+          platform: pushData.platform,
+          expoPushToken: pushData.token,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+    } catch (err: unknown) {
+      const error = err as ApiError;
+
+      console.log(
+        "Push token sync failed:",
+        error?.response?.data ?? error.message,
+      );
+    }
+  };
+
   const getLiveData = useCallback(async (): Promise<void> => {
     try {
       const user = auth.currentUser;
       if (!user) return;
 
       const token = await user.getIdToken();
-      const res = await API.get<LiveData>("/client/live", {
-        headers: { Authorization: `Bearer ${token}` },
+
+      const response = await API.get<LiveData>("/client/live", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      const data = res.data;
+      const data = response.data;
       setLiveData(data);
+
       if (data.requestStatus) {
         setRequestStatus(data.requestStatus);
       }
+
       if (data.requestId) {
         setActiveRequestId(data.requestId);
       }
 
       if (data.agent) {
-        setAgentLocation({ lat: data.agent.lat, lng: data.agent.lng });
-        // Don't yank the camera away while the user is exploring the map.
-        // liveData carries client coords at top-level lat/lng
-        if (!userInteractingRef.current) {
-          fitMapToMarkers(data.lat, data.lng, data.agent.lat, data.agent.lng);
-        }
+        const coords = {
+          lat: data.agent.lat,
+          lng: data.agent.lng,
+        };
+
+        agentLocationRef.current = coords;
+        lastKnownLocationRef.current = coords;
+
+        setAgentLocation(coords);
+        setLastKnownLocation(coords);
+      } else {
+        agentLocationRef.current = null;
+        setAgentLocation(null);
       }
     } catch (err: unknown) {
       const error = err as ApiError;
+
       console.log("Polling error:", error?.response?.data ?? error.message);
     }
   }, []);
 
-  // ─── Effects ──────────────────────────────────────────────────────────────
-
   useEffect(() => {
-    getLocation();
-    syncPushToken();
+    void getLocation();
+    void syncPushToken();
+
+    return () => {
+      clearSheetTimers();
+      addressRequestRef.current += 1;
+      locationRequestRef.current += 1;
+    };
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(getLiveData, 5000);
+    const interval = setInterval(() => {
+      void getLiveData();
+    }, 5000);
+
     return () => clearInterval(interval);
   }, [getLiveData]);
 
-  // ─── Match Request ────────────────────────────────────────────────────────
-
   const handleRequest = async (): Promise<void> => {
-    if (lat == null || lng == null) {
-      Alert.alert("Error", "Location not available");
+    const selected = selectedCoordsRef.current;
+
+    if (!selected) {
+      Alert.alert("Location required", "Select a location on the map first.");
       return;
     }
 
     const user = auth.currentUser;
+
     if (!user) {
       Alert.alert("Authentication Error", "Please sign in again");
       return;
@@ -389,54 +540,62 @@ export default function RequestMatchScreen() {
       setActiveRequestId(null);
 
       const token = await user.getIdToken();
-      const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
-      const createRes = await API.post<{ requestId: string }>(
+      const authHeader = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+
+      const createResponse = await API.post<{ requestId: string }>(
         "/match/request",
-        { lat, lng, propertyType: selectedType },
+        {
+          lat: selected.lat,
+          lng: selected.lng,
+          propertyType: selectedType,
+        },
         authHeader,
       );
 
-      const { requestId } = createRes.data;
-      if (!requestId) throw new Error("No requestId returned from server");
+      const { requestId } = createResponse.data;
+
+      if (!requestId) {
+        throw new Error("No requestId returned from server");
+      }
 
       setActiveRequestId(requestId);
 
-      const matchRes = await API.post<{
+      const matchResponse = await API.post<{
         request: MatchRequest;
         agent: Agent;
         error?: string;
       }>(`/match/match/${requestId}`, {}, authHeader);
 
-      const { request, agent } = matchRes.data;
+      const { request, agent } = matchResponse.data;
 
       if (!agent) {
         setRequestStatus("no_agents");
-        Alert.alert("No Agent", "No agents available — try again later");
+        Alert.alert("No Agent", "No agents available — try again later.");
         return;
       }
 
       setMatchData({ request, agent });
       setRequestStatus(request?.status || "offered");
-      getLiveData();
+
+      void getLiveData();
     } catch (err: unknown) {
       const error = err as ApiError;
       const serverError =
-        (
-          error?.response?.data as
-            | { error?: string; message?: string }
-            | undefined
-        )?.error || error?.response?.data?.message;
+        error?.response?.data?.error || error?.response?.data?.message;
 
-      if (serverError === "No available agents nearby") {
-        setRequestStatus("no_agents");
-      } else {
-        setRequestStatus(null);
-      }
+      setRequestStatus(
+        serverError === "No available agents nearby" ? "no_agents" : null,
+      );
 
       Alert.alert(
         "Error",
         serverError ||
+          error.message ||
           "No agents are currently available for this property type. Please try again later.",
       );
     } finally {
@@ -444,71 +603,107 @@ export default function RequestMatchScreen() {
     }
   };
 
-  // ─── Derived marker state ─────────────────────────────────────────────────
-
-  // Prefer live location; fall back to last known; null if neither is available
-  const resolvedAgentLat = agentLocation?.lat ?? lastKnownLocation?.lat ?? null;
-  const resolvedAgentLng = agentLocation?.lng ?? lastKnownLocation?.lng ?? null;
-  const agentIsLive = agentLocation != null;
-
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const displayedAgent = agentLocation ?? lastKnownLocation;
+  const agentIsLive = agentLocation !== null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Map */}
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        style={StyleSheet.absoluteFillObject}
         showsUserLocation={false}
         showsCompass={false}
         showsMyLocationButton={false}
         loadingEnabled
-        mapPadding={{ top: 0, right: 0, left: 0, bottom: 320 }}
         initialRegion={{
-          latitude: lat ?? 4.8156,
-          longitude: lng ?? 7.0498,
+          latitude: 4.8156,
+          longitude: 7.0498,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
-        // Lower the sheet while the user moves the map, raise it when they stop.
-        // onPanDrag covers dragging; onRegionChange(isGesture) also covers pinch/rotate.
         onPanDrag={handleMapGesture}
         onRegionChange={handleRegionChange}
         onRegionChangeComplete={handleRegionChangeComplete}
       >
-        {lat != null && lng != null && (
+        {liveData?.agent && displayedAgent && (
           <Marker
-            coordinate={{ latitude: lat, longitude: lng }}
-            title="You"
-            description="Your Location"
-          />
+            key="agent-property-location"
+            coordinate={{
+              latitude: displayedAgent.lat,
+              longitude: displayedAgent.lng,
+            }}
+            title={liveData.agent.name}
+            description={
+              agentIsLive
+                ? liveData.agent.phone
+                : `${liveData.agent.phone} (Last known location)`
+            }
+            anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={false}
+          >
+            <PropertyPin color="#16A34A" label="Agent" />
+          </Marker>
         )}
-
-        {liveData?.agent != null &&
-          resolvedAgentLat != null &&
-          resolvedAgentLng != null && (
-            <Marker
-              coordinate={{
-                latitude: resolvedAgentLat,
-                longitude: resolvedAgentLng,
-              }}
-              title={liveData.agent.name}
-              description={
-                agentIsLive
-                  ? liveData.agent.phone
-                  : `${liveData.agent.phone} (Offline — Last Known Location)`
-              }
-              pinColor={agentIsLive ? "green" : "orange"}
-            />
-          )}
       </MapView>
 
+      <View pointerEvents="none" style={styles.centerPin}>
+        <View style={styles.centerPinHead}>
+          <View style={styles.centerPinDot} />
+        </View>
+        <View style={styles.centerPinTip} />
+        <View style={styles.centerPinShadow} />
+      </View>
+
+      <View
+        pointerEvents="box-none"
+        style={[styles.locationDropdownPosition, { top: insets.top + 12 }]}
+      >
+        <View style={styles.locationDropdown}>
+          <View style={styles.locationIcon}>
+            <MapPinIcon size={22} color={colors.primary} />
+          </View>
+
+          <TextInput
+            value={searchText}
+            onChangeText={setSearchText}
+            onFocus={() => setIsEditingSearch(true)}
+            onBlur={() => setIsEditingSearch(false)}
+            onSubmitEditing={handleSearchSubmit}
+            editable={!searching}
+            placeholder="Search for a location"
+            placeholderTextColor="rgba(255,255,255,0.45)"
+            returnKeyType="search"
+            style={styles.locationInput}
+          />
+
+          {addressLoading || searching ? (
+            <ActivityIndicator
+              size="small"
+              color="#FFFFFF"
+              style={{ marginLeft: 8 }}
+            />
+          ) : (
+            <Pressable
+              onPress={() => void returnToCurrentLocation()}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.refreshButton,
+                pressed && styles.refreshButtonPressed,
+              ]}
+            >
+              <MaterialIcons name="refresh" size={22} color={"#cccccc"} />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* Notification bell */}
       <View
         pointerEvents="box-none"
         style={{
           position: "absolute",
-          top: insets.top + 8,
+          top: insets.top + 12,
           right: 16,
           zIndex: 60,
         }}
@@ -530,7 +725,6 @@ export default function RequestMatchScreen() {
         />
       </View>
 
-      {/* Bottom sheet */}
       <BottomModal
         onClose={() => {}}
         colors={colors}
@@ -547,6 +741,7 @@ export default function RequestMatchScreen() {
           loading={loading}
           setMatchData={(data: MatchData | null) => {
             setMatchData(data);
+
             if (!data) {
               setRequestStatus(null);
               setActiveRequestId(null);
@@ -572,16 +767,270 @@ export default function RequestMatchScreen() {
           requestId={activeRequestId || liveData?.requestId}
         />
       </BottomModal>
-
-      {/* Sidebar */}
-      <Sidebar
-        visible={isSidebarVisible}
-        name={auth.currentUser?.displayName ?? "Client"}
-        rating={5}
-        translateX={sidebarX}
-        onOverlayPress={toggleSidebar}
-        items={sidebarItems}
-      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // The pin's point sits at the center of the map.
+  centerPin: {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    width: 30,
+    height: 43,
+    marginLeft: -15,
+    marginTop: -42,
+    alignItems: "center",
+    zIndex: 25,
+  },
+
+  centerPinHead: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#111827",
+    borderWidth: 2.5,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  centerPinDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#FFFFFF",
+  },
+
+  centerPinTip: {
+    position: "absolute",
+    top: 20,
+    width: 15,
+    height: 15,
+    backgroundColor: "#111827",
+    transform: [{ rotate: "45deg" }],
+    zIndex: -1,
+  },
+
+  centerPinShadow: {
+    position: "absolute",
+    bottom: 0,
+    width: 10,
+    height: 3,
+    borderRadius: 5,
+    backgroundColor: "rgba(0,0,0,0.2)",
+  },
+
+  locationDropdownPosition: {
+    position: "absolute",
+    left: 16,
+    right: 74,
+    zIndex: 60,
+  },
+
+  locationDropdown: {
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    borderRadius: 24,
+    backgroundColor: "rgba(17, 20, 28, 0.92)",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+
+  locationIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+
+  locationIconDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    borderWidth: 2.5,
+    borderColor: "#60A5FA",
+    backgroundColor: "transparent",
+  },
+
+  locationInput: {
+    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+    padding: 0,
+  },
+
+  refreshButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+
+  refreshButtonPressed: {
+    opacity: 0.6,
+  },
+
+  refreshIconRing: {
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    borderTopColor: "transparent",
+    transform: [{ rotate: "45deg" }],
+  },
+
+  refreshIconArrow: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderBottomWidth: 4.5,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#FFFFFF",
+    transform: [{ rotate: "100deg" }],
+  },
+
+  // Shared round floating-button chrome (recenter button).
+  roundIconButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+
+  roundIconButtonPressed: {
+    opacity: 0.8,
+  },
+
+  recenterOuterRing: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#2563EB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  recenterInnerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#2563EB",
+  },
+});
+
+const pinStyles = StyleSheet.create({
+  wrapper: {
+    width: 44,
+    height: 52,
+    alignItems: "center",
+  },
+
+  head: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2.5,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  tip: {
+    position: "absolute",
+    top: 31,
+    width: 14,
+    height: 14,
+    transform: [{ rotate: "45deg" }],
+    zIndex: -1,
+  },
+
+  house: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+
+  roofLeft: {
+    position: "absolute",
+    top: 3,
+    left: 2,
+    width: 12,
+    height: 3,
+    borderRadius: 1,
+    transform: [{ rotate: "-38deg" }],
+  },
+
+  roofRight: {
+    position: "absolute",
+    top: 3,
+    right: 2,
+    width: 12,
+    height: 3,
+    borderRadius: 1,
+    transform: [{ rotate: "38deg" }],
+  },
+
+  houseBody: {
+    width: 13,
+    height: 10,
+    marginBottom: 2,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+
+  door: {
+    width: 4,
+    height: 6,
+    backgroundColor: "#374151",
+    borderTopLeftRadius: 1,
+    borderTopRightRadius: 1,
+  },
+
+  shadow: {
+    position: "absolute",
+    bottom: 0,
+    width: 13,
+    height: 4,
+    borderRadius: 7,
+    backgroundColor: "rgba(0,0,0,0.22)",
+  },
+});

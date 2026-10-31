@@ -21,57 +21,69 @@ const PropertyCard = ({
   const label = purposeLabel(item.purpose, item.tag);
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
-    <Pressable
-      onPress={() => {
-        onOpened?.();
-        router.push({
-          pathname: "/(utilities)/property-view",
-          params: {
-            propertyId: item.id,
-            ...(requestId
-              ? { requestId, canMatch: canMatch ? "1" : "0" }
-              : {}),
-          },
-        });
-      }}
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: colors.background, borderColor: colors.border },
+      ]}
     >
-      {image ? (
-        <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
-      ) : (
-        <View style={[styles.image, styles.imageFallback, { backgroundColor: colors.disabled + "33" }]}>
-          <Text style={{ color: colors.placeholder, fontWeight: "700" }}>No photo</Text>
-        </View>
-      )}
+      <Pressable
+        onPress={() => {
+          onOpened?.();
+          router.push({
+            pathname: "/(utilities)/property-view",
+            params: {
+              propertyId: item.id,
+              ...(requestId
+                ? { requestId, canMatch: canMatch ? "1" : "0" }
+                : {}),
+            },
+          });
+        }}
+      >
+        {image ? (
+          <Image
+            source={{ uri: image }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={[
+              styles.image,
+              styles.imageFallback,
+              { backgroundColor: colors.disabled + "33" },
+            ]}
+          >
+            <Text style={{ color: colors.placeholder, fontWeight: "700" }}>
+              No photo
+            </Text>
+          </View>
+        )}
 
-      <View style={styles.body}>
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: item.purpose === "Sale" ? "#16A34A" : colors.primary },
-          ]}
-        >
-          <Text style={styles.badgeText}>{label}</Text>
+        <View style={styles.body}>
+          <View
+            style={[
+              styles.badge,
+              {
+                backgroundColor:
+                  item.purpose === "Sale" ? "#16A34A" : colors.primary,
+              },
+            ]}
+          >
+            <Text style={styles.badgeText}>{label}</Text>
+          </View>
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={2}
+          >
+            {item.title || "Untitled property"}
+          </Text>
+          <Text style={[styles.price, { color: colors.primary }]}>
+            {item.price ? formatPrice(item.price) : "Price on request"}
+          </Text>
         </View>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
-          {item.title || "Untitled property"}
-        </Text>
-        <Text style={[styles.price, { color: colors.primary }]}>
-          {item.price ? formatPrice(item.price) : "Price on request"}
-        </Text>
-      </View>
-    </Pressable>
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: "/(utilities)/chats",
-              params: { productId: item.id },
-            })
-          }
-          style={[styles.chatBtn, { backgroundColor: colors.primary, marginHorizontal: 16, marginBottom: 16 }]}
-        >
-          <Text style={styles.chatBtnText}>Message agent</Text>
-        </Pressable>
+      </Pressable>
     </View>
   );
 };

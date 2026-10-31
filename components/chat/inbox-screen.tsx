@@ -288,12 +288,10 @@ export default function InboxScreen({
     );
   };
 
-  /* Header is an element, so the search input keeps focus while typing. */
   const header = (
     <View style={styles.header}>
       <View style={styles.titleRow}>
         <View style={styles.titleCol}>
-          <Text style={[styles.kicker, { color: colors.primary }]}>INBOX</Text>
           <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
         </View>
         <NotificationBell color={colors.text} size={20} />
