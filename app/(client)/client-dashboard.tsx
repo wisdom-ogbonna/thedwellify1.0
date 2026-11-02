@@ -1,21 +1,36 @@
+// NOTE on dependencies:
+// - Uses `react-native-reanimated` for entrance/press/indicator animations.
+//   (Already in your stack per the incident-report and payment-screen work.)
+// - Uses `expo-haptics` for light tactile feedback on filter taps.
+//   If it isn't installed yet: `npx expo install expo-haptics`
+//   (or delete the three `Haptics.*` calls — everything else works without it).
+
 import PriceFilter, {
   type PriceRange,
 } from "@/components/listings/price-filter";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
-  PROPERTY_TYPES,
   formatPrice,
+  PROPERTY_TYPES,
   purposeLabel,
 } from "@/constants/listings";
 import { useTheme } from "@/hooks/use-theme";
 import { listingsApi, type PublicListing } from "@/services/listings";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -25,6 +40,16 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const TYPES = ["All", ...PROPERTY_TYPES] as const;
@@ -39,33 +64,57 @@ const SORTS = [
   { id: "price_desc", label: "Highest price" },
 ] as const;
 
-const SCREEN_PAD = 20;
-const CARD_GAP = 16;
+type SortId = (typeof SORTS)[number]["id"];
+
+const DEFAULT_PRICE: PriceRange = { min: null, max: null };
+const SCREEN_PAD = 16;
+const CARD_GAP = 12;
+const SEARCH_DEBOUNCE_MS = 400;
 
 type ThemeColors = ReturnType<typeof useTheme>["colors"];
+
+const hitFeedback = () => Haptics.selectionAsync().catch(() => {});
+const hitImpact = () =>
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
 export default function RecommendedScreen() {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
 
-  // Two columns on tablets / landscape, one on phones.
-  const columns = width >= 700 ? 2 : 1;
+  // 2 columns on phones, 3 on tablets — was a dead `width >= 700 ? 2 : 2`.
+  const columns = width >= 700 ? 3 : 2;
+  const cardWidth = useMemo(
+    () => (width - SCREEN_PAD * 2 - CARD_GAP * (columns - 1)) / columns,
+    [width, columns],
+  );
 
   const [propertyType, setPropertyType] = useState("All");
   const [purpose, setPurpose] = useState("All");
-  const [priceRange, setPriceRange] = useState<PriceRange>({ min: null, max: null });
-  const [sort, setSort] = useState<(typeof SORTS)[number]["id"]>("newest");
+  const [priceRange, setPriceRange] = useState<PriceRange>(DEFAULT_PRICE);
+  const [sort, setSort] = useState<SortId>("newest");
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [listings, setListings] = useState<PublicListing[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true); // first load only
-  const [fetching, setFetching] = useState(false); // any (re)fetch
+  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
 
-  // Ignore responses from outdated requests when filters change quickly.
   const requestId = useRef(0);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout>>();
+
+  // Search-as-you-type, debounced — submit/enter still fires immediately.
+  useEffect(() => {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => {
+      setSearch(query.trim());
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    };
+  }, [query]);
 
   const fetchListings = useCallback(async () => {
     const id = ++requestId.current;
@@ -103,28 +152,58 @@ export default function RecommendedScreen() {
     }, [fetchListings]),
   );
 
-  const submitSearch = () => setSearch(query.trim());
+  const activeFilterCount =
+    (propertyType !== "All" ? 1 : 0) +
+    (purpose !== "All" ? 1 : 0) +
+    (sort !== "newest" ? 1 : 0) +
+    (priceRange.min != null || priceRange.max != null ? 1 : 0);
+
+  const resetFilters = useCallback(() => {
+    hitImpact();
+    setPropertyType("All");
+    setPurpose("All");
+    setPriceRange(DEFAULT_PRICE);
+    setSort("newest");
+    setQuery("");
+    setSearch("");
+  }, []);
+
+  const selectType = useCallback((t: string) => {
+    hitFeedback();
+    setPropertyType(t);
+  }, []);
+
+  const selectPurpose = useCallback((p: string) => {
+    hitFeedback();
+    setPurpose(p);
+  }, []);
+
+  const selectSort = useCallback((s: SortId) => {
+    hitFeedback();
+    setSort(s);
+    setSortSheetOpen(false);
+  }, []);
+
+  const submitSearch = () => {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    setSearch(query.trim());
+  };
 
   const clearSearch = () => {
     setQuery("");
     setSearch("");
   };
 
-  const cycleSort = () => {
-    const i = SORTS.findIndex((s) => s.id === sort);
-    setSort(SORTS[(i + 1) % SORTS.length].id);
-  };
-
   const sortLabel = SORTS.find((s) => s.id === sort)?.label ?? "Newest";
-  const segmentBg = colors.disabled + "1A";
   const fieldBg = colors.disabled + "14";
 
-  /* Header stays an element (not an inline component) so the input keeps focus. */
   const header = useMemo(
     () => (
       <View>
         <View style={styles.topRow}>
-          <Text style={[styles.kicker, { color: colors.primary }]}>Discover</Text>
+          <Text style={[styles.kicker, { color: colors.primary }]}>
+            DISCOVER
+          </Text>
           <NotificationBell color={colors.text} size={20} />
         </View>
         <Text style={[styles.heading, { color: colors.text }]}>
@@ -141,22 +220,23 @@ export default function RecommendedScreen() {
             { borderColor: colors.border, backgroundColor: fieldBg },
           ]}
         >
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={colors.placeholder}
+            style={styles.searchIcon}
+          />
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search title or location"
+            placeholder="Search title or location..."
             placeholderTextColor={colors.placeholder}
             style={[styles.searchInput, { color: colors.text }]}
             returnKeyType="search"
             onSubmitEditing={submitSearch}
           />
           {query.length > 0 && (
-            <Pressable
-              onPress={clearSearch}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-            >
+            <Pressable onPress={clearSearch} hitSlop={10}>
               <Ionicons
                 name="close-circle"
                 size={18}
@@ -164,124 +244,90 @@ export default function RecommendedScreen() {
               />
             </Pressable>
           )}
-          <Pressable
-            onPress={submitSearch}
-            accessibilityRole="button"
-            style={[styles.searchBtn, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color={"#fff"}
-            />
-          </Pressable>
         </View>
 
-        {/* Listed for: segmented control */}
-        <View
-          style={[
-            styles.segment,
-            { backgroundColor: segmentBg, borderColor: colors.border },
-          ]}
-        >
-          {PURPOSES.map((item) => {
-            const active = purpose === item.id;
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => setPurpose(item.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                style={[
-                  styles.segmentItem,
-                  active && { backgroundColor: colors.primary },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    { color: active ? "#fff" : colors.placeholder },
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {/* Purpose — direct-tap segmented control, no more cycling */}
+        <PurposeSegment
+          value={purpose}
+          onChange={selectPurpose}
+          colors={colors}
+        />
 
-        {/* Property type: one scrollable row instead of wrapping onto several lines */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={styles.chipScroll}
-          contentContainerStyle={styles.chipRow}
-        >
+        {/* Type — direct-tap chips, no more cycling */}
+        <TypeChips value={propertyType} onChange={selectType} colors={colors} />
+
+        {/* Price + Sort + Reset */}
+        <View style={styles.filterBar}>
           <PriceFilter
             purpose={purpose}
             value={priceRange}
             onChange={setPriceRange}
           />
-          {TYPES.map((type) => {
-            const active = propertyType === type;
-            return (
-              <Pressable
-                key={type}
-                onPress={() => setPropertyType(type)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: active
-                      ? colors.primary + "22"
-                      : colors.disabled + "14",
-                    borderColor: active ? colors.primary : colors.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: active ? colors.primary : colors.placeholder },
-                  ]}
-                >
-                  {type}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
 
-        {/* Results row: count on the left, sort on the right */}
+          <Pressable
+            onPress={() => setSortSheetOpen(true)}
+            style={[
+              styles.filterDropdownPill,
+              { backgroundColor: fieldBg, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons
+              name="swap-vertical-outline"
+              size={14}
+              color={colors.text}
+            />
+            <Text style={[styles.filterPillLabel, { color: colors.text }]}>
+              {sortLabel}
+            </Text>
+          </Pressable>
+
+          {activeFilterCount > 0 && (
+            <Pressable
+              onPress={resetFilters}
+              style={[styles.resetPill, { borderColor: colors.primary }]}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={14}
+                color={colors.primary}
+              />
+              <Text style={[styles.resetPillLabel, { color: colors.primary }]}>
+                Reset{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        <ActiveFilters
+          propertyType={propertyType}
+          purpose={purpose}
+          priceRange={priceRange}
+          sort={sort}
+          colors={colors}
+          onClearType={() => selectType("All")}
+          onClearPurpose={() => selectPurpose("All")}
+          onClearPrice={() => setPriceRange(DEFAULT_PRICE)}
+          onClearSort={() => selectSort("newest")}
+          onClearAll={resetFilters}
+        />
+
+        {/* Results Info Row */}
         <View style={styles.resultsRow}>
           <View style={styles.countWrap}>
             <Text style={[styles.count, { color: colors.text }]}>
               {loading
-                ? "Loading properties"
-                : `${total} ${total === 1 ? "property" : "properties"}`}
+                ? "Loading properties..."
+                : `${total} available ${total === 1 ? "property" : "properties"}`}
             </Text>
             {fetching && !loading && (
               <ActivityIndicator size="small" color={colors.primary} />
             )}
           </View>
-
-          <Pressable
-            onPress={cycleSort}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Sort by ${sortLabel}. Tap to change.`}
-            style={styles.sortBtn}
-          >
-            <Ionicons name="swap-vertical" size={16} color={colors.primary} />
-            <Text style={[styles.sortText, { color: colors.primary }]}>
-              {sortLabel}
-            </Text>
-          </Pressable>
+          <Text style={[styles.locationLabel, { color: colors.placeholder }]}>
+            Lagos, Nigeria
+          </Text>
         </View>
 
-        {/* Refresh failed but we still have results to show */}
         {!!error && listings.length > 0 && (
           <Pressable
             onPress={fetchListings}
@@ -298,7 +344,6 @@ export default function RecommendedScreen() {
         )}
       </View>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       colors,
       propertyType,
@@ -312,15 +357,19 @@ export default function RecommendedScreen() {
       error,
       listings.length,
       fetchListings,
+      fieldBg,
+      activeFilterCount,
+      resetFilters,
+      selectType,
+      selectPurpose,
+      selectSort,
+      sortLabel,
     ],
   );
 
-  /* Loading / error / empty all live inside the list so filters stay usable. */
-  const emptyState = loading ? (
-    <View style={styles.empty}>
-      <ActivityIndicator color={colors.primary} />
-    </View>
-  ) : error ? (
+  const listEmpty = loading ? (
+    <SkeletonGrid columns={columns} colors={colors} />
+  ) : error && listings.length === 0 ? (
     <View style={styles.empty}>
       <Ionicons
         name="cloud-offline-outline"
@@ -344,28 +393,38 @@ export default function RecommendedScreen() {
       <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
         Try another type, switch rent or sale, or change the price filter.
       </Text>
+      {activeFilterCount > 0 && (
+        <Pressable
+          onPress={resetFilters}
+          style={[styles.retry, { backgroundColor: colors.primary }]}
+        >
+          <Text style={styles.retryText}>Clear filters</Text>
+        </Pressable>
+      )}
     </View>
   );
 
-  const renderCard = ({ item }: { item: PublicListing }) => (
-    <View style={{ flex: 1, maxWidth: columns > 1 ? "50%" : "100%" }}>
-      <ListingCard
-        item={item}
-        colors={colors}
-        onOpen={() =>
-          router.push({
-            pathname: "/(utilities)/property-view",
-            params: { propertyId: item.id },
-          })
-        }
-        onMessage={() =>
-          router.push({
-            pathname: "/(utilities)/chats",
-            params: { productId: item.id },
-          })
-        }
-      />
-    </View>
+  const renderCard = useCallback(
+    ({ item, index }: { item: PublicListing; index: number }) => (
+      <Animated.View
+        entering={FadeInDown.delay(Math.min(index, 8) * 40)
+          .springify()
+          .damping(18)}
+        style={{ width: cardWidth }}
+      >
+        <ListingCard
+          item={item}
+          colors={colors}
+          onOpen={() =>
+            router.navigate({
+              pathname: "/(utilities)/property-details",
+              params: { propertyId: item.id },
+            })
+          }
+        />
+      </Animated.View>
+    ),
+    [cardWidth, colors],
   );
 
   return (
@@ -374,15 +433,15 @@ export default function RecommendedScreen() {
       edges={["top"]}
     >
       <FlatList
-        key={columns} // numColumns can't change on a mounted list
+        key={columns}
         data={listings}
         keyExtractor={(item) => item.id}
         renderItem={renderCard}
         numColumns={columns}
-        columnWrapperStyle={columns > 1 ? { gap: CARD_GAP } : undefined}
-        ItemSeparatorComponent={Separator}
+        columnWrapperStyle={{ gap: CARD_GAP }}
+        ItemSeparatorComponent={() => <View style={{ height: CARD_GAP }} />}
         ListHeaderComponent={header}
-        ListEmptyComponent={emptyState}
+        ListEmptyComponent={listEmpty}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
@@ -398,385 +457,684 @@ export default function RecommendedScreen() {
           />
         }
       />
+
+      <SortSheet
+        visible={sortSheetOpen}
+        onClose={() => setSortSheetOpen(false)}
+        sort={sort}
+        onSelect={selectSort}
+        colors={colors}
+      />
     </SafeAreaView>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* LISTING CARD                                                               */
-/* -------------------------------------------------------------------------- */
+/* ----------------------------- Purpose segment ---------------------------- */
+
+function PurposeSegment({
+  value,
+  onChange,
+  colors,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  colors: ThemeColors;
+}) {
+  const [segWidth, setSegWidth] = useState(0);
+  const indicatorX = useSharedValue(0);
+  const idx = Math.max(
+    0,
+    PURPOSES.findIndex((p) => p.id === value),
+  );
+
+  useEffect(() => {
+    if (segWidth) {
+      indicatorX.value = withSpring((segWidth / PURPOSES.length) * idx, {
+        damping: 18,
+        stiffness: 180,
+      });
+    }
+  }, [idx, segWidth, indicatorX]);
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+    width: segWidth ? segWidth / PURPOSES.length : 0,
+  }));
+
+  return (
+    <View
+      style={[
+        styles.segment,
+        { backgroundColor: colors.disabled + "14", borderColor: colors.border },
+      ]}
+      onLayout={(e) => setSegWidth(e.nativeEvent.layout.width)}
+    >
+      {segWidth > 0 && (
+        <Animated.View
+          style={[
+            styles.segmentIndicator,
+            { backgroundColor: colors.primary },
+            indicatorStyle,
+          ]}
+        />
+      )}
+      {PURPOSES.map((p) => (
+        <Pressable
+          key={p.id}
+          style={styles.segmentItem}
+          onPress={() => onChange(p.id)}
+        >
+          <Text
+            style={[
+              styles.segmentLabel,
+              { color: p.id === value ? "#fff" : colors.text },
+            ]}
+          >
+            {p.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/* -------------------------------- Type chips ------------------------------- */
+
+function TypeChips({
+  value,
+  onChange,
+  colors,
+}: {
+  value: string;
+  onChange: (t: string) => void;
+  colors: ThemeColors;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.chipRow}
+      keyboardShouldPersistTaps="handled"
+    >
+      {TYPES.map((t) => {
+        const selected = t === value;
+        return (
+          <Pressable
+            key={t}
+            onPress={() => onChange(t)}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: selected
+                  ? colors.primary
+                  : colors.disabled + "14",
+                borderColor: selected ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.chipLabel,
+                { color: selected ? "#fff" : colors.text },
+              ]}
+            >
+              {t}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+/* ------------------------------ Active filters ----------------------------- */
+
+function ActiveFilters({
+  propertyType,
+  purpose,
+  priceRange,
+  sort,
+  colors,
+  onClearType,
+  onClearPurpose,
+  onClearPrice,
+  onClearSort,
+  onClearAll,
+}: {
+  propertyType: string;
+  purpose: string;
+  priceRange: PriceRange;
+  sort: SortId;
+  colors: ThemeColors;
+  onClearType: () => void;
+  onClearPurpose: () => void;
+  onClearPrice: () => void;
+  onClearSort: () => void;
+  onClearAll: () => void;
+}) {
+  const chips: { key: string; label: string; onClear: () => void }[] = [];
+
+  if (propertyType !== "All") {
+    chips.push({ key: "type", label: propertyType, onClear: onClearType });
+  }
+  if (purpose !== "All") {
+    chips.push({
+      key: "purpose",
+      label: PURPOSES.find((p) => p.id === purpose)?.label ?? purpose,
+      onClear: onClearPurpose,
+    });
+  }
+  if (priceRange.min != null || priceRange.max != null) {
+    chips.push({
+      key: "price",
+      label: `${priceRange.min != null ? formatPrice(priceRange.min) : "Any"} – ${
+        priceRange.max != null ? formatPrice(priceRange.max) : "Any"
+      }`,
+      onClear: onClearPrice,
+    });
+  }
+  if (sort !== "newest") {
+    chips.push({
+      key: "sort",
+      label: SORTS.find((s) => s.id === sort)?.label ?? sort,
+      onClear: onClearSort,
+    });
+  }
+
+  if (!chips.length) return null;
+
+  return (
+    <Animated.View entering={FadeIn.duration(150)} style={styles.activeRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 6, alignItems: "center" }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {chips.map((c) => (
+          <Pressable
+            key={c.key}
+            onPress={c.onClear}
+            style={[styles.activeChip, { borderColor: colors.primary }]}
+          >
+            <Text
+              style={[styles.activeChipLabel, { color: colors.primary }]}
+              numberOfLines={1}
+            >
+              {c.label}
+            </Text>
+            <Ionicons name="close" size={12} color={colors.primary} />
+          </Pressable>
+        ))}
+        <Pressable onPress={onClearAll} hitSlop={8}>
+          <Text style={[styles.clearAll, { color: colors.placeholder }]}>
+            Clear all
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </Animated.View>
+  );
+}
+
+/* --------------------------------- Sort sheet -------------------------------- */
+
+function SortSheet({
+  visible,
+  onClose,
+  sort,
+  onSelect,
+  colors,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  sort: SortId;
+  onSelect: (s: SortId) => void;
+  colors: ThemeColors;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+      <Animated.View
+        entering={FadeInDown.springify().damping(18)}
+        style={[
+          styles.sheet,
+          { backgroundColor: colors.background, borderColor: colors.border },
+        ]}
+      >
+        <View style={styles.sheetHandle} />
+        <Text style={[styles.sheetTitle, { color: colors.text }]}>Sort by</Text>
+        {SORTS.map((s) => {
+          const selected = s.id === sort;
+          return (
+            <Pressable
+              key={s.id}
+              style={styles.sheetRow}
+              onPress={() => onSelect(s.id)}
+            >
+              <Text
+                style={[
+                  styles.sheetRowLabel,
+                  { color: colors.text, fontWeight: selected ? "800" : "500" },
+                ]}
+              >
+                {s.label}
+              </Text>
+              {selected && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={20}
+                  color={colors.primary}
+                />
+              )}
+            </Pressable>
+          );
+        })}
+      </Animated.View>
+    </Modal>
+  );
+}
+
+/* -------------------------------- Skeleton grid ------------------------------- */
+
+function SkeletonCard({ colors }: { colors: ThemeColors }) {
+  const pulse = useSharedValue(0.4);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [pulse]);
+
+  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.card,
+        { borderColor: colors.border, backgroundColor: colors.disabled + "10" },
+        style,
+      ]}
+    >
+      <View
+        style={[styles.image, { backgroundColor: colors.disabled + "30" }]}
+      />
+      <View style={{ padding: 10, gap: 6 }}>
+        <View
+          style={{
+            height: 14,
+            width: "50%",
+            borderRadius: 4,
+            backgroundColor: colors.disabled + "30",
+          }}
+        />
+        <View
+          style={{
+            height: 12,
+            width: "80%",
+            borderRadius: 4,
+            backgroundColor: colors.disabled + "30",
+          }}
+        />
+        <View
+          style={{
+            height: 10,
+            width: "60%",
+            borderRadius: 4,
+            backgroundColor: colors.disabled + "30",
+          }}
+        />
+      </View>
+    </Animated.View>
+  );
+}
+
+function SkeletonGrid({
+  columns,
+  colors,
+}: {
+  columns: number;
+  colors: ThemeColors;
+}) {
+  const rowCount = 3;
+  const rows = Array.from({ length: rowCount });
+
+  return (
+    <View>
+      {rows.map((_, r) => (
+        <View
+          key={r}
+          style={{
+            flexDirection: "row",
+            gap: CARD_GAP,
+            marginBottom: CARD_GAP,
+          }}
+        >
+          {Array.from({ length: columns }).map((__, c) => (
+            <View key={c} style={{ flex: 1 }}>
+              <SkeletonCard colors={colors} />
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/* -------------------------------- Listing card -------------------------------- */
 
 function ListingCard({
   item,
   colors,
   onOpen,
-  onMessage,
 }: {
   item: PublicListing;
   colors: ThemeColors;
   onOpen: () => void;
-  onMessage: () => void;
 }) {
   const image = item.images?.[0];
   const label = purposeLabel(item.purpose, item.tag);
-  const agentName = item.agent?.name;
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={onOpen}
+      accessibilityRole="button"
+      style={({ pressed }) => [
         styles.card,
         { backgroundColor: colors.background, borderColor: colors.border },
+        {
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
       ]}
     >
-      <Pressable
-        onPress={onOpen}
-        accessibilityRole="button"
-        accessibilityLabel={`View ${item.title || "property"}`}
-      >
-        {/* Image keeps a fixed ratio so cards scale with screen width */}
-        <View style={styles.imageWrap}>
-          {image ? (
-            <Image
-              source={{ uri: image }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          ) : (
-            <View
-              style={[
-                styles.image,
-                styles.imageFallback,
-                { backgroundColor: colors.disabled + "33" },
-              ]}
-            >
-              <Ionicons
-                name="image-outline"
-                size={28}
-                color={colors.placeholder}
-              />
-              <Text style={[styles.noPhoto, { color: colors.placeholder }]}>
-                No photo
-              </Text>
-            </View>
-          )}
-
+      <View style={styles.imageWrap}>
+        {image ? (
+          <Image
+            source={{ uri: image }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
           <View
             style={[
-              styles.badge,
-              {
-                backgroundColor:
-                  item.purpose === "Sale" ? "#16A34A" : colors.primary,
-              },
+              styles.image,
+              styles.imageFallback,
+              { backgroundColor: colors.disabled + "33" },
             ]}
           >
-            <Text style={styles.badgeText}>{label}</Text>
+            <Ionicons
+              name="image-outline"
+              size={24}
+              color={colors.placeholder}
+            />
           </View>
-        </View>
-
-        <View style={styles.cardBody}>
-          <Text
-            style={[styles.title, { color: colors.text }]}
-            numberOfLines={2}
-          >
-            {item.title || "Untitled property"}
-          </Text>
-
-          {!!item.location && (
-            <View style={styles.metaRow}>
-              <Ionicons
-                name="location-outline"
-                size={15}
-                color={colors.placeholder}
-              />
-              <Text
-                style={[styles.meta, { color: colors.placeholder }]}
-                numberOfLines={1}
-              >
-                {item.location}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.priceRow}>
-            <Text
-              style={[styles.price, { color: colors.primary }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {item.price ? formatPrice(item.price) : "Price on request"}
-            </Text>
-            <View
-              style={[
-                styles.typePill,
-                { backgroundColor: colors.disabled + "22" },
-              ]}
-            >
-              <Text
-                style={[styles.typePillText, { color: colors.placeholder }]}
-              >
-                {item.propertyType}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </Pressable>
-
-      {/* Footer: agent on the left, action on the right */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        {agentName ? (
-          <View style={styles.agentWrap}>
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: colors.primary + "22" },
-              ]}
-            >
-              <Text style={[styles.avatarText, { color: colors.primary }]}>
-                {agentName.trim().charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.agentText}>
-              <Text
-                style={[styles.agentName, { color: colors.text }]}
-                numberOfLines={1}
-              >
-                {agentName}
-              </Text>
-              {!!item.agent?.agencyName && (
-                <Text
-                  style={[styles.agency, { color: colors.placeholder }]}
-                  numberOfLines={1}
-                >
-                  {item.agent.agencyName}
-                </Text>
-              )}
-            </View>
-          </View>
-        ) : (
-          <View style={{ flex: 1 }} />
         )}
 
-        <Pressable
-          onPress={onMessage}
-          accessibilityRole="button"
-          accessibilityLabel="Message agent"
-          style={[styles.chatBtn, { backgroundColor: colors.primary }]}
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor:
+                item.purpose === "Sale" ? "#16A34A" : colors.primary,
+            },
+          ]}
         >
-          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#fff" />
-          <Text style={styles.chatBtnText}>Message</Text>
-        </Pressable>
+          <Text style={styles.badgeText}>{label}</Text>
+        </View>
       </View>
-    </View>
+
+      <View style={styles.cardBody}>
+        <Text
+          style={[styles.price, { color: colors.primary }]}
+          numberOfLines={1}
+        >
+          {item.price ? formatPrice(item.price) : "Price on request"}
+        </Text>
+
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          {item.title || "Untitled property"}
+        </Text>
+
+        {!!item.location && (
+          <View style={styles.metaRow}>
+            <Ionicons
+              name="location-outline"
+              size={13}
+              color={colors.placeholder}
+            />
+            <Text
+              style={[styles.meta, { color: colors.placeholder }]}
+              numberOfLines={1}
+            >
+              {item.location}
+            </Text>
+          </View>
+        )}
+      </View>
+    </Pressable>
   );
 }
-
-function Separator() {
-  return <View style={{ height: CARD_GAP }} />;
-}
-
-/* -------------------------------------------------------------------------- */
-/* STYLES                                                                     */
-/* -------------------------------------------------------------------------- */
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: {
     paddingHorizontal: SCREEN_PAD,
-    paddingTop: 12,
-    paddingBottom: 120,
+    paddingTop: 8,
+    paddingBottom: 100,
   },
-
-  // Header
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  kicker: { fontSize: 13, fontWeight: "800" },
+  kicker: { fontSize: 11, fontWeight: "800", letterSpacing: 1 },
   heading: {
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: "900",
     letterSpacing: -0.4,
-    marginTop: 4,
+    marginTop: 2,
   },
-  sub: { fontSize: 14, lineHeight: 21, marginTop: 6, marginBottom: 20 },
+  sub: { fontSize: 13, lineHeight: 18, marginTop: 4, marginBottom: 14 },
 
-  // Search
   search: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    height: 56,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingLeft: 14,
-    paddingRight: 6,
-  },
-  searchInput: { flex: 1, minWidth: 0, fontSize: 15, paddingVertical: 0 },
-  searchBtn: {
-    height: 44,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    justifyContent: "center",
-  },
-  searchBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
-
-  // Segmented control
-  segment: {
-    flexDirection: "row",
-    height: 44,
-    padding: 4,
-    marginTop: 12,
+    gap: 8,
+    height: 46,
     borderWidth: 1,
     borderRadius: 14,
+    paddingHorizontal: 12,
   },
-  segmentItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-  },
-  segmentText: { fontSize: 14, fontWeight: "700" },
+  searchIcon: { marginRight: 2 },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingVertical: 0 },
 
-  // Type chips (bleed to the screen edges)
-  chipScroll: { marginTop: 12, marginHorizontal: -SCREEN_PAD },
-  chipRow: { paddingHorizontal: SCREEN_PAD, gap: 8 },
-  chip: {
+  segment: {
+    flexDirection: "row",
     height: 40,
-    paddingHorizontal: 16,
     borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 14,
+    overflow: "hidden",
+    position: "relative",
+  },
+  segmentIndicator: {
+    position: "absolute",
+    top: 3,
+    bottom: 3,
+    left: 3,
+    borderRadius: 9,
+  },
+  segmentItem: { flex: 1, alignItems: "center", justifyContent: "center" },
+  segmentLabel: { fontSize: 13, fontWeight: "700" },
+
+  chipRow: { gap: 8, paddingVertical: 10 },
+  chip: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  chipText: { fontSize: 14, fontWeight: "700" },
+  chipLabel: { fontSize: 12, fontWeight: "700" },
 
-  // Results row
+  filterBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 4,
+    gap: 8,
+  },
+  filterDropdownPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+  },
+  filterPillLabel: { fontSize: 13, fontWeight: "600" },
+
+  resetPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+  },
+  resetPillLabel: { fontSize: 12, fontWeight: "800" },
+
+  activeRow: { marginTop: 10 },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  activeChipLabel: { fontSize: 11, fontWeight: "700", maxWidth: 120 },
+  clearAll: {
+    fontSize: 12,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+    marginLeft: 4,
+  },
+
   resultsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    marginTop: 20,
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 10,
   },
   countWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     flexShrink: 1,
   },
-  count: { fontSize: 15, fontWeight: "700" },
-  sortBtn: { flexDirection: "row", alignItems: "center", gap: 4, height: 32 },
-  sortText: { fontSize: 14, fontWeight: "700" },
+  count: { fontSize: 14, fontWeight: "800" },
+  locationLabel: { fontSize: 13, fontWeight: "500" },
 
   banner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    padding: 12,
-    marginBottom: 12,
+    padding: 10,
+    marginBottom: 10,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 10,
   },
-  bannerText: { flex: 1, fontSize: 13 },
-  bannerAction: { fontSize: 13, fontWeight: "800" },
+  bannerText: { flex: 1, fontSize: 12 },
+  bannerAction: { fontSize: 12, fontWeight: "800" },
 
-  // Card
-  card: { borderWidth: 1, borderRadius: 20, overflow: "hidden" },
-  imageWrap: { aspectRatio: 16 / 10 },
+  card: { borderWidth: 1, borderRadius: 16, overflow: "hidden" },
+  imageWrap: { aspectRatio: 4 / 3 },
   image: { width: "100%", height: "100%" },
-  imageFallback: { alignItems: "center", justifyContent: "center", gap: 6 },
-  noPhoto: { fontSize: 13, fontWeight: "700" },
+  imageFallback: { alignItems: "center", justifyContent: "center" },
   badge: {
     position: "absolute",
-    top: 12,
-    left: 12,
-    height: 28,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    top: 8,
+    left: 8,
+    height: 22,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     justifyContent: "center",
   },
-  badgeText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
 
-  cardBody: { padding: 16 },
-  title: {
-    fontSize: 17,
-    lineHeight: 23,
-    fontWeight: "800",
-    letterSpacing: -0.2,
+  cardBody: { padding: 10 },
+  price: { fontSize: 16, fontWeight: "900" },
+  title: { fontSize: 13, lineHeight: 18, fontWeight: "700", marginTop: 2 },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 4 },
+  meta: { flex: 1, fontSize: 11 },
+
+  empty: {
+    alignItems: "center",
+    paddingTop: 30,
+    paddingHorizontal: 16,
+    gap: 8,
   },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 },
-  meta: { flex: 1, fontSize: 13 },
-  priceRow: {
+  emptyTitle: { fontSize: 15, fontWeight: "800", textAlign: "center" },
+  emptyCopy: { fontSize: 13, lineHeight: 18, textAlign: "center" },
+  retry: {
+    marginTop: 6,
+    paddingHorizontal: 20,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: "center",
+  },
+  retryText: { color: "#fff", fontSize: 13, fontWeight: "800" },
+
+  sheetBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#88888844",
+    marginBottom: 12,
+  },
+  sheetTitle: { fontSize: 16, fontWeight: "900", marginBottom: 10 },
+  sheetRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    marginTop: 12,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#88888822",
   },
-  price: { flexShrink: 1, fontSize: 20, fontWeight: "900" },
-  typePill: {
-    paddingHorizontal: 10,
-    height: 26,
-    borderRadius: 8,
-    justifyContent: "center",
-  },
-  typePillText: { fontSize: 12, fontWeight: "700" },
-
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-  },
-  agentWrap: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    minWidth: 0,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontSize: 15, fontWeight: "800" },
-  agentText: { flex: 1, minWidth: 0 },
-  agentName: { fontSize: 13, fontWeight: "700" },
-  agency: { fontSize: 12, marginTop: 1 },
-  chatBtn: {
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  chatBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
-
-  // States
-  empty: {
-    alignItems: "center",
-    paddingTop: 40,
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  emptyTitle: { fontSize: 17, fontWeight: "800", textAlign: "center" },
-  emptyCopy: { fontSize: 14, lineHeight: 21, textAlign: "center" },
-  retry: {
-    marginTop: 6,
-    paddingHorizontal: 24,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
-  },
-  retryText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  sheetRowLabel: { fontSize: 14 },
 });

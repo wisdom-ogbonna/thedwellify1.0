@@ -66,7 +66,7 @@ function AppContent() {
 
         if (data?.type === "incoming_request") {
           playRingtone();
-          router.push({
+          router.navigate({
             pathname: "/(utilities)/requests",
             params: {
               requestId: String(data.requestId),
@@ -83,7 +83,7 @@ function AppContent() {
           data?.type === "property_request_sent" ||
           data?.type === "request_missed"
         ) {
-          router.push("/(utilities)/notifications");
+          router.navigate("/(utilities)/notifications");
         }
 
         if (
@@ -92,11 +92,11 @@ function AppContent() {
           data?.type === "request_cancelled" ||
           data?.type === "request_rematch"
         ) {
-          router.push("/(client)/client-map");
+          router.navigate("/(client)/client-map");
         }
 
         if (data?.type === "NEW_PROPERTY") {
-          router.push({
+          router.navigate({
             pathname: "/",
 
             params: {
@@ -110,7 +110,7 @@ function AppContent() {
         }
 
         if (data?.type === "listing_chat" && data.conversationId) {
-          router.push({
+          router.navigate({
             pathname: "/(utilities)/chats",
             params: { id: String(data.conversationId) },
           });

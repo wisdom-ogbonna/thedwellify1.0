@@ -50,7 +50,7 @@ const openItem = (item: InboxItem, router: ReturnType<typeof useRouter>) => {
   const data = item.data || {};
 
   if (type === "incoming_request") {
-    router.push({
+    router.navigate({
       pathname: "/(utilities)/requests",
       params: {
         requestId: String(data.requestId || ""),
@@ -69,12 +69,12 @@ const openItem = (item: InboxItem, router: ReturnType<typeof useRouter>) => {
     type === "request_cancelled" ||
     type === "request_rematch"
   ) {
-    router.push("/(client)/client-map");
+    router.navigate("/(client)/client-map");
     return;
   }
 
   if (type === "listing_chat" && data.conversationId) {
-    router.push({
+    router.navigate({
       pathname: "/(utilities)/chats",
       params: { id: String(data.conversationId) },
     });
@@ -82,7 +82,7 @@ const openItem = (item: InboxItem, router: ReturnType<typeof useRouter>) => {
   }
 
   if (type === "NEW_PROPERTY" && data.productId) {
-    router.push({
+    router.navigate({
       pathname: "/(utilities)/property-view",
       params: { propertyId: String(data.productId) },
     });
@@ -95,7 +95,7 @@ const openItem = (item: InboxItem, router: ReturnType<typeof useRouter>) => {
     type === "request_missed"
   ) {
     if (data.requestId) {
-      router.push({
+      router.navigate({
         pathname: "/(utilities)/property-request",
         params: { id: String(data.requestId) },
       });
@@ -120,24 +120,27 @@ export default function NotificationsScreen() {
   const unreadBg = isDark ? "#15243A" : "#E7F3FF";
   const muted = colors.placeholder;
 
-  const load = useCallback(async (soft = false) => {
-    if (!soft) setLoading(true);
-    try {
-      setError("");
-      const data = await inboxApi.list();
-      setItems(data.notifications || []);
-      refreshBadge();
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.error ||
-          err?.message ||
-          "Could not load notifications.",
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [refreshBadge]);
+  const load = useCallback(
+    async (soft = false) => {
+      if (!soft) setLoading(true);
+      try {
+        setError("");
+        const data = await inboxApi.list();
+        setItems(data.notifications || []);
+        refreshBadge();
+      } catch (err: any) {
+        setError(
+          err?.response?.data?.error ||
+            err?.message ||
+            "Could not load notifications.",
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [refreshBadge],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -168,7 +171,10 @@ export default function NotificationsScreen() {
           row.id === item.id ? { ...row, status: "attended" } : row,
         ),
       );
-      inboxApi.attend(item.id).then(() => refreshBadge()).catch(() => undefined);
+      inboxApi
+        .attend(item.id)
+        .then(() => refreshBadge())
+        .catch(() => undefined);
     }
     openItem(item, router);
   };
@@ -186,7 +192,9 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <View style={[styles.safe, { backgroundColor: bg, paddingTop: insets.top }]}>
+    <View
+      style={[styles.safe, { backgroundColor: bg, paddingTop: insets.top }]}
+    >
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
@@ -195,7 +203,9 @@ export default function NotificationsScreen() {
         >
           <ChevronLeft size={22} color={colors.text} />
         </Pressable>
-        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Notifications
+        </Text>
         <Pressable onPress={markAll} hitSlop={8} disabled={!unattended.length}>
           <CheckCheck
             size={22}
@@ -247,11 +257,19 @@ export default function NotificationsScreen() {
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Text style={{ color: colors.error, textAlign: "center", paddingHorizontal: 24 }}>
+          <Text
+            style={{
+              color: colors.error,
+              textAlign: "center",
+              paddingHorizontal: 24,
+            }}
+          >
             {error}
           </Text>
           <Pressable onPress={() => load()} style={{ marginTop: 16 }}>
-            <Text style={{ color: colors.primary, fontWeight: "700" }}>Try again</Text>
+            <Text style={{ color: colors.primary, fontWeight: "700" }}>
+              Try again
+            </Text>
           </Pressable>
         </View>
       ) : (
@@ -291,7 +309,10 @@ export default function NotificationsScreen() {
           renderItem={({ item }) => {
             const unread = item.status !== "attended";
             const Icon = iconFor(item.type);
-            const initial = (item.actorName || "D").trim().charAt(0).toUpperCase();
+            const initial = (item.actorName || "D")
+              .trim()
+              .charAt(0)
+              .toUpperCase();
             return (
               <Pressable
                 onPress={() => onPressItem(item)}
@@ -301,10 +322,7 @@ export default function NotificationsScreen() {
                 ]}
               >
                 <View
-                  style={[
-                    styles.avatar,
-                    { backgroundColor: colors.primary },
-                  ]}
+                  style={[styles.avatar, { backgroundColor: colors.primary }]}
                 >
                   {item.actorAvatar ? (
                     <UserRound size={20} color="#FFFFFF" />
@@ -321,7 +339,10 @@ export default function NotificationsScreen() {
                   <Text
                     style={[
                       styles.itemTitle,
-                      { color: colors.text, fontWeight: unread ? "800" : "600" },
+                      {
+                        color: colors.text,
+                        fontWeight: unread ? "800" : "600",
+                      },
                     ]}
                     numberOfLines={2}
                   >
@@ -431,7 +452,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: 32, gap: 10 },
+  empty: {
+    alignItems: "center",
+    paddingTop: 80,
+    paddingHorizontal: 32,
+    gap: 10,
+  },
   emptyTitle: { fontSize: 18, fontWeight: "800" },
   emptyBody: { fontSize: 14, lineHeight: 20, textAlign: "center" },
 });

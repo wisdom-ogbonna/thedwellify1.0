@@ -11,9 +11,9 @@ import {
   Alert,
   FlatList,
   Image,
-  TouchableOpacity,
   RefreshControl,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,7 +56,7 @@ const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
   return (
     <TouchableOpacity
       onPress={() =>
-        router.push({
+        router.navigate({
           pathname: "/(product)/[id]",
           params: { id: item.id },
         })
@@ -115,7 +115,7 @@ const ProductCard = memo(({ item, onDelete, router, colors }: any) => {
         >
           <TouchableOpacity
             onPress={() =>
-              router.push({
+              router.navigate({
                 pathname: "/(product)/[id]",
                 params: { id: item.id },
               })
@@ -206,7 +206,10 @@ export default function RentalProductsScreen() {
         }
         ListHeaderComponent={
           <View className="flex-row items-center mb-8 mt-2 gap-3">
-            <TouchableOpacity onPress={() => router.push("/(agent)/dashboard")} className="px-2 py-1">
+            <TouchableOpacity
+              onPress={() => router.navigate("/(agent)/dashboard")}
+              className="px-2 py-1"
+            >
               <CaretLeftIcon size={22} weight="bold" color={colors.text} />
             </TouchableOpacity>
             <Text
@@ -241,7 +244,7 @@ export default function RentalProductsScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.push("/(agent)/listings/new")}
+          onPress={() => router.navigate("/(agent)/listings/new")}
           className="shadow-xl justify-center items-center rounded-3xl"
           style={{
             backgroundColor: colors.text,

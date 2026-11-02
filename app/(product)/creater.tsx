@@ -13,10 +13,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  TouchableOpacity,
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -49,7 +49,10 @@ export default function CreateProduct() {
       const result = await pickLibraryImages(10);
       if (!result.ok) {
         if (result.reason === "permission") {
-          Alert.alert("Permission required", "Allow photo access to upload images.");
+          Alert.alert(
+            "Permission required",
+            "Allow photo access to upload images.",
+          );
         }
         return;
       }
@@ -67,7 +70,10 @@ export default function CreateProduct() {
       const result = await pickLibraryVideo();
       if (!result.ok) {
         if (result.reason === "permission") {
-          Alert.alert("Permission required", "Allow video access to upload a tour.");
+          Alert.alert(
+            "Permission required",
+            "Allow video access to upload a tour.",
+          );
         }
         return;
       }
@@ -157,7 +163,7 @@ export default function CreateProduct() {
       });
 
       Alert.alert("Success", "Listing created successfully");
-      router.push("/(product)/products");
+      router.navigate("/(product)/products");
     } catch (err: any) {
       console.log(err?.response?.data || err.message);
       Alert.alert("Error", "Failed to create listing");

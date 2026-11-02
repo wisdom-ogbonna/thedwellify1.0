@@ -2,11 +2,7 @@ import MessageTicks from "@/components/chat/message-ticks";
 import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  chatApi,
-  type ChatMessage,
-  type Conversation,
-} from "@/services/chat";
+import { chatApi, type ChatMessage, type Conversation } from "@/services/chat";
 import {
   connectSocket,
   emitTyping,
@@ -18,7 +14,13 @@ import {
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { PaperPlaneRight } from "phosphor-react-native";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -65,7 +67,9 @@ const dateLabel = (value: string) => {
 };
 
 const mergeThread = (local: ChatMessage[], remote: ChatMessage[]) => {
-  const remoteNonces = new Set(remote.map((item) => item.nonce).filter(Boolean));
+  const remoteNonces = new Set(
+    remote.map((item) => item.nonce).filter(Boolean),
+  );
   const remoteIds = new Set(remote.map((item) => item.id));
   const extras = local.filter((item) => {
     const pending = item.status === "pending" || item.status === "failed";
@@ -106,9 +110,11 @@ const buildRows = (messages: ChatMessage[]): ThreadRow[] => {
     }
     const grouped = Boolean(
       previous &&
-        previous.senderId === message.senderId &&
-        day === startOfDay(previous.createdAt) &&
-        new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() < 60000,
+      previous.senderId === message.senderId &&
+      day === startOfDay(previous.createdAt) &&
+      new Date(message.createdAt).getTime() -
+        new Date(previous.createdAt).getTime() <
+        60000,
     );
     chronological.push({
       type: "message",
@@ -163,7 +169,9 @@ export default function ChatThreadScreen() {
       setLoading(true);
       let id = String(params.id || "");
       if (!id && params.requestId) {
-        const started = await chatApi.startFromRequest(String(params.requestId));
+        const started = await chatApi.startFromRequest(
+          String(params.requestId),
+        );
         id = started.id;
         setConversation(started);
       }
@@ -182,7 +190,10 @@ export default function ChatThreadScreen() {
         return;
       }
       setConversationId(id);
-      const [convo, rows] = await Promise.all([chatApi.get(id), chatApi.messages(id)]);
+      const [convo, rows] = await Promise.all([
+        chatApi.get(id),
+        chatApi.messages(id),
+      ]);
       const liveId = convo?.id || id;
       setConversation(convo);
       setConversationId(liveId);
@@ -221,13 +232,22 @@ export default function ChatThreadScreen() {
         }
       };
 
-      const onAck = (ack: { conversationId?: string; userId?: string; mode?: string }) => {
-        if (ack?.conversationId !== conversationId || ack.userId === user.uid) return;
+      const onAck = (ack: {
+        conversationId?: string;
+        userId?: string;
+        mode?: string;
+      }) => {
+        if (ack?.conversationId !== conversationId || ack.userId === user.uid)
+          return;
         setMessages((prev) =>
           prev.map((item) => {
             if (item.senderId !== user.uid) return item;
             if (ack.mode === "read") {
-              return { ...item, status: "read", readAt: new Date().toISOString() };
+              return {
+                ...item,
+                status: "read",
+                readAt: new Date().toISOString(),
+              };
             }
             if (ack.mode === "delivered" && item.status !== "read") {
               return {
@@ -246,7 +266,11 @@ export default function ChatThreadScreen() {
         userId?: string;
         isTyping?: boolean;
       }) => {
-        if (payload.conversationId !== conversationId || payload.userId === user.uid) return;
+        if (
+          payload.conversationId !== conversationId ||
+          payload.userId === user.uid
+        )
+          return;
         setPeerTyping(Boolean(payload.isTyping));
         if (typingClear) clearTimeout(typingClear);
         if (payload.isTyping) {
@@ -259,7 +283,8 @@ export default function ChatThreadScreen() {
         userId?: string;
         online?: boolean;
       }) => {
-        if (payload.conversationId && payload.conversationId !== conversationId) return;
+        if (payload.conversationId && payload.conversationId !== conversationId)
+          return;
         if (payload.userId === user.uid) return;
         setPeerOnline(Boolean(payload.online));
       };
@@ -312,7 +337,9 @@ export default function ChatThreadScreen() {
   }, [conversationId, user?.uid]);
 
   const peer =
-    conversation?.agentId === user?.uid ? conversation?.client : conversation?.agent;
+    conversation?.agentId === user?.uid
+      ? conversation?.client
+      : conversation?.agent;
   const property = conversation?.property;
   const isPeerChat = conversation?.kind === "agent_peer";
   const rows = useMemo(() => buildRows(messages), [messages]);
@@ -324,7 +351,9 @@ export default function ChatThreadScreen() {
       const next = value.trim();
       if (!next) return;
 
-      const nonce = existingId || `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const nonce =
+        existingId ||
+        `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       if (sendingRef.current.has(nonce)) return;
       sendingRef.current.add(nonce);
 
@@ -353,12 +382,19 @@ export default function ChatThreadScreen() {
       try {
         const message = await chatApi.send(conversationId, next, nonce);
         setMessages((prev) => {
-          const rest = prev.filter((item) => item.id !== nonce && item.id !== message.id);
-          return [...rest, { ...message, nonce, status: message.status || "sent" }];
+          const rest = prev.filter(
+            (item) => item.id !== nonce && item.id !== message.id,
+          );
+          return [
+            ...rest,
+            { ...message, nonce, status: message.status || "sent" },
+          ];
         });
       } catch {
         setMessages((prev) =>
-          prev.map((item) => (item.id === nonce ? { ...item, status: "failed" } : item)),
+          prev.map((item) =>
+            item.id === nonce ? { ...item, status: "failed" } : item,
+          ),
         );
       } finally {
         sendingRef.current.delete(nonce);
@@ -372,7 +408,10 @@ export default function ChatThreadScreen() {
     if (!conversationId) return;
     emitTyping(conversationId, Boolean(value.trim()));
     if (typingTimer.current) clearTimeout(typingTimer.current);
-    typingTimer.current = setTimeout(() => emitTyping(conversationId, false), 1200);
+    typingTimer.current = setTimeout(
+      () => emitTyping(conversationId, false),
+      1200,
+    );
   };
 
   const send = () => {
@@ -397,8 +436,13 @@ export default function ChatThreadScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.page }]}>
         <View style={styles.centered}>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>{error}</Text>
-          <Pressable onPress={openConversation} style={[styles.retry, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            {error}
+          </Text>
+          <Pressable
+            onPress={openConversation}
+            style={[styles.retry, { backgroundColor: colors.primary }]}
+          >
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
@@ -407,17 +451,38 @@ export default function ChatThreadScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.header }]} edges={["top"]}>
-      <View style={[styles.header, { backgroundColor: theme.header, borderBottomColor: isDark ? "#222" : "#E9EDEF" }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: theme.header }]}
+      edges={["top"]}
+    >
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.header,
+            borderBottomColor: isDark ? "#222" : "#E9EDEF",
+          },
+        ]}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={10}
+        >
           <Text style={[styles.backText, { color: colors.text }]}>‹</Text>
         </Pressable>
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarLetter}>{(peer?.name || "D").slice(0, 1).toUpperCase()}</Text>
+          <Text style={styles.avatarLetter}>
+            {(peer?.name || "D").slice(0, 1).toUpperCase()}
+          </Text>
         </View>
         <View style={styles.headerCopy}>
-          <Text style={[styles.peerName, { color: colors.text }]} numberOfLines={1}>
-            {peer?.name || (isPeerChat ? "Agent" : role === "agent" ? "Client" : "Agent")}
+          <Text
+            style={[styles.peerName, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {peer?.name ||
+              (isPeerChat ? "Agent" : role === "agent" ? "Client" : "Agent")}
           </Text>
           <Text
             style={[
@@ -439,7 +504,9 @@ export default function ChatThreadScreen() {
             style={styles.headerCall}
             hitSlop={8}
           >
-            <Text style={[styles.headerCallText, { color: colors.primary }]}>Call</Text>
+            <Text style={[styles.headerCallText, { color: colors.primary }]}>
+              Call
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -448,32 +515,50 @@ export default function ChatThreadScreen() {
         <Pressable
           onPress={() =>
             conversation?.kind === "property_request" || conversation?.requestId
-              ? router.push({
+              ? router.navigate({
                   pathname: "/(utilities)/property-request",
                   params: { id: String(conversation.requestId || property.id) },
                 })
-              : router.push({
+              : router.navigate({
                   pathname: "/(utilities)/property-view",
-                  params: { propertyId: property.id || conversation?.productId },
+                  params: {
+                    propertyId: property.id || conversation?.productId,
+                  },
                 })
           }
           style={[styles.propertyCard, { backgroundColor: theme.chip }]}
         >
           {property.image ? (
-            <Image source={{ uri: property.image }} style={styles.propertyImage} />
+            <Image
+              source={{ uri: property.image }}
+              style={styles.propertyImage}
+            />
           ) : (
-            <View style={[styles.propertyImage, { backgroundColor: colors.disabled + "33" }]} />
+            <View
+              style={[
+                styles.propertyImage,
+                { backgroundColor: colors.disabled + "33" },
+              ]}
+            />
           )}
           <View style={styles.propertyCopy}>
-            <Text style={[styles.propertyTitle, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.propertyTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {property.title}
             </Text>
-            <Text style={[styles.propertyMeta, { color: theme.meta }]} numberOfLines={1}>
+            <Text
+              style={[styles.propertyMeta, { color: theme.meta }]}
+              numberOfLines={1}
+            >
               {purposeLabel(property.purpose)}
               {property.location ? ` · ${property.location}` : ""}
             </Text>
             <Text style={[styles.propertyPrice, { color: colors.primary }]}>
-              {property.price ? formatPrice(property.price) : "Price on request"}
+              {property.price
+                ? formatPrice(property.price)
+                : "Price on request"}
             </Text>
           </View>
         </Pressable>
@@ -504,8 +589,12 @@ export default function ChatThreadScreen() {
             if (item.type === "date") {
               return (
                 <View style={styles.dateWrap}>
-                  <View style={[styles.dateChip, { backgroundColor: theme.chip }]}>
-                    <Text style={[styles.dateText, { color: theme.meta }]}>{item.label}</Text>
+                  <View
+                    style={[styles.dateChip, { backgroundColor: theme.chip }]}
+                  >
+                    <Text style={[styles.dateText, { color: theme.meta }]}>
+                      {item.label}
+                    </Text>
                   </View>
                 </View>
               );
@@ -519,13 +608,17 @@ export default function ChatThreadScreen() {
               <Pressable
                 onPress={() => {
                   if (isShare && listing?.id) {
-                    router.push({
+                    router.navigate({
                       pathname: "/(utilities)/property-view",
                       params: { propertyId: listing.id },
                     });
                     return;
                   }
-                  if (failed) sendNow(item.message.text, item.message.nonce || item.message.id);
+                  if (failed)
+                    sendNow(
+                      item.message.text,
+                      item.message.nonce || item.message.id,
+                    );
                 }}
                 style={[
                   styles.bubbleWrap,
@@ -551,9 +644,17 @@ export default function ChatThreadScreen() {
                   {isShare ? (
                     <View style={styles.shareCard}>
                       {listing?.image ? (
-                        <Image source={{ uri: listing.image }} style={styles.shareImage} />
+                        <Image
+                          source={{ uri: listing.image }}
+                          style={styles.shareImage}
+                        />
                       ) : (
-                        <View style={[styles.shareImage, { backgroundColor: colors.disabled + "44" }]} />
+                        <View
+                          style={[
+                            styles.shareImage,
+                            { backgroundColor: colors.disabled + "44" },
+                          ]}
+                        />
                       )}
                       <View style={styles.shareCopy}>
                         <Text
@@ -564,24 +665,42 @@ export default function ChatThreadScreen() {
                         <Text
                           style={[
                             styles.shareTitle,
-                            { color: mine ? theme.outgoingText : theme.incomingText },
+                            {
+                              color: mine
+                                ? theme.outgoingText
+                                : theme.incomingText,
+                            },
                           ]}
                           numberOfLines={2}
                         >
                           {listing?.title || "Property"}
                         </Text>
                         {listing?.location ? (
-                          <Text style={[styles.shareMeta, { color: theme.meta }]} numberOfLines={1}>
+                          <Text
+                            style={[styles.shareMeta, { color: theme.meta }]}
+                            numberOfLines={1}
+                          >
                             {listing.location}
                           </Text>
                         ) : null}
-                        <Text style={[styles.sharePrice, { color: colors.primary }]}>
-                          {listing?.price ? formatPrice(listing.price) : "Price on request"}
+                        <Text
+                          style={[styles.sharePrice, { color: colors.primary }]}
+                        >
+                          {listing?.price
+                            ? formatPrice(listing.price)
+                            : "Price on request"}
                         </Text>
                       </View>
                     </View>
                   ) : (
-                    <Text style={[styles.bubbleText, { color: mine ? theme.outgoingText : theme.incomingText }]}>
+                    <Text
+                      style={[
+                        styles.bubbleText,
+                        {
+                          color: mine ? theme.outgoingText : theme.incomingText,
+                        },
+                      ]}
+                    >
                       {item.message.text}
                     </Text>
                   )}
@@ -606,7 +725,10 @@ export default function ChatThreadScreen() {
           }}
         />
 
-        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: theme.composer }}>
+        <SafeAreaView
+          edges={["bottom"]}
+          style={{ backgroundColor: theme.composer }}
+        >
           <View style={[styles.composer, { backgroundColor: theme.composer }]}>
             <TextInput
               ref={inputRef}
@@ -614,7 +736,10 @@ export default function ChatThreadScreen() {
               onChangeText={onChangeText}
               placeholder="Message"
               placeholderTextColor={theme.meta}
-              style={[styles.input, { color: colors.text, backgroundColor: theme.input }]}
+              style={[
+                styles.input,
+                { color: colors.text, backgroundColor: theme.input },
+              ]}
               multiline
               blurOnSubmit={false}
               onSubmitEditing={() => {
@@ -626,7 +751,10 @@ export default function ChatThreadScreen() {
               disabled={!canSend}
               style={[
                 styles.send,
-                { backgroundColor: canSend ? "#00A884" : theme.meta, opacity: canSend ? 1 : 0.55 },
+                {
+                  backgroundColor: canSend ? "#00A884" : theme.meta,
+                  opacity: canSend ? 1 : 0.55,
+                },
               ]}
             >
               <PaperPlaneRight size={18} color="#FFFFFF" weight="fill" />
@@ -641,7 +769,12 @@ export default function ChatThreadScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -649,7 +782,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backBtn: { width: 36, height: 40, alignItems: "center", justifyContent: "center" },
+  backBtn: {
+    width: 36,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   backText: { fontSize: 34, lineHeight: 36, fontWeight: "300" },
   avatar: {
     width: 40,
@@ -670,7 +808,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerCallText: { fontSize: 15, fontWeight: "800" },
-  shareBubble: { overflow: "hidden", paddingHorizontal: 6, paddingTop: 6, maxWidth: 260 },
+  shareBubble: {
+    overflow: "hidden",
+    paddingHorizontal: 6,
+    paddingTop: 6,
+    maxWidth: 260,
+  },
   shareCard: { width: 232 },
   shareImage: { width: "100%", height: 120, borderRadius: 12 },
   shareCopy: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 2 },
@@ -687,13 +830,23 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   propertyImage: { width: 64, height: 64 },
-  propertyCopy: { flex: 1, paddingHorizontal: 10, paddingVertical: 8, justifyContent: "center" },
+  propertyCopy: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: "center",
+  },
   propertyTitle: { fontSize: 13, fontWeight: "800" },
   propertyMeta: { fontSize: 11, marginTop: 2 },
   propertyPrice: { fontSize: 12, fontWeight: "800", marginTop: 3 },
   thread: { paddingHorizontal: 10, paddingVertical: 8, flexGrow: 1 },
   emptyWrap: { transform: [{ scaleY: -1 }] },
-  emptyThread: { textAlign: "center", marginTop: 24, lineHeight: 20, paddingHorizontal: 24 },
+  emptyThread: {
+    textAlign: "center",
+    marginTop: 24,
+    lineHeight: 20,
+    paddingHorizontal: 24,
+  },
   dateWrap: { alignItems: "center", marginVertical: 8 },
   dateChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
   dateText: { fontSize: 12, fontWeight: "700" },
@@ -709,9 +862,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   bubbleText: { fontSize: 15.5, lineHeight: 21 },
-  metaRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginTop: 3 },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    marginTop: 3,
+  },
   bubbleTime: { fontSize: 11, fontWeight: "600" },
-  failedHint: { fontSize: 11, color: "#EF4444", fontWeight: "700", marginRight: 8 },
+  failedHint: {
+    fontSize: 11,
+    color: "#EF4444",
+    fontWeight: "700",
+    marginRight: 8,
+  },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -738,6 +901,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyTitle: { fontSize: 18, fontWeight: "800", textAlign: "center" },
-  retry: { marginTop: 16, paddingHorizontal: 20, height: 44, borderRadius: 12, justifyContent: "center" },
+  retry: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+  },
   retryText: { color: "#fff", fontWeight: "800" },
 });

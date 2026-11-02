@@ -83,7 +83,7 @@ export default function PropertyRequestDetail() {
     setOpeningChat(true);
     try {
       const conversation = await chatApi.startFromRequest(requestId);
-      router.push({
+      router.navigate({
         pathname: "/(utilities)/chats",
         params: { id: conversation.id, requestId },
       });
@@ -226,7 +226,13 @@ export default function PropertyRequestDetail() {
           ]}
         >
           {chatError ? (
-            <Text style={{ color: colors.error, textAlign: "center", marginBottom: 8 }}>
+            <Text
+              style={{
+                color: colors.error,
+                textAlign: "center",
+                marginBottom: 8,
+              }}
+            >
               {chatError}
             </Text>
           ) : null}
@@ -235,7 +241,10 @@ export default function PropertyRequestDetail() {
             disabled={openingChat}
             style={[
               styles.chatBtn,
-              { backgroundColor: colors.primary, opacity: openingChat ? 0.7 : 1 },
+              {
+                backgroundColor: colors.primary,
+                opacity: openingChat ? 0.7 : 1,
+              },
             ]}
           >
             {openingChat ? (
@@ -272,14 +281,25 @@ function Row({
 }) {
   return (
     <View style={[styles.row, { backgroundColor: card, borderColor: border }]}>
-      <View style={[styles.iconWrap, { backgroundColor: `${colors.primary}22` }]}>
+      <View
+        style={[styles.iconWrap, { backgroundColor: `${colors.primary}22` }]}
+      >
         <Icon size={18} color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.placeholder, fontSize: 12, fontWeight: "700" }}>
+        <Text
+          style={{ color: colors.placeholder, fontSize: 12, fontWeight: "700" }}
+        >
           {label}
         </Text>
-        <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700", marginTop: 4 }}>
+        <Text
+          style={{
+            color: colors.text,
+            fontSize: 16,
+            fontWeight: "700",
+            marginTop: 4,
+          }}
+        >
           {value}
         </Text>
       </View>
@@ -304,7 +324,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: { fontSize: 22, fontWeight: "800" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
   card: {
     borderWidth: 1,
     borderRadius: 22,

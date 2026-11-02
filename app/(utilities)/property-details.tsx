@@ -147,12 +147,12 @@ export default function PropertyView() {
       setChatBusy(true);
       if (role === "agent" && peerId) {
         const started = await chatApi.startPeer(String(peerId));
-        router.push({
+        router.navigate({
           pathname: "/(utilities)/chats",
           params: { id: started.id, peerAgentId: String(peerId) },
         });
       } else {
-        router.push({
+        router.navigate({
           pathname: "/(utilities)/chats",
           params: { productId: String(property.id) },
         });
@@ -562,7 +562,7 @@ export default function PropertyView() {
         productTitle={property.title}
         onClose={() => setShareOpen(false)}
         onShared={(id) =>
-          router.push({ pathname: "/(utilities)/chats", params: { id } })
+          router.navigate({ pathname: "/(utilities)/chats", params: { id } })
         }
       />
     </View>

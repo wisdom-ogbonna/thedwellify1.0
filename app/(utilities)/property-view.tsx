@@ -18,7 +18,6 @@ import {
   Alert,
   FlatList,
   Image,
-  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -114,7 +113,7 @@ export default function PropertyView() {
     if (role === "agent" && peerId && peerId !== user?.uid) {
       try {
         const started = await chatApi.startPeer(String(peerId));
-        router.push({
+        router.navigate({
           pathname: "/(utilities)/chats",
           params: { id: started.id, peerAgentId: String(peerId) },
         });
@@ -126,7 +125,7 @@ export default function PropertyView() {
       }
       return;
     }
-    router.push({
+    router.navigate({
       pathname: "/(utilities)/chats",
       params: { productId: String(property.id) },
     });
@@ -407,14 +406,13 @@ export default function PropertyView() {
         style={{ top: insets.top + 8 }}
       />
 
-      
       <ShareListingSheet
         visible={shareOpen}
         productId={String(property.id || "")}
         productTitle={property.title}
         onClose={() => setShareOpen(false)}
         onShared={(id) =>
-          router.push({ pathname: "/(utilities)/chats", params: { id } })
+          router.navigate({ pathname: "/(utilities)/chats", params: { id } })
         }
       />
     </View>

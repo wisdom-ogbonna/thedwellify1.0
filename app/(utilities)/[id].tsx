@@ -1,15 +1,8 @@
 import { useTheme } from "@/hooks/use-theme";
 import { ResizeMode, Video } from "expo-av";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  ArrowLeft,
-  ArrowsOut,
-  House,
-  MapPin,
-  Record,
-  PencilSimple,
-} from "phosphor-react-native";
-import React, { useEffect, useState, useRef } from "react";
+import { ArrowLeft, MapPin, PencilSimple } from "phosphor-react-native";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -214,7 +207,7 @@ export default function ProductDetails() {
         <TouchableOpacity
           onPress={() => {
             if (userRole === "agent") {
-              router.push(`/edit-product/${id}`);
+              router.navigate(`/edit-product/${id}`);
             } else {
               console.log("Booking agent...");
             }

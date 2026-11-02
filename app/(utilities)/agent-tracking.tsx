@@ -1,17 +1,15 @@
-import React from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
 import { useTheme } from "@/hooks/use-theme";
+import { useRouter } from "expo-router";
 import {
-  Phone,
-  ChatTeardropText,
-  NavigationArrow,
-  WarningCircle,
-  ShieldCheck,
   CaretLeft,
-  MapPin,
+  ChatTeardropText,
   ClockAfternoon,
+  Phone,
+  ShieldCheck,
+  WarningCircle,
 } from "phosphor-react-native";
+import React from "react";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const AgentTracking = () => {
   const { colors } = useTheme();
@@ -19,7 +17,6 @@ const AgentTracking = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-
       {/* FULL SCREEN MAP PLACEHOLDER */}
       <View className="absolute inset-0 bg-gray-300 items-center justify-center">
         {/* In a real app, replace this View with <MapView /> */}
@@ -142,7 +139,7 @@ const AgentTracking = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.push("/(client)/dashboard")}
+              onPress={() => router.navigate("/(client)/dashboard")}
               className="flex-1 py-4 bg-red-50 rounded-2xl items-center justify-center border border-red-100"
             >
               <Text className="text-red-500 font-bold">Cancel</Text>

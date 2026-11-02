@@ -122,7 +122,7 @@ function Matched({
   };
 
   const handlePropertyView = () => {
-    router.push({
+    router.navigate({
       pathname: "/(utilities)/agent-available-properties",
       params: {
         agentId: agent?.agentId,

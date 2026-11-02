@@ -272,7 +272,7 @@ export default function MapScreen() {
             openedRequestRef.current !== String(latestItem.requestId)
           ) {
             openedRequestRef.current = String(latestItem.requestId);
-            router.push({
+            router.navigate({
               pathname: "/(utilities)/requests",
               params: {
                 requestId: String(latestItem.requestId),

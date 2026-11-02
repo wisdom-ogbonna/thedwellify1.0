@@ -1,5 +1,5 @@
 import { useTheme } from "@/hooks/use-theme";
-import { useRouter, usePathname } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { CaretRight, Star } from "phosphor-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
@@ -33,9 +33,9 @@ export default function MiniProfile({ name, rating }: MiniProfileProps) {
   // Handle dynamic routing based on the current screen path
   const handlePress = () => {
     if (pathname.includes("agent-dashboard")) {
-      router.push("/(agent)/agent-profile");
+      router.navigate("/(agent)/agent-profile");
     } else {
-      router.push("/(client)/profile");
+      router.navigate("/(client)/profile");
     }
   };
 

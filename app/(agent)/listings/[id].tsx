@@ -53,7 +53,8 @@ export default function ListingDetailsScreen() {
 
   const toggleAvailability = async () => {
     if (!listing) return;
-    const next = listing.availability === "Unavailable" ? "Available" : "Unavailable";
+    const next =
+      listing.availability === "Unavailable" ? "Available" : "Unavailable";
     try {
       setUpdating(true);
       await listingsApi.setAvailability(listing.id, next);
@@ -67,21 +68,25 @@ export default function ListingDetailsScreen() {
 
   const onDelete = () => {
     if (!listing) return;
-    Alert.alert("Delete property", "This will permanently remove the listing.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await listingsApi.remove(listing.id);
-            router.replace("/(agent)/listings");
-          } catch {
-            Alert.alert("Error", "Could not delete this property.");
-          }
+    Alert.alert(
+      "Delete property",
+      "This will permanently remove the listing.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await listingsApi.remove(listing.id);
+              router.replace("/(agent)/listings");
+            } catch {
+              Alert.alert("Error", "Could not delete this property.");
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   if (loading) {
@@ -94,12 +99,16 @@ export default function ListingDetailsScreen() {
 
   if (!listing) {
     return (
-      <SafeAreaView style={[styles.centered, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        style={[styles.centered, { backgroundColor: colors.background }]}
+      >
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
           {error || "Property not found"}
         </Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 12 }}>
-          <Text style={{ color: colors.primary, fontWeight: "800" }}>Go back</Text>
+          <Text style={{ color: colors.primary, fontWeight: "800" }}>
+            Go back
+          </Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -112,10 +121,22 @@ export default function ListingDetailsScreen() {
     <View style={[styles.flex, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
         {images[0] ? (
-          <Image source={{ uri: images[0] }} style={styles.hero} resizeMode="cover" />
+          <Image
+            source={{ uri: images[0] }}
+            style={styles.hero}
+            resizeMode="cover"
+          />
         ) : (
-          <View style={[styles.hero, styles.heroFallback, { backgroundColor: colors.disabled + "33" }]}>
-            <Text style={{ color: colors.placeholder, fontWeight: "700" }}>No photo</Text>
+          <View
+            style={[
+              styles.hero,
+              styles.heroFallback,
+              { backgroundColor: colors.disabled + "33" },
+            ]}
+          >
+            <Text style={{ color: colors.placeholder, fontWeight: "700" }}>
+              No photo
+            </Text>
           </View>
         )}
 
@@ -123,18 +144,31 @@ export default function ListingDetailsScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backBtnText}>‹</Text>
           </Pressable>
-          <View style={[styles.status, { backgroundColor: available ? "#22C55E" : "#6B7280" }]}>
-            <Text style={styles.badgeText}>{available ? "Available" : "Unavailable"}</Text>
+          <View
+            style={[
+              styles.status,
+              { backgroundColor: available ? "#22C55E" : "#6B7280" },
+            ]}
+          >
+            <Text style={styles.badgeText}>
+              {available ? "Available" : "Unavailable"}
+            </Text>
           </View>
         </SafeAreaView>
 
         <View style={styles.body}>
           <View style={styles.row}>
             <View style={[styles.pill, { backgroundColor: colors.primary }]}>
-              <Text style={styles.badgeText}>{purposeLabel(listing.purpose, listing.tag)}</Text>
+              <Text style={styles.badgeText}>
+                {purposeLabel(listing.purpose, listing.tag)}
+              </Text>
             </View>
-            <View style={[styles.pill, { backgroundColor: colors.disabled + "22" }]}>
-              <Text style={{ color: colors.text, fontWeight: "800", fontSize: 11 }}>
+            <View
+              style={[styles.pill, { backgroundColor: colors.disabled + "22" }]}
+            >
+              <Text
+                style={{ color: colors.text, fontWeight: "800", fontSize: 11 }}
+              >
                 {listing.propertyType}
               </Text>
             </View>
@@ -144,7 +178,9 @@ export default function ListingDetailsScreen() {
             {listing.title || "Untitled property"}
           </Text>
           {!!listing.location && (
-            <Text style={[styles.location, { color: colors.placeholder }]}>{listing.location}</Text>
+            <Text style={[styles.location, { color: colors.placeholder }]}>
+              {listing.location}
+            </Text>
           )}
           <Text style={[styles.price, { color: colors.primary }]}>
             {listing.price ? formatPrice(listing.price) : "Price on request"}
@@ -157,24 +193,38 @@ export default function ListingDetailsScreen() {
           )}
 
           {!!listing.description && (
-            <Text style={[styles.description, { color: colors.text }]}>{listing.description}</Text>
+            <Text style={[styles.description, { color: colors.text }]}>
+              {listing.description}
+            </Text>
           )}
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
         <Pressable
           onPress={toggleAvailability}
           disabled={updating}
-          style={[styles.footerBtn, { borderColor: colors.border, borderWidth: 1 }]}
+          style={[
+            styles.footerBtn,
+            { borderColor: colors.border, borderWidth: 1 },
+          ]}
         >
           <Text style={{ color: colors.text, fontWeight: "800" }}>
-            {updating ? "Updating..." : available ? "Mark unavailable" : "Mark available"}
+            {updating
+              ? "Updating..."
+              : available
+                ? "Mark unavailable"
+                : "Mark available"}
           </Text>
         </Pressable>
         <Pressable
           onPress={() =>
-            router.push({
+            router.navigate({
               pathname: "/(agent)/listings/edit",
               params: { id: listing.id },
             })
@@ -193,7 +243,12 @@ export default function ListingDetailsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
   emptyTitle: { fontSize: 18, fontWeight: "800", textAlign: "center" },
   hero: { width, height: 320 },
   heroFallback: { alignItems: "center", justifyContent: "center" },
@@ -216,7 +271,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backBtnText: { fontSize: 28, lineHeight: 30, color: "#111" },
-  status: { height: 32, paddingHorizontal: 12, borderRadius: 16, justifyContent: "center" },
+  status: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    justifyContent: "center",
+  },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   body: { paddingHorizontal: 20, paddingTop: 20 },
   row: { flexDirection: "row", gap: 8, marginBottom: 12 },
@@ -246,5 +306,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  deleteBtn: { width: "100%", height: 40, alignItems: "center", justifyContent: "center" },
+  deleteBtn: {
+    width: "100%",
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

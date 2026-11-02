@@ -102,7 +102,7 @@ export default function MyListingsScreen() {
     return (
       <Pressable
         onPress={() =>
-          router.push({
+          router.navigate({
             pathname: "/(agent)/listings/[id]",
             params: { id: item.id },
           })
@@ -201,7 +201,7 @@ export default function MyListingsScreen() {
           <View style={styles.actions}>
             <Pressable
               onPress={() =>
-                router.push({
+                router.navigate({
                   pathname: "/(agent)/listings/edit",
                   params: { id: item.id },
                 })
@@ -246,7 +246,7 @@ export default function MyListingsScreen() {
         <Text style={[styles.heading, { color: colors.text }]}>Listings</Text>
 
         <Pressable
-          onPress={() => router.push("/(agent)/listings/new")}
+          onPress={() => router.navigate("/(agent)/listings/new")}
           style={[styles.addButton, { backgroundColor: colors.primary }]}
         >
           <Ionicons name="add" size={18} color="#FFFFFF" />

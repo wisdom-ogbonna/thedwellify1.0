@@ -1,4 +1,3 @@
-import ShareListingSheet from "@/components/listings/share-listing-sheet";
 import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
@@ -371,7 +370,7 @@ export default function ExploreScreen() {
   }, [minPrice, maxPrice]);
 
   const openListing = (item: PublicListing) => {
-    router.push({
+    router.navigate({
       pathname: "/(utilities)/property-details",
       params: { propertyId: item.id },
     });
@@ -501,7 +500,9 @@ export default function ExploreScreen() {
           </Text>
         </View>
 
-        <Pressable onPress={() => router.push("/(utilities)/agent-profile")}>
+        <Pressable
+          onPress={() => router.navigate("/(utilities)/agent-profile")}
+        >
           <View style={{ position: "relative" }}>
             <Image
               source={{

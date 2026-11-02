@@ -148,7 +148,7 @@ export default function DiscoverMarketplaceScreen() {
         <View className="mb-6">
           <View className="flex-row justify-between items-center px-5 mb-4">
             <Text style={{ fontSize: 18, fontWeight: '900', color: textColor, letterSpacing: -0.5 }}>Saved Properties</Text>
-            <TouchableOpacity className="flex-row items-center" onPress={() => router.push("/(client)/saved")}>
+            <TouchableOpacity className="flex-row items-center" onPress={() => router.navigate("/(client)/saved")}>
               <Text style={{ fontSize: 12, color: '#2563EB', fontWeight: '700' }}>View all</Text>
               <ChevronRight size={14} color="#2563EB" />
             </TouchableOpacity>

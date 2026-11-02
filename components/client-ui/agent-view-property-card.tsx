@@ -30,7 +30,7 @@ const PropertyCard = ({
       <Pressable
         onPress={() => {
           onOpened?.();
-          router.push({
+          router.navigate({
             pathname: "/(utilities)/property-view",
             params: {
               propertyId: item.id,

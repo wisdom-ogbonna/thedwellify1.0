@@ -313,7 +313,7 @@ export default function MyListingsScreen() {
         right: 16,
       }}>
         <TouchableOpacity
-          onPress={() => router.push("/(agent)/create-property")}
+          onPress={() => router.navigate("/(agent)/create-property")}
           activeOpacity={0.9}
           style={{
             height: 54,

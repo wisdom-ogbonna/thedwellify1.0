@@ -96,7 +96,7 @@ export default function Request({
         contentContainerStyle={{
           paddingBottom: 105,
         }}
-      > 
+      >
         {/* BUY / RENT SWITCH */}
         <View className="px-6 mb-7 mt-5">
           <View
@@ -251,7 +251,7 @@ export default function Request({
               key="Request Custom Property"
               activeOpacity={0.85}
               onPress={() =>
-                router.push("/(utilities)/request-custom-property")
+                router.navigate("/(utilities)/request-custom-property")
               }
               style={{
                 width: CARD_WIDTH,

@@ -127,7 +127,7 @@ export default function ChatsScreen() {
           {chats.map((chat) => (
             <TouchableOpacity
               key={chat.id}
-              onPress={() => router.push(`/(tabs)/chats/${chat.id}`)}
+              onPress={() => router.navigate(`/(tabs)/chats/${chat.id}`)}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: borderRegular }}
             >
               <View style={{ position: "relative", marginRight: 14 }}>

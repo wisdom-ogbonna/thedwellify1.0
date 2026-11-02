@@ -344,7 +344,7 @@ export default function HistoryScreen() {
         address={addresses[item.id]}
         colors={colors}
         onPress={() => {
-          router.push({
+          router.navigate({
             pathname: "/(utilities)/client-history-event",
             params: {
               item: JSON.stringify(item),
@@ -424,7 +424,7 @@ export default function HistoryScreen() {
         <TouchableOpacity
           activeOpacity={0.8}
           hitSlop={8}
-          onPress={() => router.push("/(client)/client-dashboard")}
+          onPress={() => router.navigate("/(client)/client-dashboard")}
           className="w-11 h-11 rounded-full border items-center justify-center"
           style={{ backgroundColor: colors.card, borderColor: colors.border }}
         >

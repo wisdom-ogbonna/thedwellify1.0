@@ -359,13 +359,13 @@ export default function PremiumProfileScreen() {
             Icon={Bell}
             title="Notifications"
             iconColor="#1877F2"
-            onPress={() => router.push("/(utilities)/notifications")}
+            onPress={() => router.navigate("/(utilities)/notifications")}
           />
           <ProfileMenuRow
             Icon={Clock}
             title="History"
             iconColor="#A8422D"
-            onPress={() => router.push("/(utilities)/history")}
+            onPress={() => router.navigate("/(utilities)/history")}
           />
           <ProfileMenuRow
             Icon={Calendar}

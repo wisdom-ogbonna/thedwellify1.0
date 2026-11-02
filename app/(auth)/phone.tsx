@@ -46,7 +46,7 @@ export default function PhoneScreen() {
         throw new Error("Server did not return a pin_id");
       }
 
-      router.push({
+      router.navigate({
         pathname: "/(auth)/otp",
         params: {
           phone: `+234${processedPhone}`,

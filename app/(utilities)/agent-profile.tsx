@@ -436,7 +436,7 @@ export default function ProfileScreen() {
               return (
                 <View key={item.id}>
                   <Pressable
-                    onPress={() => router.push(item.path as any)}
+                    onPress={() => router.navigate(item.path as any)}
                     android_ripple={{
                       color: isDark
                         ? "rgba(22,135,255,0.08)"

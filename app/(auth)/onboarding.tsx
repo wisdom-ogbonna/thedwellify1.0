@@ -86,7 +86,10 @@ export default function OnboardingScreen() {
   });
 
   const compact = height < 740;
-  const imageHeight = Math.min(height * (compact ? 0.28 : 0.34), compact ? 220 : 280);
+  const imageHeight = Math.min(
+    height * (compact ? 0.28 : 0.34),
+    compact ? 220 : 280,
+  );
   const headlineSize = compact ? 26 : 32;
   const slideHeight = pageHeight || height;
 
@@ -98,7 +101,8 @@ export default function OnboardingScreen() {
           style={[
             styles.dash,
             {
-              backgroundColor: index === activeIndex ? colors.primary : colors.disabled + "55",
+              backgroundColor:
+                index === activeIndex ? colors.primary : colors.disabled + "55",
             },
           ]}
         />
@@ -118,7 +122,7 @@ export default function OnboardingScreen() {
       goTo(activeIndex + 1);
       return;
     }
-    router.push("/(auth)/phone");
+    router.navigate("/(auth)/phone");
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -129,7 +133,12 @@ export default function OnboardingScreen() {
   };
 
   const renderItem = ({ item }: ListRenderItemInfo<Slide>) => (
-    <View style={[styles.slide, { width, height: slideHeight, backgroundColor: colors.background }]}>
+    <View
+      style={[
+        styles.slide,
+        { width, height: slideHeight, backgroundColor: colors.background },
+      ]}
+    >
       <View style={styles.hero}>
         <Image
           source={item.image}
@@ -142,16 +151,25 @@ export default function OnboardingScreen() {
         <Text
           style={[
             styles.headline,
-            { color: colors.text, fontSize: headlineSize, lineHeight: headlineSize + 8 },
+            {
+              color: colors.text,
+              fontSize: headlineSize,
+              lineHeight: headlineSize + 8,
+            },
           ]}
         >
           {item.headlineParts.map((part, index) => (
-            <Text key={`${item.id}-${index}`} style={{ color: part.accent ? colors.primary : colors.text }}>
+            <Text
+              key={`${item.id}-${index}`}
+              style={{ color: part.accent ? colors.primary : colors.text }}
+            >
               {part.text}
             </Text>
           ))}
         </Text>
-        <Text style={[styles.subtitle, { color: colors.placeholder }]}>{item.subtitle}</Text>
+        <Text style={[styles.subtitle, { color: colors.placeholder }]}>
+          {item.subtitle}
+        </Text>
         <Pressable
           onPress={handleNext}
           style={[styles.button, { backgroundColor: colors.primary }]}
@@ -160,19 +178,30 @@ export default function OnboardingScreen() {
         </Pressable>
         <Text style={[styles.terms, { color: colors.placeholder }]}>
           By continuing, you accept our{" "}
-          <Text style={[styles.termsLink, { color: colors.text }]}>Terms & Conditions</Text>
+          <Text style={[styles.termsLink, { color: colors.text }]}>
+            Terms & Conditions
+          </Text>
           {" and "}
-          <Text style={[styles.termsLink, { color: colors.text }]}>Privacy Policy</Text>.
+          <Text style={[styles.termsLink, { color: colors.text }]}>
+            Privacy Policy
+          </Text>
+          .
         </Text>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={["top", "bottom"]}
+    >
       <StatusBar style={isDark ? "light" : "dark"} />
       <View style={styles.progress}>{dashes}</View>
-      <View style={styles.listWrap} onLayout={(event) => setPageHeight(event.nativeEvent.layout.height)}>
+      <View
+        style={styles.listWrap}
+        onLayout={(event) => setPageHeight(event.nativeEvent.layout.height)}
+      >
         <FlatList
           ref={listRef}
           data={SLIDES}

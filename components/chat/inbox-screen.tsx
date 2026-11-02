@@ -35,11 +35,7 @@ const formatTime = (value?: string | null) => {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-export default function InboxScreen({
-  role
-}: {
-  role: "client" | "agent";
-}) {
+export default function InboxScreen({ role }: { role: "client" | "agent" }) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [items, setItems] = useState<Conversation[]>([]);
@@ -139,8 +135,12 @@ export default function InboxScreen({
         byPeer.set(key, item);
         return;
       }
-      const prevTime = prev.lastMessageAt ? new Date(prev.lastMessageAt).getTime() : 0;
-      const nextTime = item.lastMessageAt ? new Date(item.lastMessageAt).getTime() : 0;
+      const prevTime = prev.lastMessageAt
+        ? new Date(prev.lastMessageAt).getTime()
+        : 0;
+      const nextTime = item.lastMessageAt
+        ? new Date(item.lastMessageAt).getTime()
+        : 0;
       const winner = nextTime >= prevTime ? item : prev;
       byPeer.set(key, {
         ...winner,
@@ -190,12 +190,14 @@ export default function InboxScreen({
           (item.property?.purpose
             ? ` - ${purposeLabel(item.property.purpose)}`
             : "") +
-          (item.property?.price ? ` • ${formatPrice(item.property.price)}` : "");
+          (item.property?.price
+            ? ` • ${formatPrice(item.property.price)}`
+            : "");
 
     return (
       <Pressable
         onPress={() =>
-          router.push({
+          router.navigate({
             pathname: "/(utilities)/chats",
             params: { id: item.id },
           })
@@ -238,7 +240,12 @@ export default function InboxScreen({
               style={[styles.name, { color: colors.text }]}
               numberOfLines={1}
             >
-              {peer?.name || (item.kind === "agent_peer" ? "Agent" : role === "agent" ? "Client" : "Agent")}
+              {peer?.name ||
+                (item.kind === "agent_peer"
+                  ? "Agent"
+                  : role === "agent"
+                    ? "Client"
+                    : "Agent")}
             </Text>
             <Text
               style={[
@@ -486,7 +493,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderRadius: 24,
-    backgroundColor: "#121214"
+    backgroundColor: "#121214",
   },
   avatar: { width: 56, height: 56, borderRadius: 18 },
   avatarFallback: { alignItems: "center", justifyContent: "center" },
