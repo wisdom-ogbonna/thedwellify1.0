@@ -245,7 +245,6 @@ export default function RequestMatchScreen() {
 
     clearSheetTimers();
 
-    // Safety net for gestures that don't trigger region-complete normally.
     fallbackTimerRef.current = setTimeout(() => {
       releaseMap();
     }, SHEET_RAISE_FALLBACK_MS);
@@ -267,7 +266,7 @@ export default function RequestMatchScreen() {
       setAddressLoading(false);
 
       if (isGpsLocation) {
-        setAreaName("Your current location");
+        setAreaName(fullAddress);
       } else {
         setAreaName(getAreaName(fullAddress));
       }
