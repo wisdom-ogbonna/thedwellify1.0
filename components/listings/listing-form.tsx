@@ -9,6 +9,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { listingsApi, type ListingPayload } from "@/services/listings";
 import { pickLibraryImages, pickLibraryVideo } from "@/services/media-picker";
 import * as Location from "expo-location";
+import { getCurrentPositionSafe } from "@/services/position";
 import { router, useNavigation } from "expo-router";
 import { CaretLeftIcon, XIcon } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
@@ -158,9 +159,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         );
         return;
       }
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const position = await getCurrentPositionSafe();
       setLatitude(position.coords.latitude);
       setLongitude(position.coords.longitude);
       const results = await Location.reverseGeocodeAsync({

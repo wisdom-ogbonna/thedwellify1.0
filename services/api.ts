@@ -6,6 +6,7 @@ export const API = axios.create({
   timeout: 120000,
 });
 
+
 API.interceptors.request.use(
   async (config) => {
     const user = auth.currentUser;

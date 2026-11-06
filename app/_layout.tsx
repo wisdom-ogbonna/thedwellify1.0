@@ -72,6 +72,7 @@ function AppContent() {
               requestId: String(data.requestId),
               agentId: String(data.agentId || ""),
               propertyType: String(data.propertyType || ""),
+              purpose: String(data.purpose || ""),
               lat: String(data.lat || ""),
               lng: String(data.lng || ""),
             },

@@ -6,6 +6,7 @@ import { API } from "../services/api";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "../config/firebase";
 import * as Location from "expo-location";
+import { getCurrentPositionSafe } from "../services/position";
 import {
   startLocationTracking,
   stopLocationTracking,
@@ -265,9 +266,7 @@ const goOnline = async () => {
       }
 
       // 4. Fetch seed positioning data
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const loc = await getCurrentPositionSafe();
 
       const lat = loc.coords.latitude;
       const lng = loc.coords.longitude;

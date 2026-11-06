@@ -75,6 +75,8 @@ function ClientEvent({
   PROPERTY_TYPES,
   selectedType,
   setSelectedType,
+  selectedPurpose,
+  setSelectedPurpose,
   handleRequest,
   loading,
   matchData,
@@ -104,6 +106,8 @@ function ClientEvent({
           PROPERTY_TYPES={PROPERTY_TYPES}
           selectedType={selectedType}
           setSelectedType={setSelectedType}
+          selectedPurpose={selectedPurpose}
+          setSelectedPurpose={setSelectedPurpose}
           handleRequest={handleRequest}
           loading={loading}
         />

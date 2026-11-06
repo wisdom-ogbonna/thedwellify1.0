@@ -1,4 +1,5 @@
 import * as Location from "expo-location";
+import { getCurrentPositionSafe } from "./position";
 import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
@@ -191,9 +192,7 @@ const startHeartbeatSystem = () => {
         const parsedCoords: Coordinates = JSON.parse(storedLastLocStr);
         await dispatchLocationUpdate(parsedCoords, true);
       } else {
-        const freshPosition = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        const freshPosition = await getCurrentPositionSafe();
         await dispatchLocationUpdate(
           {
             lat: freshPosition.coords.latitude,

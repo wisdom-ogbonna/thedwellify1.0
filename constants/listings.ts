@@ -7,6 +7,16 @@ export const PROPERTY_TYPES = [
   "Other",
 ] as const;
 
+/** Instant agent matching supports these listing types. */
+export const MATCH_PROPERTY_TYPES = [
+  "Hotel",
+  "Apartment",
+  "Shortlet",
+  "Land",
+] as const;
+
+export const MATCH_PURPOSES = ["Buy", "Rent"] as const;
+
 export const PURPOSES = ["Sale", "Rent"] as const;
 export const AVAILABILITIES = ["Available", "Unavailable"] as const;
 

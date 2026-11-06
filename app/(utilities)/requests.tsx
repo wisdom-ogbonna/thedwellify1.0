@@ -19,13 +19,15 @@ export default function RequestDetailsScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { requestId, propertyType, lat, lng, clientName } =
+  const { requestId, propertyType, purpose, lat, lng, clientName } =
     useLocalSearchParams();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
   const [stale, setStale] = useState(false);
   const [staleMessage, setStaleMessage] = useState("");
   const [address, setAddress] = useState("");
+  const [requestType, setRequestType] = useState(String(propertyType || ""));
+  const [requestPurpose, setRequestPurpose] = useState(String(purpose || ""));
   const AGENT_HOME = "/(agent)/agent-dashboard";
 
   const handleAction = async (
@@ -59,6 +61,9 @@ export default function RequestDetailsScreen() {
       try {
         const res = await API.get(`/match/request/${requestId}`);
         const data = res.data;
+
+        if (data?.propertyType) setRequestType(String(data.propertyType));
+        if (data?.purpose) setRequestPurpose(String(data.purpose));
 
         if (!data?.actionable) {
           await stopRingtone();
@@ -190,7 +195,8 @@ export default function RequestDetailsScreen() {
           style={{ borderColor: colors.border }}
         >
           <DetailRow label="Client" value={clientName as string} />
-          <DetailRow label="Property Type" value={propertyType as string} />
+          <DetailRow label="Looking to" value={requestPurpose || "—"} />
+          <DetailRow label="Property Type" value={requestType || "—"} />
           <DetailRow
             label="Property Address"
             value={address || "Loading address..."}

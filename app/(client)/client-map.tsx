@@ -3,6 +3,7 @@ import BottomModal from "@/components/dialogs/bottom-modal";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useTheme } from "@react-navigation/native";
 import * as Location from "expo-location";
+import { getCurrentPositionSafe } from "@/services/position";
 import { useRouter } from "expo-router";
 import React, {
   useCallback,
@@ -29,12 +30,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { MapPinIcon } from "lucide-react-native";
+import { MATCH_PROPERTY_TYPES, MATCH_PURPOSES } from "@/constants/listings";
 import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
 import { registerForPushNotificationsAsync } from "../../services/notification";
 
-const PROPERTY_TYPES = ["Hotel", "Apartment", "Shortlet", "Land"] as const;
+const PROPERTY_TYPES = MATCH_PROPERTY_TYPES;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
+type MatchPurpose = (typeof MATCH_PURPOSES)[number];
 
 const SHEET_RAISE_DELAY_MS = 600;
 const SHEET_RAISE_FALLBACK_MS = 2000;
@@ -80,6 +83,7 @@ type MatchRequest = {
   lat: number;
   lng: number;
   propertyType: PropertyType;
+  purpose?: MatchPurpose | string;
   status: string;
 };
 
@@ -221,6 +225,13 @@ export default function RequestMatchScreen() {
   const [areaName, setAreaName] = useState("Finding your location...");
   const [addressLoading, setAddressLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<PropertyType>("Hotel");
+  const [selectedPurpose, setSelectedPurpose] = useState<MatchPurpose>("Buy");
+
+  useEffect(() => {
+    if (!PROPERTY_TYPES.includes(selectedType)) {
+      setSelectedType("Hotel");
+    }
+  }, [selectedType]);
 
   const [searchText, setSearchText] = useState("Finding your location...");
   const [isEditingSearch, setIsEditingSearch] = useState(false);
@@ -372,9 +383,7 @@ export default function RequestMatchScreen() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const location = await getCurrentPositionSafe(Location.Accuracy.High);
 
       if (requestNumber !== locationRequestRef.current) return;
 
@@ -567,12 +576,28 @@ export default function RequestMatchScreen() {
         },
       };
 
+      const propertyType = PROPERTY_TYPES.find(
+        (type) => type.toLowerCase() === String(selectedType).trim().toLowerCase(),
+      );
+      const purpose = MATCH_PURPOSES.find(
+        (item) => item.toLowerCase() === String(selectedPurpose).trim().toLowerCase(),
+      );
+
+      if (!propertyType || !purpose) {
+        Alert.alert(
+          "Choose what you need",
+          "Select Hotel, Apartment, Shortlet, or Land, and whether you want to Buy or Rent.",
+        );
+        return;
+      }
+
       const createResponse = await API.post<{ requestId: string }>(
         "/match/request",
         {
           lat: selected.lat,
           lng: selected.lng,
-          propertyType: selectedType,
+          propertyType,
+          purpose,
         },
         authHeader,
       );
@@ -756,6 +781,8 @@ export default function RequestMatchScreen() {
           PROPERTY_TYPES={PROPERTY_TYPES}
           selectedType={selectedType}
           setSelectedType={setSelectedType}
+          selectedPurpose={selectedPurpose}
+          setSelectedPurpose={setSelectedPurpose}
           handleRequest={handleRequest}
           loading={loading}
           setMatchData={(data: MatchData | null) => {
@@ -775,6 +802,7 @@ export default function RequestMatchScreen() {
                     lat: liveData.lat,
                     lng: liveData.lng,
                     propertyType: selectedType,
+                    purpose: selectedPurpose,
                     status: liveData.requestStatus,
                   },
                   agent: liveData.agent as any,

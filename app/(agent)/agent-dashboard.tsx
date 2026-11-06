@@ -4,6 +4,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Location from "expo-location";
+import { getCurrentPositionSafe } from "@/services/position";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -279,6 +280,7 @@ export default function MapScreen() {
                 agentId: String(latestItem.agentId),
                 clientName: String(latestItem.clientName),
                 propertyType: String(latestItem.propertyType),
+                purpose: String(latestItem.purpose || ""),
                 lat: String(latestItem.lat),
                 lng: String(latestItem.lng),
               },
@@ -445,9 +447,7 @@ export default function MapScreen() {
           return;
         }
 
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
+        const loc = await getCurrentPositionSafe(Location.Accuracy.High);
 
         setLocation(loc.coords);
       } catch (err) {

@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -5,67 +6,72 @@ import { Platform } from "react-native";
 /**
  * ✅ SETUP NOTIFICATION CHANNELS
  */
+export const REQUEST_CHANNEL_ID = "requests_v4";
+
 export const setupNotifications = async () => {
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("requests_v3", {
+    await Notifications.setNotificationChannelAsync(REQUEST_CHANNEL_ID, {
       name: "Incoming Requests",
-
       importance: Notifications.AndroidImportance.MAX,
-
-      sound: "ringtone",
-
+      sound: "ringtone.wav",
       vibrationPattern: [0, 500, 500, 500],
-
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      enableVibrate: true,
+      lockscreenVisibility:
+        Notifications.AndroidNotificationVisibility.PUBLIC,
     });
   }
 };
 
 /**
- * ✅ REGISTER ANDROID FCM TOKEN
+ * ✅ REGISTER PUSH TOKEN
  */
 export const registerForPushNotificationsAsync = async () => {
   if (!Device.isDevice) {
     alert("Must use physical device for Push Notifications");
-
     return null;
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  const { status: existingStatus } =
+    await Notifications.getPermissionsAsync();
 
   let finalStatus = existingStatus;
 
   if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
+    const { status } = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
 
     finalStatus = status;
   }
 
   if (finalStatus !== "granted") {
     alert("Permission not granted");
-
     return null;
   }
 
-  try {
-    let token = null;
+  const projectId =
+    Constants?.expoConfig?.extra?.eas?.projectId ||
+    Constants?.easConfig?.projectId;
 
-    if (Platform.OS === "android") {
-      // ✅ REAL FCM TOKEN
-      const tokenData = await Notifications.getDevicePushTokenAsync();
-
-      token = tokenData.data;
-
-      console.log("✅ FCM Token:", token);
-    }
-
-    return {
-      token,
-      platform: Platform.OS,
-    };
-  } catch (error) {
-    console.log("❌ Error getting FCM token:", error);
-
+  if (!projectId) {
+    console.log("❌ Missing projectId");
     return null;
   }
+
+  const tokenData = await Notifications.getExpoPushTokenAsync({
+    projectId,
+  });
+
+  const token = tokenData.data;
+
+  console.log("✅ Expo Push Token:", token);
+
+  return {
+    token,
+    platform: Platform.OS,
+  };
 };

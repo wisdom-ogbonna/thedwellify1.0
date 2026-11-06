@@ -1,7 +1,7 @@
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -19,6 +19,8 @@ interface RequestProps {
   PROPERTY_TYPES: string[];
   selectedType: string;
   setSelectedType: (type: string) => void;
+  selectedPurpose: "Buy" | "Rent";
+  setSelectedPurpose: (purpose: "Buy" | "Rent") => void;
   handleRequest: () => void;
   loading: boolean;
 }
@@ -67,12 +69,14 @@ export default function Request({
   PROPERTY_TYPES,
   selectedType,
   setSelectedType,
+  selectedPurpose,
+  setSelectedPurpose,
   handleRequest,
   loading,
 }: RequestProps): React.JSX.Element {
   const { colors, isDark } = useTheme();
 
-  const [listingMode, setListingMode] = useState<"buy" | "rent">("buy");
+  const listingMode = selectedPurpose === "Rent" ? "rent" : "buy";
 
   const primaryColor = colors.primary || "#0066FF";
 
@@ -110,7 +114,7 @@ export default function Request({
             {/* BUY */}
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => setListingMode("buy")}
+              onPress={() => setSelectedPurpose("Buy")}
               className="flex-1 rounded-full flex-row items-center justify-center"
               style={{
                 backgroundColor:
@@ -136,7 +140,7 @@ export default function Request({
             {/* RENT */}
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => setListingMode("rent")}
+              onPress={() => setSelectedPurpose("Rent")}
               className="flex-1 rounded-full flex-row items-center justify-center"
               style={{
                 backgroundColor:
