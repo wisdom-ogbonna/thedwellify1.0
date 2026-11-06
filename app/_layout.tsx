@@ -1,3 +1,4 @@
+import "@/services/notification-task";
 import { useTheme } from "@/hooks/use-theme";
 import NetInfo from "@react-native-community/netinfo";
 import {
@@ -18,7 +19,7 @@ import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { InboxProvider } from "../context/InboxContext";
 import "../global.css";
-import { setupNotifications } from "../services/notification";
+import { setupNotifications, syncPushToken } from "../services/notification";
 import { playRingtone } from "../services/ringtone";
 import { connectSocket, disconnectSocket } from "../services/socket";
 import OfflineModal from "./(utilities)/offlineModal";
@@ -34,6 +35,7 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    priority: Notifications.AndroidNotificationPriority.MAX,
   }),
 });
 
@@ -49,6 +51,22 @@ function AppContent() {
   /* =========================
      HANDLE NOTIFICATIONS
   ========================= */
+  const openIncomingRequest = (data: Record<string, unknown> | undefined) => {
+    if (data?.type !== "incoming_request") return;
+    playRingtone();
+    router.navigate({
+      pathname: "/(utilities)/requests",
+      params: {
+        requestId: String(data.requestId || ""),
+        agentId: String(data.agentId || ""),
+        propertyType: String(data.propertyType || ""),
+        purpose: String(data.purpose || ""),
+        lat: String(data.lat || ""),
+        lng: String(data.lng || ""),
+      },
+    });
+  };
+
   useEffect(() => {
     const receivedSub = Notifications.addNotificationReceivedListener(
       (notification) => {
@@ -63,20 +81,9 @@ function AppContent() {
     const responseSub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
-
+        openIncomingRequest(data as Record<string, unknown>);
         if (data?.type === "incoming_request") {
-          playRingtone();
-          router.navigate({
-            pathname: "/(utilities)/requests",
-            params: {
-              requestId: String(data.requestId),
-              agentId: String(data.agentId || ""),
-              propertyType: String(data.propertyType || ""),
-              purpose: String(data.purpose || ""),
-              lat: String(data.lat || ""),
-              lng: String(data.lng || ""),
-            },
-          });
+          return;
         }
 
         if (
@@ -119,11 +126,24 @@ function AppContent() {
       },
     );
 
+    Notifications.getLastNotificationResponseAsync()
+      .then(async (response) => {
+        const data = response?.notification.request.content.data;
+        openIncomingRequest(data as Record<string, unknown> | undefined);
+        await Notifications.clearLastNotificationResponseAsync?.();
+      })
+      .catch(() => {});
+
     return () => {
       receivedSub.remove();
       responseSub.remove();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!user || !role) return;
+    void syncPushToken(role);
+  }, [user, role]);
 
   /* =========================
      AUTH + ROLE ROUTING

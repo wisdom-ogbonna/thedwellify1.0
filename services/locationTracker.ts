@@ -90,16 +90,25 @@ const dispatchLocationUpdate = async (
       }
     }
 
-    if (!isConnected) {
+    const netState = await NetInfo.fetch();
+    const networkAvailable =
+      (netState.isConnected ?? isConnected) &&
+      netState.isInternetReachable !== false;
+
+    if (!networkAvailable) {
       throw new Error("Network disconnected. Stashing update in queue.");
     }
 
-    await API.post("/location/update", {
-      lat: payload.lat,
-      lng: payload.lng,
-      load: payload.load,
-      rating: payload.rating,
-    });
+    await API.post(
+      "/location/update",
+      {
+        lat: payload.lat,
+        lng: payload.lng,
+        load: payload.load,
+        rating: payload.rating,
+      },
+      { skipErrorLog: true, timeout: 15000 },
+    );
 
     await AsyncStorage.setItem(KEYS.LAST_LOCATION, JSON.stringify(coords));
     console.log(`📍 [${isHeartbeat ? "Heartbeat" : "Movement"}] Sync success.`);
@@ -155,7 +164,7 @@ const drainLocalQueue = async () => {
             load: currentItem.load,
             rating: currentItem.rating,
           },
-          { headers, timeout: 8000 },
+          { headers, timeout: 8000, skipErrorLog: true },
         );
 
         queue.shift();
@@ -459,6 +468,7 @@ const sharedHeadlessLocationEngineRunner = async ({
             "Content-Type": "application/json",
           },
           timeout: 10000,
+          skipErrorLog: true,
         },
       );
 

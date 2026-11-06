@@ -21,7 +21,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
-import { registerForPushNotificationsAsync } from "../../services/notification";
+import { syncPushToken } from "../../services/notification";
 
 interface Agent {
   status?: string;
@@ -205,20 +205,8 @@ export default function MapScreen() {
   const [requestId, setRequestId] = useState<string | null>(null);
   const openedRequestRef = useRef<string | null>(null);
 
-  const syncPushToken = async () => {
-    try {
-      const pushData = await registerForPushNotificationsAsync();
-      if (!pushData) return;
-
-      const payload = {
-        platform: pushData.platform,
-        expoPushToken: pushData.token,
-      };
-
-      await API.post("/notifications/agent", payload);
-    } catch (err) {
-      console.log("Push token sync failed:", err);
-    }
+  const refreshPushToken = async () => {
+    await syncPushToken("agent");
   };
 
   const fetchAgentStatus = async () => {
@@ -424,7 +412,7 @@ export default function MapScreen() {
   };
 
   useEffect(() => {
-    syncPushToken();
+    refreshPushToken();
     fetchAgentStatus();
 
     const interval = setInterval(() => {

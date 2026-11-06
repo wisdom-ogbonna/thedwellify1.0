@@ -33,7 +33,7 @@ import { MapPinIcon } from "lucide-react-native";
 import { MATCH_PROPERTY_TYPES, MATCH_PURPOSES } from "@/constants/listings";
 import { auth } from "../../config/firebase";
 import { API } from "../../services/api";
-import { registerForPushNotificationsAsync } from "../../services/notification";
+import { syncPushToken } from "../../services/notification";
 
 const PROPERTY_TYPES = MATCH_PROPERTY_TYPES;
 type PropertyType = (typeof PROPERTY_TYPES)[number];
@@ -449,36 +449,8 @@ export default function RequestMatchScreen() {
     mapRef.current?.animateToRegion(regionCenteredOnPin(coords), 650);
   };
 
-  const syncPushToken = async (): Promise<void> => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const pushData = await registerForPushNotificationsAsync();
-      if (!pushData) return;
-
-      const token = await user.getIdToken();
-
-      await API.post(
-        "/notifications/client",
-        {
-          platform: pushData.platform,
-          expoPushToken: pushData.token,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-    } catch (err: unknown) {
-      const error = err as ApiError;
-
-      console.log(
-        "Push token sync failed:",
-        error?.response?.data ?? error.message,
-      );
-    }
+  const refreshPushToken = async (): Promise<void> => {
+    await syncPushToken("client");
   };
 
   const getLiveData = useCallback(async (): Promise<void> => {
@@ -529,7 +501,7 @@ export default function RequestMatchScreen() {
 
   useEffect(() => {
     void getLocation();
-    void syncPushToken();
+    void refreshPushToken();
 
     return () => {
       clearSheetTimers();

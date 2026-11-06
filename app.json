@@ -45,7 +45,12 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION"
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.USE_FULL_SCREEN_INTENT"
       ],
       "package": "com.doph574.dwellifyapp"
     },
@@ -59,7 +64,9 @@
         {
           "sounds": [
             "./assets/sounds/ringtone.wav"
-          ]
+          ],
+          "mode": "production",
+          "enableBackgroundRemoteNotifications": true
         }
       ],
       "expo-router",
