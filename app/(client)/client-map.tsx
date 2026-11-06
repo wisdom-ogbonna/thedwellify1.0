@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   centerPin: {
     position: "absolute",
     left: "50%",
-    top: "50%",
+    top: "30%",
     width: 30,
     height: 43,
     marginLeft: -15,

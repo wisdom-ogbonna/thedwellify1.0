@@ -21,24 +21,17 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const TYPES = [
-  "All Types",
-  "Apartment",
-  "House",
-  "Land",
-  "Duplex",
-  "Hotel",
-] as const;
+const ALL = "All";
+const DEFAULT_FILTERS = {
+  purpose: ALL,
+  propertyType: ALL,
+  location: "",
+  minPrice: "",
+  maxPrice: "",
+  sort: "Newest",
+};
 
-const SORT_OPTIONS = [
-  "Default",
-  "Price: Low to High",
-  "Price: High to Low",
-] as const;
-
-const ALL_LOCATIONS = "All Locations";
-
-// ─── Shared bottom-sheet pieces ─────────────────────────────────────────────
+type Filters = typeof DEFAULT_FILTERS;
 
 type SheetTheme = {
   colors: any;
@@ -46,29 +39,302 @@ type SheetTheme = {
   surface: string;
 };
 
-function OptionSheet({
-  visible,
+function formatNairaInput(value: string): string {
+  if (!value) return "";
+  return Number(value).toLocaleString("en-NG");
+}
+
+function FilterChip({
+  label,
+  selected,
+  onPress,
+  colors,
+  outlined = false,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  colors: any;
+  outlined?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.filterChip,
+        {
+          backgroundColor: selected
+            ? outlined
+              ? colors.primary + "12"
+              : colors.primary
+            : colors.disabled + "18",
+          borderColor: selected ? colors.primary : "transparent",
+          borderWidth: selected && outlined ? 1.5 : 0,
+        },
+      ]}
+    >
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.filterChipText,
+          {
+            color: selected
+              ? outlined
+                ? colors.primary
+                : "#FFFFFF"
+              : colors.text,
+          },
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function FilterSection({
   title,
-  options,
-  selectedValue,
-  onSelect,
+  trailing,
+  colors,
+  children,
+}: {
+  title: string;
+  trailing?: string;
+  colors: any;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.filterSection}>
+      <View style={styles.filterSectionHeader}>
+        <Text style={[styles.filterSectionTitle, { color: colors.text }]}>
+          {title}
+        </Text>
+        {!!trailing && (
+          <Text
+            style={[
+              styles.filterSectionTrailing,
+              { color: colors.placeholder },
+            ]}
+          >
+            {trailing}
+          </Text>
+        )}
+      </View>
+      <View style={styles.filterChipGroup}>{children}</View>
+    </View>
+  );
+}
+
+function PriceInput({
+  label,
+  value,
+  onChange,
+  colors,
+  borderColor,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  colors: any;
+  borderColor: string;
+  error?: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.priceInputWrap,
+        {
+          borderColor: error ? "#EF4444" : borderColor,
+          backgroundColor: colors.disabled + "12",
+        },
+      ]}
+    >
+      <Text style={[styles.priceInputLabel, { color: colors.placeholder }]}>
+        {label}
+      </Text>
+      <View style={styles.priceInputLine}>
+        <Text style={[styles.nairaSymbol, { color: colors.placeholder }]}>
+          ₦
+        </Text>
+        <TextInput
+          value={formatNairaInput(value)}
+          onChangeText={(text) => onChange(text.replace(/[^0-9]/g, ""))}
+          keyboardType="numeric"
+          placeholder="0"
+          placeholderTextColor={colors.placeholder}
+          style={[styles.priceInput, { color: colors.text }]}
+        />
+      </View>
+    </View>
+  );
+}
+
+function LocationField({
+  value,
+  onChange,
+  suggestions,
+  colors,
+  borderColor,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  suggestions: string[];
+  colors: any;
+  borderColor: string;
+}) {
+  const [focused, setFocused] = useState(false);
+
+  const filteredSuggestions = useMemo(() => {
+    const query = value.trim().toLowerCase();
+    if (!query) return suggestions.slice(0, 6);
+    return suggestions
+      .filter((item) => item.toLowerCase().includes(query))
+      .slice(0, 6);
+  }, [value, suggestions]);
+
+  const showSuggestions = focused && filteredSuggestions.length > 0;
+
+  return (
+    <View style={styles.locationField}>
+      <View
+        style={[
+          styles.locationInputWrap,
+          { borderColor, backgroundColor: colors.disabled + "12" },
+        ]}
+      >
+        <Ionicons name="search-outline" size={17} color={colors.placeholder} />
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder="Search location or area..."
+          placeholderTextColor={colors.placeholder}
+          style={[styles.locationInput, { color: colors.text }]}
+          autoCorrect={false}
+          autoCapitalize="words"
+        />
+        {!!value && (
+          <Pressable onPress={() => onChange("")} hitSlop={8}>
+            <Ionicons
+              name="close-circle"
+              size={17}
+              color={colors.placeholder}
+            />
+          </Pressable>
+        )}
+      </View>
+
+      {showSuggestions && (
+        <View
+          style={[
+            styles.suggestionList,
+            { borderColor, backgroundColor: colors.disabled + "08" },
+          ]}
+        >
+          {filteredSuggestions.map((item) => {
+            const selected = item.toLowerCase() === value.trim().toLowerCase();
+            return (
+              <Pressable
+                key={item}
+                onPress={() => {
+                  onChange(item);
+                  setFocused(false);
+                }}
+                style={[
+                  styles.suggestionItem,
+                  selected && { backgroundColor: colors.primary + "14" },
+                ]}
+              >
+                <Ionicons
+                  name="location-outline"
+                  size={15}
+                  color={selected ? colors.primary : colors.placeholder}
+                />
+                <Text
+                  style={[
+                    styles.suggestionText,
+                    { color: selected ? colors.primary : colors.text },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item}
+                </Text>
+                {selected && (
+                  <Ionicons name="checkmark" size={16} color={colors.primary} />
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function FiltersSheet({
+  visible,
   onClose,
+  onApply,
+  filters,
+  propertyTypes,
+  locations,
+  purposes,
   colors,
   isDark,
   surface,
 }: SheetTheme & {
   visible: boolean;
-  title: string;
-  options: string[];
-  selectedValue: string;
-  onSelect: (value: string) => void;
   onClose: () => void;
+  onApply: (filters: Filters) => void;
+  filters: Filters;
+  propertyTypes: string[];
+  locations: string[];
+  purposes: string[];
 }) {
+  const [draft, setDraft] = useState<Filters>(filters);
+  const borderColor = isDark ? "#292D36" : "#E8ECF2";
+
+  useEffect(() => {
+    if (visible) setDraft(filters);
+  }, [visible, filters]);
+
+  const update = (key: keyof Filters, value: string) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const reset = () => {
+    setDraft(DEFAULT_FILTERS);
+  };
+
+  const priceError = useMemo(() => {
+    if (!draft.minPrice || !draft.maxPrice) return false;
+    return Number(draft.minPrice) > Number(draft.maxPrice);
+  }, [draft.minPrice, draft.maxPrice]);
+
+  const apply = () => {
+    if (priceError) return;
+    onApply(draft);
+    onClose();
+  };
+
+  const sortOptions = ["Newest", "Price: Low to High", "Price: High to Low"];
+
+  const selectedCount = [
+    draft.purpose !== ALL,
+    draft.propertyType !== ALL,
+    !!draft.location.trim(),
+    !!draft.minPrice || !!draft.maxPrice,
+    draft.sort !== "Newest",
+  ].filter(Boolean).length;
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <View style={styles.modalRoot}>
@@ -76,179 +342,160 @@ function OptionSheet({
 
         <View
           style={[
-            styles.sheet,
+            styles.filterSheet,
             {
               backgroundColor: surface,
-              borderColor: isDark ? "#2A2A2A" : "#EBEBEF",
+              borderColor,
             },
           ]}
         >
-          <View style={styles.sheetHeader}>
+          <View style={styles.sheetHandle} />
+
+          <View
+            style={[styles.sheetHeader, { borderBottomColor: borderColor }]}
+          >
+            <Pressable
+              onPress={onClose}
+              style={[
+                styles.closeButton,
+                { backgroundColor: colors.disabled + "22" },
+              ]}
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={22} color={colors.text} />
+            </Pressable>
+
             <Text style={[styles.sheetTitle, { color: colors.text }]}>
-              {title}
+              Filters
             </Text>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={colors.placeholder} />
+
+            <Pressable onPress={reset} hitSlop={8}>
+              <Text style={[styles.resetText, { color: colors.primary }]}>
+                Reset
+              </Text>
             </Pressable>
           </View>
 
-          <FlatList
-            data={options}
-            keyExtractor={(item) => item}
-            style={{ maxHeight: 360 }}
-            renderItem={({ item }) => {
-              const active = item === selectedValue;
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <FilterSection title="LISTING PURPOSE" colors={colors}>
+              {purposes.map((purpose) => (
+                <FilterChip
+                  key={purpose}
+                  label={
+                    purpose === ALL ? "All" : purposeLabel(purpose, undefined)
+                  }
+                  selected={draft.purpose === purpose}
+                  onPress={() => update("purpose", purpose)}
+                  colors={colors}
+                />
+              ))}
+            </FilterSection>
 
-              return (
-                <Pressable
-                  onPress={() => {
-                    onSelect(item);
-                    onClose();
-                  }}
-                  style={[
-                    styles.sheetRow,
-                    { borderBottomColor: isDark ? "#242424" : "#F0F0F3" },
-                  ]}
-                >
+            <FilterSection title="PROPERTY TYPE" colors={colors}>
+              {[ALL, ...propertyTypes].map((type) => (
+                <FilterChip
+                  key={type}
+                  label={type}
+                  selected={draft.propertyType === type}
+                  onPress={() => update("propertyType", type)}
+                  colors={colors}
+                />
+              ))}
+            </FilterSection>
+
+            <FilterSection
+              title="PRICE RANGE"
+              trailing="Nigerian Naira"
+              colors={colors}
+            >
+              <View style={styles.priceInputsRow}>
+                <PriceInput
+                  label="Minimum"
+                  value={draft.minPrice}
+                  onChange={(value) => update("minPrice", value)}
+                  colors={colors}
+                  borderColor={borderColor}
+                  error={priceError}
+                />
+                <View style={styles.priceDivider}>
                   <Text
-                    numberOfLines={1}
                     style={[
-                      styles.sheetRowText,
-                      { color: active ? colors.primary : colors.text },
-                      active && { fontWeight: "800" },
+                      styles.priceDividerDash,
+                      { color: colors.placeholder },
                     ]}
                   >
-                    {item}
+                    –
                   </Text>
-                  {active && (
-                    <Ionicons
-                      name="checkmark"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  )}
-                </Pressable>
-              );
-            }}
-          />
-        </View>
-      </View>
-    </Modal>
-  );
-}
+                </View>
+                <PriceInput
+                  label="Maximum"
+                  value={draft.maxPrice}
+                  onChange={(value) => update("maxPrice", value)}
+                  colors={colors}
+                  borderColor={borderColor}
+                  error={priceError}
+                />
+              </View>
+              {priceError && (
+                <Text style={styles.priceErrorText}>
+                  Minimum price cannot exceed maximum price.
+                </Text>
+              )}
+            </FilterSection>
 
-function PriceSheet({
-  visible,
-  minValue,
-  maxValue,
-  onApply,
-  onClear,
-  onClose,
-  colors,
-  isDark,
-  surface,
-}: SheetTheme & {
-  visible: boolean;
-  minValue: string;
-  maxValue: string;
-  onApply: (min: string, max: string) => void;
-  onClear: () => void;
-  onClose: () => void;
-}) {
-  const [min, setMin] = useState(minValue);
-  const [max, setMax] = useState(maxValue);
-
-  // Re-sync the draft fields whenever the sheet is (re)opened, so it always
-  // reflects whatever was last applied rather than stale typing.
-  useEffect(() => {
-    if (visible) {
-      setMin(minValue);
-      setMax(maxValue);
-    }
-  }, [visible, minValue, maxValue]);
-
-  const borderColor = isDark ? "#2A2A2A" : "#EBEBEF";
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalRoot}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-
-        <View style={[styles.sheet, { backgroundColor: surface, borderColor }]}>
-          <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>
-              Price range
-            </Text>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={colors.placeholder} />
-            </Pressable>
-          </View>
-
-          <View style={styles.priceInputsRow}>
-            <View style={[styles.priceInputWrap, { borderColor }]}>
-              <Text
-                style={[styles.priceInputLabel, { color: colors.placeholder }]}
-              >
-                Min (₦)
-              </Text>
-              <TextInput
-                value={min}
-                onChangeText={setMin}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={colors.placeholder}
-                style={[styles.priceInput, { color: colors.text }]}
+            <FilterSection title="LOCATION / AREA" colors={colors}>
+              <LocationField
+                value={draft.location}
+                onChange={(value) => update("location", value)}
+                suggestions={locations}
+                colors={colors}
+                borderColor={borderColor}
               />
+            </FilterSection>
+
+            <FilterSection title="SORT BY" colors={colors}>
+              {sortOptions.map((sort) => (
+                <FilterChip
+                  key={sort}
+                  label={sort}
+                  selected={draft.sort === sort}
+                  onPress={() => update("sort", sort)}
+                  colors={colors}
+                />
+              ))}
+            </FilterSection>
+          </ScrollView>
+
+          <View style={[styles.sheetFooter, { borderTopColor: borderColor }]}>
+            <View style={styles.matchingWrap}>
+              <Text
+                style={[styles.matchingLabel, { color: colors.placeholder }]}
+              >
+                Filters
+              </Text>
+              <Text style={[styles.matchingValue, { color: colors.text }]}>
+                {selectedCount} selected
+              </Text>
             </View>
 
-            <View style={[styles.priceInputWrap, { borderColor }]}>
-              <Text
-                style={[styles.priceInputLabel, { color: colors.placeholder }]}
-              >
-                Max (₦)
-              </Text>
-              <TextInput
-                value={max}
-                onChangeText={setMax}
-                keyboardType="numeric"
-                placeholder="Any"
-                placeholderTextColor={colors.placeholder}
-                style={[styles.priceInput, { color: colors.text }]}
-              />
-            </View>
-          </View>
-
-          <View style={styles.sheetActions}>
             <Pressable
-              onPress={() => {
-                onClear();
-                onClose();
-              }}
-              style={[styles.sheetSecondaryBtn, { borderColor }]}
-            >
-              <Text
-                style={[styles.sheetSecondaryBtnText, { color: colors.text }]}
-              >
-                Clear
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                onApply(min, max);
-                onClose();
-              }}
-              style={[
-                styles.sheetPrimaryBtn,
-                { backgroundColor: colors.primary },
+              onPress={apply}
+              disabled={priceError}
+              style={({ pressed }) => [
+                styles.applyButton,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: priceError ? 0.5 : pressed ? 0.88 : 1,
+                },
               ]}
             >
-              <Text style={styles.sheetPrimaryBtnText}>Apply</Text>
+              <Text style={styles.applyButtonText}>APPLY FILTERS</Text>
+              <Ionicons name="arrow-forward" size={19} color="#FFFFFF" />
             </Pressable>
           </View>
         </View>
@@ -256,8 +503,6 @@ function PriceSheet({
     </Modal>
   );
 }
-
-// ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function ExploreScreen() {
   const { colors, isDark } = useTheme();
@@ -269,17 +514,9 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-
-  const [selectedType, setSelectedType] = useState<string>("All Types");
-  const [locationFilter, setLocationFilter] = useState<string>(ALL_LOCATIONS);
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [sortOption, setSortOption] = useState<string>("Default");
-
-  const [typeSheetVisible, setTypeSheetVisible] = useState(false);
-  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
-  const [priceSheetVisible, setPriceSheetVisible] = useState(false);
-  const [sortSheetVisible, setSortSheetVisible] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
 
   const load = useCallback(async () => {
     try {
@@ -304,70 +541,111 @@ export default function ExploreScreen() {
     }, [load]),
   );
 
-  // Location options are derived from whatever is actually in the current
-  // listings, so the filter never goes stale against a hard-coded list.
-  const locationOptions = useMemo(() => {
-    const unique = Array.from(
-      new Set(
-        listings
-          .map((item) => item.location)
-          .filter((loc): loc is string => !!loc),
-      ),
-    );
+  const propertyTypes = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          listings
+            .map((item) => item.propertyType?.trim())
+            .filter((value): value is string => !!value),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [listings],
+  );
 
-    return [ALL_LOCATIONS, ...unique];
-  }, [listings]);
+  const locations = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          listings
+            .map((item) => item.location?.trim())
+            .filter((value): value is string => !!value),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [listings],
+  );
+
+  const purposes = useMemo(
+    () => [
+      ALL,
+      ...Array.from(
+        new Set(
+          listings
+            .map((item) => item.purpose)
+            .filter((value): value is string => !!value),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    ],
+    [listings],
+  );
 
   const visibleListings = useMemo(() => {
-    let result = listings;
+    let result = [...listings];
 
-    if (selectedType !== "All Types") {
-      result = result.filter(
-        (item) =>
-          item.propertyType?.toLowerCase() === selectedType.toLowerCase(),
+    const normalizedSearch = search.trim().toLowerCase();
+
+    if (normalizedSearch) {
+      result = result.filter((item) =>
+        [item.title, item.location, item.propertyType, item.tag, item.purpose]
+          .filter(Boolean)
+          .some((value) =>
+            String(value).toLowerCase().includes(normalizedSearch),
+          ),
       );
     }
 
-    if (locationFilter !== ALL_LOCATIONS) {
-      result = result.filter((item) => item.location === locationFilter);
+    if (filters.purpose !== ALL) {
+      result = result.filter(
+        (item) => item.purpose?.toLowerCase() === filters.purpose.toLowerCase(),
+      );
     }
 
-    const min = minPrice ? Number(minPrice) : null;
-    const max = maxPrice ? Number(maxPrice) : null;
-
-    if (min !== null && !Number.isNaN(min)) {
-      result = result.filter((item) => (item.price ?? 0) >= min);
+    if (filters.propertyType !== ALL) {
+      result = result.filter(
+        (item) =>
+          item.propertyType?.toLowerCase() ===
+          filters.propertyType.toLowerCase(),
+      );
     }
 
-    if (max !== null && !Number.isNaN(max)) {
-      result = result.filter((item) => (item.price ?? 0) <= max);
+    const locationQuery = filters.location.trim().toLowerCase();
+    if (locationQuery) {
+      result = result.filter((item) =>
+        item.location?.toLowerCase().includes(locationQuery),
+      );
     }
 
-    if (sortOption === "Price: Low to High") {
-      result = [...result].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-    } else if (sortOption === "Price: High to Low") {
-      result = [...result].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    const min = filters.minPrice ? Number(filters.minPrice) : null;
+    const max = filters.maxPrice ? Number(filters.maxPrice) : null;
+
+    if (min !== null && Number.isFinite(min)) {
+      result = result.filter((item) => item.price != null && item.price >= min);
+    }
+
+    if (max !== null && Number.isFinite(max)) {
+      result = result.filter((item) => item.price != null && item.price <= max);
+    }
+
+    if (filters.sort === "Price: Low to High") {
+      result.sort(
+        (a, b) =>
+          (a.price ?? Number.MAX_SAFE_INTEGER) -
+          (b.price ?? Number.MAX_SAFE_INTEGER),
+      );
+    } else if (filters.sort === "Price: High to Low") {
+      result.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
     }
 
     return result;
-  }, [listings, selectedType, locationFilter, minPrice, maxPrice, sortOption]);
+  }, [listings, search, filters]);
 
-  const isLocationActive = locationFilter !== ALL_LOCATIONS;
-  const isPriceActive = !!minPrice || !!maxPrice;
-  const isSortActive = sortOption !== "Default";
-
-  const priceLabel = useMemo(() => {
-    const format = (value: string) => {
-      const n = Number(value);
-      return value && !Number.isNaN(n) ? n.toLocaleString("en-NG") : null;
-    };
-
-    const minLabel = format(minPrice);
-    const maxLabel = format(maxPrice);
-
-    if (!minLabel && !maxLabel) return "Price";
-    return `${minLabel ?? "0"} - ${maxLabel ?? "Any"}`;
-  }, [minPrice, maxPrice]);
+  const activeFilterCount = [
+    filters.purpose !== ALL,
+    filters.propertyType !== ALL,
+    !!filters.location.trim(),
+    !!filters.minPrice || !!filters.maxPrice,
+    filters.sort !== "Newest",
+  ].filter(Boolean).length;
 
   const openListing = (item: PublicListing) => {
     router.navigate({
@@ -376,13 +654,13 @@ export default function ExploreScreen() {
     });
   };
 
-  const getTypeIcon = (type?: string) => {
-    const t = type?.toLowerCase() || "";
-    if (t.includes("apartment")) return "business-outline";
-    if (t.includes("hotel")) return "bed-outline";
-    if (t.includes("house")) return "home-outline";
-    if (t.includes("land")) return "grid-outline";
-    if (t.includes("duplex")) return "home-outline";
+  const getTypeIcon = (type?: string): keyof typeof Ionicons.glyphMap => {
+    const value = type?.toLowerCase() || "";
+    if (value.includes("apartment")) return "business-outline";
+    if (value.includes("hotel")) return "bed-outline";
+    if (value.includes("house") || value.includes("duplex"))
+      return "home-outline";
+    if (value.includes("land")) return "grid-outline";
     return "home-outline";
   };
 
@@ -391,7 +669,6 @@ export default function ExploreScreen() {
     const typeLabel = (item.propertyType || "PROPERTY").toUpperCase();
     const tagLabel = purposeLabel(item.purpose, item.tag).toUpperCase();
 
-    // Determine rate suffix if applicable
     const isNightly =
       item.tag?.toLowerCase().includes("shortlet") ||
       item.propertyType?.toLowerCase().includes("hotel");
@@ -404,11 +681,12 @@ export default function ExploreScreen() {
     return (
       <Pressable
         onPress={() => openListing(item)}
-        style={[
+        style={({ pressed }) => [
           styles.card,
           {
             backgroundColor: surface,
             borderColor: isDark ? "#2A2A2A" : "#F0F0F3",
+            opacity: pressed ? 0.9 : 1,
           },
         ]}
       >
@@ -435,18 +713,18 @@ export default function ExploreScreen() {
             </View>
           )}
 
-          {/* Type Badge (Top Left) */}
           <View style={[styles.typeBadge, { backgroundColor: colors.primary }]}>
             <Ionicons
               name={getTypeIcon(item.propertyType)}
               size={11}
-              color="#FFF"
+              color="#FFFFFF"
               style={{ marginRight: 3 }}
             />
-            <Text style={styles.typeBadgeText}>{typeLabel}</Text>
+            <Text style={styles.typeBadgeText}>
+              {typeLabel === "APARTMENT" ? "APT" : typeLabel}
+            </Text>
           </View>
 
-          {/* Purpose Badge (Top Right) */}
           <View style={styles.purposeBadge}>
             <Text style={styles.purposeBadgeText}>{tagLabel}</Text>
           </View>
@@ -489,7 +767,6 @@ export default function ExploreScreen() {
       style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={[styles.screenTitle, { color: colors.text }]}>
@@ -527,119 +804,89 @@ export default function ExploreScreen() {
         </Pressable>
       </View>
 
-      {/* Filter Row */}
-      <View style={styles.filters}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
+      <View style={styles.searchFilterRow}>
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: surface,
+              borderColor: isDark ? "#2A2A2A" : "#E8ECF2",
+            },
+          ]}
         >
-          {/* Type Pill */}
-          <Pressable
-            onPress={() => setTypeSheetVisible(true)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: colors.primary,
-                borderColor: colors.primary,
-              },
-            ]}
-          >
-            <Text style={[styles.chipText, { color: "#FFF" }]}>
-              {selectedType}
-            </Text>
-            <Ionicons name="chevron-down" size={14} color="#FFF" />
-          </Pressable>
+          <Ionicons
+            name="search-outline"
+            size={19}
+            color={colors.placeholder}
+          />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search properties or locations..."
+            placeholderTextColor={colors.placeholder}
+            style={[styles.searchInput, { color: colors.text }]}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {!!search && (
+            <Pressable onPress={() => setSearch("")} hitSlop={8}>
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={colors.placeholder}
+              />
+            </Pressable>
+          )}
+        </View>
 
-          {/* Location Pill */}
-          <Pressable
-            onPress={() => setLocationSheetVisible(true)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: surface,
-                borderColor: isLocationActive
-                  ? colors.primary
-                  : isDark
-                    ? "#2A2A2A"
-                    : "#EBEBEF",
-              },
-            ]}
-          >
-            <Ionicons
-              name="location-outline"
-              size={14}
-              color={colors.primary}
-            />
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.chipText,
-                { color: isLocationActive ? colors.primary : colors.text },
-              ]}
-            >
-              {isLocationActive ? locationFilter : "Location"}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color={isLocationActive ? colors.primary : colors.placeholder}
-            />
-          </Pressable>
-
-          {/* Price Pill */}
-          <Pressable
-            onPress={() => setPriceSheetVisible(true)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: surface,
-                borderColor: isPriceActive
-                  ? colors.primary
-                  : isDark
-                    ? "#2A2A2A"
-                    : "#EBEBEF",
-              },
-            ]}
-          >
-            <Text style={styles.nairaSymbol}>₦</Text>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.chipText,
-                { color: isPriceActive ? colors.primary : colors.text },
-              ]}
-            >
-              {priceLabel}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color={isPriceActive ? colors.primary : colors.placeholder}
-            />
-          </Pressable>
-
-          {/* Sort Button */}
-          <Pressable
-            onPress={() => setSortSheetVisible(true)}
-            style={[
-              styles.iconChip,
-              {
-                backgroundColor: surface,
-                borderColor: isSortActive
-                  ? colors.primary
-                  : isDark
-                    ? "#2A2A2A"
-                    : "#EBEBEF",
-              },
-            ]}
-          >
-            <Ionicons name="swap-vertical" size={16} color={colors.primary} />
-          </Pressable>
-        </ScrollView>
+        <Pressable
+          onPress={() => setFilterSheetVisible(true)}
+          style={[
+            styles.filterButton,
+            {
+              backgroundColor: activeFilterCount ? colors.primary : surface,
+              borderColor: activeFilterCount
+                ? colors.primary
+                : isDark
+                  ? "#2A2A2A"
+                  : "#E8ECF2",
+            },
+          ]}
+        >
+          <Ionicons
+            name="options-outline"
+            size={21}
+            color={activeFilterCount ? "#FFFFFF" : colors.text}
+          />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterCountBadge}>
+              <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
-      {/* Main Grid Content */}
+      <View style={styles.resultsHeader}>
+        <Text style={[styles.resultsCount, { color: colors.text }]}>
+          {loading
+            ? "Loading properties..."
+            : `${visibleListings.length} ${visibleListings.length === 1 ? "property" : "properties"} found`}
+        </Text>
+        {(activeFilterCount > 0 || !!search) && (
+          <Pressable
+            onPress={() => {
+              setFilters(DEFAULT_FILTERS);
+              setSearch("");
+            }}
+            hitSlop={8}
+          >
+            <Text style={[styles.clearFiltersText, { color: colors.primary }]}>
+              Clear all
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} size="large" />
@@ -665,6 +912,7 @@ export default function ExploreScreen() {
           columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -677,66 +925,30 @@ export default function ExploreScreen() {
           }
           ListEmptyComponent={
             <View style={styles.centered}>
+              <Ionicons
+                name="home-outline"
+                size={32}
+                color={colors.placeholder}
+              />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>
                 No properties found
               </Text>
               <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
-                Try a different search or filter.
+                Try another search or adjust your filters.
               </Text>
             </View>
           }
         />
       )}
 
-      <OptionSheet
-        visible={typeSheetVisible}
-        title="Property type"
-        options={[...TYPES]}
-        selectedValue={selectedType}
-        onSelect={setSelectedType}
-        onClose={() => setTypeSheetVisible(false)}
-        colors={colors}
-        isDark={isDark}
-        surface={surface}
-      />
-
-      <OptionSheet
-        visible={locationSheetVisible}
-        title="Location"
-        options={locationOptions}
-        selectedValue={locationFilter}
-        onSelect={setLocationFilter}
-        onClose={() => setLocationSheetVisible(false)}
-        colors={colors}
-        isDark={isDark}
-        surface={surface}
-      />
-
-      <OptionSheet
-        visible={sortSheetVisible}
-        title="Sort by"
-        options={[...SORT_OPTIONS]}
-        selectedValue={sortOption}
-        onSelect={setSortOption}
-        onClose={() => setSortSheetVisible(false)}
-        colors={colors}
-        isDark={isDark}
-        surface={surface}
-      />
-
-      <PriceSheet
-        visible={priceSheetVisible}
-        minValue={minPrice}
-        maxValue={maxPrice}
-        onApply={(min, max) => {
-          setMinPrice(min);
-          setMaxPrice(max);
-        }}
-        onClear={() => {
-          setMinPrice("");
-          setMaxPrice("");
-        }}
-        onClose={() => setPriceSheetVisible(false)}
+      <FiltersSheet
+        visible={filterSheetVisible}
+        onClose={() => setFilterSheetVisible(false)}
+        onApply={setFilters}
+        filters={filters}
+        propertyTypes={propertyTypes}
+        locations={locations}
+        purposes={purposes}
         colors={colors}
         isDark={isDark}
         surface={surface}
@@ -753,7 +965,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 12,
+    paddingBottom: 14,
   },
   headerCopy: { flex: 1, paddingRight: 12 },
   screenTitle: { fontSize: 30, fontWeight: "900", letterSpacing: -0.6 },
@@ -768,33 +980,59 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
   },
-  filters: { marginBottom: 12 },
-  filterRow: { paddingHorizontal: 20, gap: 8 },
-  chip: {
-    height: 38,
-    maxWidth: 170,
-    paddingHorizontal: 14,
-    borderRadius: 19,
-    borderWidth: 1,
+  searchFilterRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 14,
   },
-  iconChip: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  searchBox: {
+    flex: 1,
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 13, paddingVertical: 0 },
+  filterButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
   },
-  chipText: { fontSize: 13, fontWeight: "700", flexShrink: 1 },
-  nairaSymbol: { fontSize: 13, fontWeight: "800", color: "#0284C7" },
-  list: { paddingHorizontal: 16, paddingBottom: 100 },
-  columnWrapper: {
+  filterCountBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  filterCountText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" },
+  resultsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
+  resultsCount: { fontSize: 13, fontWeight: "800" },
+  clearFiltersText: { fontSize: 12, fontWeight: "800" },
+  list: { paddingHorizontal: 16, paddingBottom: 100 },
+  columnWrapper: { justifyContent: "space-between", marginBottom: 14 },
   card: {
     width: "48%",
     borderWidth: 1,
@@ -820,7 +1058,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   typeBadgeText: {
-    color: "#FFF",
+    color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -852,7 +1090,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
-  emptyTitle: { fontSize: 16, fontWeight: "800", textAlign: "center" },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 8,
+  },
   emptyCopy: { fontSize: 12, textAlign: "center", marginTop: 6 },
   retry: {
     marginTop: 14,
@@ -862,62 +1105,164 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  retryText: { color: "#FFF", fontWeight: "800", fontSize: 12 },
-
-  // ─── Filter sheets ────────────────────────────────────────────────────────
+  retryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
   modalRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.48)",
   },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  filterSheet: {
+    height: "88%",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     borderWidth: 1,
     borderBottomWidth: 0,
-    padding: 20,
-    paddingBottom: 32,
+    overflow: "hidden",
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 72,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#C7D0DC",
+    marginTop: 12,
+    marginBottom: 12,
   },
   sheetHeader: {
+    minHeight: 68,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  sheetTitle: { fontSize: 16, fontWeight: "800" },
-  sheetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 14,
   },
-  sheetRowText: { fontSize: 14, fontWeight: "600", flex: 1, paddingRight: 12 },
-  priceInputsRow: { flexDirection: "row", gap: 12, marginTop: 10 },
+  closeButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetTitle: { flex: 1, fontSize: 21, fontWeight: "900" },
+  resetText: { fontSize: 15, fontWeight: "800" },
+  sheetScroll: { flex: 1 },
+  sheetContent: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 24 },
+  filterSection: { marginTop: 26 },
+  filterSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  filterSectionTrailing: { fontSize: 11, fontWeight: "600" },
+  filterChipGroup: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  filterChip: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterChipText: { fontSize: 13, fontWeight: "700" },
+  priceInputsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+  },
   priceInputWrap: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 10,
+    minWidth: 0,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 66,
   },
-  priceInputLabel: { fontSize: 11, fontWeight: "700", marginBottom: 4 },
-  priceInput: { fontSize: 16, fontWeight: "700", padding: 0 },
-  sheetActions: { flexDirection: "row", gap: 12, marginTop: 20 },
-  sheetPrimaryBtn: {
+  priceInputLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    marginBottom: 7,
+  },
+  priceInputLine: { flexDirection: "row", alignItems: "center", gap: 6 },
+  nairaSymbol: { fontSize: 15, fontWeight: "800" },
+  priceInput: {
     flex: 1,
-    height: 46,
-    borderRadius: 12,
+    minWidth: 0,
+    fontSize: 16,
+    fontWeight: "800",
+    padding: 0,
+  },
+  priceDivider: {
+    width: 14,
     alignItems: "center",
     justifyContent: "center",
+    paddingTop: 18,
   },
-  sheetPrimaryBtnText: { color: "#FFF", fontWeight: "800", fontSize: 14 },
-  sheetSecondaryBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: 12,
+  priceDividerDash: { fontSize: 17, fontWeight: "800" },
+  priceErrorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 9,
+  },
+  locationField: { width: "100%" },
+  locationInputWrap: {
+    minHeight: 50,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  locationInput: { flex: 1, minWidth: 0, fontSize: 13, paddingVertical: 10 },
+  suggestionList: {
+    marginTop: 8,
     borderWidth: 1,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  suggestionText: { flex: 1, minWidth: 0, fontSize: 13, fontWeight: "600" },
+  sheetFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 26,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  matchingWrap: { minWidth: 88 },
+  matchingLabel: { fontSize: 11, fontWeight: "600" },
+  matchingValue: { fontSize: 15, fontWeight: "900", marginTop: 2 },
+  applyButton: {
+    flex: 1,
+    height: 56,
+    borderRadius: 17,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
   },
-  sheetSecondaryBtnText: { fontWeight: "800", fontSize: 14 },
+  applyButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
 });
