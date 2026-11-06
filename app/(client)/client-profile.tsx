@@ -3,20 +3,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
 import { API } from "@/services/api";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import {
   Bell,
-  Calendar,
   ChevronRight,
   Clock,
-  CreditCard,
-  Heart,
-  LifeBuoy,
   LogOut,
-  Settings,
+  StarIcon,
   Trash2Icon,
-  UserCheck2Icon,
 } from "lucide-react-native";
-import { StarIcon } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -349,12 +344,12 @@ export default function PremiumProfileScreen() {
 
         {/* Settings Navigation List Groups */}
         <View className="px-5 mt-4">
-          <ProfileMenuRow
+          {/* <ProfileMenuRow
             Icon={Heart}
             title="Saved Properties"
             badge="12"
             iconColor="#3B82F6"
-          />
+          /> */}
           <ProfileMenuRow
             Icon={Bell}
             title="Notifications"
@@ -367,7 +362,7 @@ export default function PremiumProfileScreen() {
             iconColor="#A8422D"
             onPress={() => router.navigate("/(utilities)/history")}
           />
-          <ProfileMenuRow
+          {/* <ProfileMenuRow
             Icon={Calendar}
             title="Scheduled Visits"
             iconColor="#10B981"
@@ -381,18 +376,27 @@ export default function PremiumProfileScreen() {
             Icon={UserCheck2Icon}
             title="Become an Agent"
             iconColor="#32CD32"
-          />
-          <ProfileMenuRow
+          /> */}
+          {/* <ProfileMenuRow
             Icon={LifeBuoy}
             title="Support & Help"
             iconColor="#F59E0B"
-          />
-          <ProfileMenuRow Icon={StarIcon} title="Rate Us" iconColor="#FFD700" />
+          /> */}
           <ProfileMenuRow
+            Icon={StarIcon}
+            title="Rate Us"
+            iconColor="#FFD700"
+            onPress={() => {
+              WebBrowser.openBrowserAsync(
+                "https://play.google.com/store/apps/details?id=com.doph574.dwellifyapp&pcampaignid=web_share",
+              );
+            }}
+          />
+          {/* <ProfileMenuRow
             Icon={Settings}
             title="Settings"
             iconColor="#64748B"
-          />
+          /> */}
           <ProfileMenuRow
             Icon={LogOut}
             title="Logout"

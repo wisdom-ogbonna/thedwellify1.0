@@ -188,47 +188,47 @@ export default function ProfileScreen() {
   };
 
   const settingsOptions = [
-    {
-      id: "personal",
-      label: "Personal Information",
-      subtitle: "Name, national ID, contact details",
-      icon: UserRound,
-      path: "/(agent)/personalInfo",
-    },
-    {
-      id: "business",
-      label: "Business Information",
-      subtitle: "Agency, broker license, tax info",
-      icon: Building2,
-      path: "/(agent)/businessForm",
-    },
-    {
-      id: "bank",
-      label: "Bank Details & Payouts",
-      subtitle: "Commission accounts and routing",
-      icon: Wallet,
-      path: "/(agent)/bank",
-    },
+    // {
+    //   id: "personal",
+    //   label: "Personal Information",
+    //   subtitle: "Name, national ID, contact details",
+    //   icon: UserRound,
+    //   path: "/(agent)/personalInfo",
+    // },
+    // {
+    //   id: "business",
+    //   label: "Business Information",
+    //   subtitle: "Agency, broker license, tax info",
+    //   icon: Building2,
+    //   path: "/(agent)/businessForm",
+    // },
+    // {
+    //   id: "bank",
+    //   label: "Bank Details & Payouts",
+    //   subtitle: "Commission accounts and routing",
+    //   icon: Wallet,
+    //   path: "/(agent)/bank",
+    // },
     {
       id: "notifications",
-      label: "Notification Settings",
+      label: "Notifications & Alerts",
       subtitle: "Push, inquiries, leads & alerts",
       icon: BellRing,
       path: "/(utilities)/notifications",
-    },
-    {
-      id: "privacy",
-      label: "Privacy & Security",
-      subtitle: "Two-factor auth, passcodes, sessions",
-      icon: LockKeyhole,
-      path: "/(agent)/privacy",
-    },
-    {
-      id: "help",
-      label: "Help & Support",
-      subtitle: "Agent concierge 24/7, FAQs",
-      icon: CircleHelp,
-      path: "/(agent)/help",
+    // },
+    // {
+    //   id: "privacy",
+    //   label: "Privacy & Security",
+    //   subtitle: "Two-factor auth, passcodes, sessions",
+    //   icon: LockKeyhole,
+    //   path: "/(agent)/privacy",
+    // },
+    // {
+    //   id: "help",
+    //   label: "Help & Support",
+    //   subtitle: "Agent concierge 24/7, FAQs",
+    //   icon: CircleHelp,
+    //   path: "/(agent)/help",
     },
   ];
 
