@@ -822,7 +822,7 @@ export default function ExploreScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search properties or locations..."
+            placeholder="Search properties"
             placeholderTextColor={colors.placeholder}
             style={[styles.searchInput, { color: colors.text }]}
             returnKeyType="search"
