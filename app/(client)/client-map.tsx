@@ -4,13 +4,20 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useTheme } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
   Pressable,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import MapView, {
@@ -31,6 +38,16 @@ type PropertyType = (typeof PROPERTY_TYPES)[number];
 
 const SHEET_RAISE_DELAY_MS = 600;
 const SHEET_RAISE_FALLBACK_MS = 2000;
+
+const PIN_COLOR = "#111827";
+const PIN_TOP_FRACTION = 0.3;
+const PIN_VERTICAL_OFFSET_FRACTION = 0.5 - PIN_TOP_FRACTION;
+const PIN_HEAD_SIZE = 30;
+const PIN_STEM_HEIGHT = 7;
+const PIN_DOT_SIZE = 6;
+const PIN_TOTAL_HEIGHT = PIN_HEAD_SIZE + PIN_STEM_HEIGHT + PIN_DOT_SIZE;
+const PIN_ANCHOR_OFFSET = PIN_HEAD_SIZE + PIN_STEM_HEIGHT + PIN_DOT_SIZE / 2;
+const DEFAULT_REGION_DELTA = 0.01;
 
 type Agent = {
   agentId: string;
@@ -85,6 +102,18 @@ type ApiError = {
   };
   message: string;
 };
+
+function regionCenteredOnPin(
+  coords: Coords,
+  delta: number = DEFAULT_REGION_DELTA,
+): Region {
+  return {
+    latitude: coords.lat - PIN_VERTICAL_OFFSET_FRACTION * delta,
+    longitude: coords.lng,
+    latitudeDelta: delta,
+    longitudeDelta: delta,
+  };
+}
 
 async function getRealAddress(lat: number, lng: number): Promise<string> {
   try {
@@ -158,7 +187,6 @@ function PropertyPin({ color, label }: { color: string; label: string }) {
           },
         ]}
       >
-        {/* Small house symbol */}
         <View style={pinStyles.house}>
           <View style={[pinStyles.roofLeft, { backgroundColor: "#FFFFFF" }]} />
           <View style={[pinStyles.roofRight, { backgroundColor: "#FFFFFF" }]} />
@@ -213,6 +241,12 @@ export default function RequestMatchScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  const pinAnchorPoint = useMemo(
+    () => ({ x: screenWidth / 2, y: screenHeight * PIN_TOP_FRACTION }),
+    [screenWidth, screenHeight],
+  );
 
   const selectedCoordsRef = useRef<Coords | null>(null);
   const gpsCoordsRef = useRef<Coords | null>(null);
@@ -278,10 +312,21 @@ export default function RequestMatchScreen() {
     (region: Region) => {
       if (!userInteractingRef.current) return;
 
-      void updateSelectedLocation({
-        lat: region.latitude,
-        lng: region.longitude,
-      });
+      (async () => {
+        let coords: Coords = { lat: region.latitude, lng: region.longitude };
+
+        try {
+          const map = mapRef.current;
+          if (map) {
+            const coordinate = await map.coordinateForPoint(pinAnchorPoint);
+            coords = { lat: coordinate.latitude, lng: coordinate.longitude };
+          }
+        } catch {
+          coords = { lat: region.latitude, lng: region.longitude };
+        }
+
+        await updateSelectedLocation(coords);
+      })();
 
       clearSheetTimers();
 
@@ -289,7 +334,7 @@ export default function RequestMatchScreen() {
         releaseMap();
       }, SHEET_RAISE_DELAY_MS);
     },
-    [clearSheetTimers, releaseMap, updateSelectedLocation],
+    [clearSheetTimers, releaseMap, updateSelectedLocation, pinAnchorPoint],
   );
 
   const handleRegionChange = useCallback(
@@ -344,15 +389,7 @@ export default function RequestMatchScreen() {
       await updateSelectedLocation(coords, true);
 
       if (!userInteractingRef.current) {
-        mapRef.current?.animateToRegion(
-          {
-            latitude: coords.lat,
-            longitude: coords.lng,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          },
-          650,
-        );
+        mapRef.current?.animateToRegion(regionCenteredOnPin(coords), 650);
       }
     } catch (error: unknown) {
       Alert.alert("Error", "Failed to get location");
@@ -370,15 +407,7 @@ export default function RequestMatchScreen() {
     if (currentGps) {
       await updateSelectedLocation(currentGps, true);
 
-      mapRef.current?.animateToRegion(
-        {
-          latitude: currentGps.lat,
-          longitude: currentGps.lng,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        },
-        650,
-      );
+      mapRef.current?.animateToRegion(regionCenteredOnPin(currentGps), 650);
 
       return;
     }
@@ -408,15 +437,7 @@ export default function RequestMatchScreen() {
 
     await updateSelectedLocation(coords);
 
-    mapRef.current?.animateToRegion(
-      {
-        latitude: coords.lat,
-        longitude: coords.lng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      },
-      650,
-    );
+    mapRef.current?.animateToRegion(regionCenteredOnPin(coords), 650);
   };
 
   const syncPushToken = async (): Promise<void> => {
@@ -638,7 +659,7 @@ export default function RequestMatchScreen() {
                 ? liveData.agent.phone
                 : `${liveData.agent.phone} (Last known location)`
             }
-            anchor={{ x: 0.5, y: 1 }}
+            anchor={{ x: 0.5, y: 0.92 }}
             tracksViewChanges={false}
           >
             <PropertyPin color="#16A34A" label="Agent" />
@@ -648,10 +669,10 @@ export default function RequestMatchScreen() {
 
       <View pointerEvents="none" style={styles.centerPin}>
         <View style={styles.centerPinHead}>
-          <View style={styles.centerPinDot} />
+          <View style={styles.centerPinHeadDot} />
         </View>
-        <View style={styles.centerPinTip} />
-        <View style={styles.centerPinShadow} />
+        <View style={styles.centerPinStem} />
+        <View style={styles.centerPinGroundDot} />
       </View>
 
       <View
@@ -697,7 +718,6 @@ export default function RequestMatchScreen() {
         </View>
       </View>
 
-      {/* Notification bell */}
       <View
         pointerEvents="box-none"
         style={{
@@ -771,26 +791,25 @@ export default function RequestMatchScreen() {
 }
 
 const styles = StyleSheet.create({
-  // The pin's point sits at the center of the map.
   centerPin: {
     position: "absolute",
     left: "50%",
-    top: "30%",
-    width: 30,
-    height: 43,
-    marginLeft: -15,
-    marginTop: -42,
+    top: `${PIN_TOP_FRACTION * 100}%`,
+    width: PIN_HEAD_SIZE,
+    height: PIN_TOTAL_HEIGHT,
+    marginLeft: -(PIN_HEAD_SIZE / 2),
+    marginTop: -PIN_ANCHOR_OFFSET,
     alignItems: "center",
     zIndex: 25,
   },
 
   centerPinHead: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#111827",
-    borderWidth: 2.5,
-    borderColor: "#FFFFFF",
+    width: PIN_HEAD_SIZE,
+    height: PIN_HEAD_SIZE,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: PIN_COLOR,
     alignItems: "center",
     justifyContent: "center",
     elevation: 5,
@@ -800,30 +819,37 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
 
-  centerPinDot: {
+  centerPinHeadDot: {
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: PIN_COLOR,
   },
 
-  centerPinTip: {
-    position: "absolute",
-    top: 20,
-    width: 15,
-    height: 15,
-    backgroundColor: "#111827",
-    transform: [{ rotate: "45deg" }],
-    zIndex: -1,
+  centerPinStem: {
+    width: 3,
+    height: PIN_STEM_HEIGHT + 2,
+    borderRadius: 1.5,
+    backgroundColor: PIN_COLOR,
+  },
+
+  centerPinGroundDot: {
+    width: PIN_DOT_SIZE,
+    height: PIN_DOT_SIZE,
+    borderRadius: PIN_DOT_SIZE / 2,
+    backgroundColor: PIN_COLOR,
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
   },
 
   centerPinShadow: {
     position: "absolute",
     bottom: 0,
-    width: 10,
-    height: 3,
-    borderRadius: 5,
-    backgroundColor: "rgba(0,0,0,0.2)",
+    width: 14,
+    height: 4,
+    borderRadius: 7,
+    backgroundColor: "rgba(0,0,0,0.22)",
+    zIndex: -1,
   },
 
   locationDropdownPosition: {
@@ -857,15 +883,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 
-  locationIconDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    borderWidth: 2.5,
-    borderColor: "#60A5FA",
-    backgroundColor: "transparent",
-  },
-
   locationInput: {
     flex: 1,
     color: "#FFFFFF",
@@ -885,67 +902,6 @@ const styles = StyleSheet.create({
 
   refreshButtonPressed: {
     opacity: 0.6,
-  },
-
-  refreshIconRing: {
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-    borderTopColor: "transparent",
-    transform: [{ rotate: "45deg" }],
-  },
-
-  refreshIconArrow: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderBottomWidth: 4.5,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#FFFFFF",
-    transform: [{ rotate: "100deg" }],
-  },
-
-  // Shared round floating-button chrome (recenter button).
-  roundIconButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-
-  roundIconButtonPressed: {
-    opacity: 0.8,
-  },
-
-  recenterOuterRing: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  recenterInnerDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#2563EB",
   },
 });
 
