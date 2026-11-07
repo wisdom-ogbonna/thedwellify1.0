@@ -30,7 +30,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -90,7 +89,6 @@ export default function RecommendedScreen() {
 
   const [draftPropertyType, setDraftPropertyType] = useState("All");
   const [draftPurpose, setDraftPurpose] = useState("All");
-  const [draftPlace, setDraftPlace] = useState(EMPTY_PLACE);
   const [draftPriceRange, setDraftPriceRange] =
     useState<PriceRange>(DEFAULT_PRICE);
   const [draftSort, setDraftSort] = useState<SortId>("newest");
@@ -146,15 +144,13 @@ export default function RecommendedScreen() {
 
       if (id !== requestId.current) return;
 
-      const products = res.products.filter((item) => {
-        const blob = `${item.state || ""} ${item.lga || ""} ${item.landmark || ""} ${item.location || ""}`.toLowerCase();
-        if (place.state && !blob.includes(place.state.toLowerCase())) return false;
-        if (place.lga && !blob.includes(place.lga.toLowerCase())) return false;
-        if (place.landmark && !blob.includes(place.landmark.trim().toLowerCase())) {
-          return false;
-        }
-        return true;
-      });
+      // Every active filter above is already sent to the API independently,
+      // which is the single source of truth for matching. We previously
+      // re-filtered the response on the client by checking raw filter text
+      // against a concatenated string of item fields — that duplicate pass
+      // could silently drop valid results (casing/formatting mismatches)
+      // and made combined filters behave inconsistently with each other.
+      const products = res.products ?? [];
 
       setListings(products);
       setTotal(products.length);
@@ -171,7 +167,17 @@ export default function RecommendedScreen() {
         setFetching(false);
       }
     }
-  }, [propertyType, purpose, place.state, place.lga, place.landmark, priceRange.min, priceRange.max, sort, search]);
+  }, [
+    propertyType,
+    purpose,
+    place.state,
+    place.lga,
+    place.landmark,
+    priceRange.min,
+    priceRange.max,
+    sort,
+    search,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -186,30 +192,31 @@ export default function RecommendedScreen() {
     (sort !== "newest" ? 1 : 0) +
     (priceRange.min != null || priceRange.max != null ? 1 : 0);
 
+  // Note: location (state/LGA) is picked directly on this screen via
+  // LocationPicker and applies immediately — it isn't part of the
+  // Apply/Reset draft flow below, which only covers the filters that live
+  // inside the filter sheet (property type, purpose, price, sort).
   const openFilters = useCallback(() => {
     setDraftPropertyType(propertyType);
     setDraftPurpose(purpose);
-    setDraftPlace(place);
     setDraftPriceRange(priceRange);
     setDraftSort(sort);
     setFilterSheetOpen(true);
-  }, [propertyType, purpose, place, priceRange, sort]);
+  }, [propertyType, purpose, priceRange, sort]);
 
   const applyFilters = useCallback(() => {
     hitImpact();
     setPropertyType(draftPropertyType);
     setPurpose(draftPurpose);
-    setPlace(draftPlace);
     setPriceRange(draftPriceRange);
     setSort(draftSort);
     setFilterSheetOpen(false);
-  }, [draftPropertyType, draftPurpose, draftPlace, draftPriceRange, draftSort]);
+  }, [draftPropertyType, draftPurpose, draftPriceRange, draftSort]);
 
   const resetDraftFilters = useCallback(() => {
     hitImpact();
     setDraftPropertyType("All");
     setDraftPurpose("All");
-    setDraftPlace(EMPTY_PLACE);
     setDraftPriceRange(DEFAULT_PRICE);
     setDraftSort("newest");
   }, []);
@@ -223,7 +230,6 @@ export default function RecommendedScreen() {
     setSort("newest");
     setDraftPropertyType("All");
     setDraftPurpose("All");
-    setDraftPlace(EMPTY_PLACE);
     setDraftPriceRange(DEFAULT_PRICE);
     setDraftSort("newest");
   }, []);
@@ -264,7 +270,7 @@ export default function RecommendedScreen() {
         </Text>
 
         <View style={styles.searchRow}>
-          <View
+          {/* <View
             style={[
               styles.search,
               styles.searchField,
@@ -299,7 +305,9 @@ export default function RecommendedScreen() {
                 />
               </Pressable>
             )}
-          </View>
+          </View> */}
+
+          <LocationPicker value={place} onChange={setPlace} compact />
 
           <Pressable
             onPress={openFilters}
@@ -366,6 +374,7 @@ export default function RecommendedScreen() {
       error,
       listings.length,
       fetchListings,
+      place,
     ],
   );
 
@@ -469,8 +478,6 @@ export default function RecommendedScreen() {
         setPropertyType={setDraftPropertyType}
         purpose={draftPurpose}
         setPurpose={setDraftPurpose}
-        place={draftPlace}
-        setPlace={setDraftPlace}
         priceRange={draftPriceRange}
         setPriceRange={setDraftPriceRange}
         sort={draftSort}
@@ -491,8 +498,6 @@ function ListingFilterSheet({
   setPropertyType,
   purpose,
   setPurpose,
-  place,
-  setPlace,
   priceRange,
   setPriceRange,
   sort,
@@ -508,8 +513,6 @@ function ListingFilterSheet({
   setPropertyType: (value: string) => void;
   purpose: string;
   setPurpose: (value: string) => void;
-  place: { state: string; lga: string; landmark: string };
-  setPlace: (value: { state: string; lga: string; landmark: string }) => void;
   priceRange: PriceRange;
   setPriceRange: (value: PriceRange) => void;
   sort: SortId;
@@ -580,10 +583,6 @@ function ListingFilterSheet({
                   />
                 ))}
               </View>
-            </FilterSection>
-
-            <FilterSection title="LOCATION" colors={colors}>
-              <LocationPicker value={place} onChange={setPlace} compact />
             </FilterSection>
 
             <FilterSection title="PROPERTY TYPE" colors={colors}>
@@ -700,15 +699,19 @@ function FilterChip({
       style={[
         styles.filterChip,
         {
-          backgroundColor: selected ? colors.primary : colors.disabled + "18",
+          // Selection is now communicated with a thin colored border
+          // instead of a filled background, so the chip's background
+          // stays the same whether it's selected or not.
+          backgroundColor: colors.disabled + "18",
           borderColor: selected ? colors.primary : colors.border,
+          borderWidth: selected ? 1.5 : 1,
         },
       ]}
     >
       <Text
         style={[
           styles.filterChipText,
-          { color: selected ? "#fff" : colors.text },
+          { color: selected ? colors.primary : colors.text },
         ]}
       >
         {label}
