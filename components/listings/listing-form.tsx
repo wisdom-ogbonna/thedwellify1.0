@@ -1,3 +1,4 @@
+import { LocationPicker } from "@/components/listings/location-picker";
 import {
   PROPERTY_TYPES,
   isLand,
@@ -5,9 +6,14 @@ import {
   needsRooms,
   type Listing,
 } from "@/constants/listings";
+import {
+  formatListingLocation,
+  parseListingLocation,
+} from "@/constants/nigeria-locations";
 import { useTheme } from "@/hooks/use-theme";
 import { listingsApi, type ListingPayload } from "@/services/listings";
 import { pickLibraryImages, pickLibraryVideo } from "@/services/media-picker";
+import { resolvePlaceFromCoords } from "@/services/nigeria-place";
 import * as Location from "expo-location";
 import { getCurrentPositionSafe } from "@/services/position";
 import { router, useNavigation } from "expo-router";
@@ -30,7 +36,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 type LocalMedia = {
   uri: string;
@@ -56,7 +62,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
   const [description, setDescription] = useState("");
   const [plots, setPlots] = useState("");
   const [price, setPrice] = useState("");
-  const [address, setAddress] = useState("");
+  const [place, setPlace] = useState({ state: "", lga: "", landmark: "" });
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [size, setSize] = useState("");
@@ -112,7 +118,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         setDescription(listing.description || "");
         setPlots(listing.plots != null ? String(listing.plots) : "");
         setPrice(String(listing.price || "").replace(/[^\d.]/g, ""));
-        setAddress(listing.location || "");
+        setPlace(parseListingLocation(listing));
         setBedrooms(listing.bedrooms != null ? String(listing.bedrooms) : "");
         setBathrooms(
           listing.bathrooms != null ? String(listing.bathrooms) : "",
@@ -138,11 +144,11 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
   const detailsSelected = needsListingDetails(propertyType);
   const plotsValue = Number(plots);
   const canContinue = [
+    Boolean(place.state && place.lga),
     Boolean(propertyType),
     purpose === "Sale" || purpose === "Rent",
     photos.length > 0,
     price.trim().length > 0 &&
-      address.trim().length > 2 &&
       (landSelected
         ? Number.isInteger(plotsValue) && plotsValue > 0
         : title.trim().length > 2 && description.trim().length > 5),
@@ -155,23 +161,31 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
       if (!permission.granted) {
         Alert.alert(
           "Location needed",
-          "Allow location access to pin this property.",
+          "Allow location access so we can select your state and LGA.",
         );
         return;
       }
       const position = await getCurrentPositionSafe();
       setLatitude(position.coords.latitude);
       setLongitude(position.coords.longitude);
-      const results = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-      const first = results[0];
-      if (first) {
-        setAddress(
-          [first.name, first.street, first.city, first.region, first.country]
-            .filter(Boolean)
-            .join(", "),
+      const detected = await resolvePlaceFromCoords(
+        position.coords.latitude,
+        position.coords.longitude,
+      );
+      setPlace((current) => ({
+        state: detected.state || current.state,
+        lga: detected.lga || (detected.state === current.state ? current.lga : ""),
+        landmark: detected.landmark || current.landmark,
+      }));
+      if (!detected.state) {
+        Alert.alert(
+          "Select location",
+          "We pinned this spot, but you still need to choose the state and LGA.",
+        );
+      } else if (!detected.lga) {
+        Alert.alert(
+          "Select LGA",
+          `We selected ${detected.state}. Choose the LGA from the list.`,
         );
       }
     } catch {
@@ -247,7 +261,10 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
 
   const buildPayload = (): ListingPayload => ({
     title: detailsSelected ? title.trim() : title.trim(),
-    location: address.trim(),
+    location: formatListingLocation(place),
+    state: place.state,
+    lga: place.lga,
+    landmark: place.landmark.trim(),
     price: price.trim(),
     propertyType,
     purpose,
@@ -283,9 +300,15 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
     if (saving) return;
 
     // Validate again at submission time so the request cannot bypass the UI checks.
+    if (!place.state || !place.lga) {
+      Alert.alert("Missing location", "Select a state and LGA.");
+      setStep(1);
+      return;
+    }
+
     if (!propertyType) {
       Alert.alert("Missing information", "Choose a property type.");
-      setStep(1);
+      setStep(2);
       return;
     }
 
@@ -294,13 +317,13 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         "Missing information",
         "Choose whether the property is for sale or rent.",
       );
-      setStep(2);
+      setStep(3);
       return;
     }
 
     if (photos.length === 0) {
       Alert.alert("Missing photos", "Add at least one property photo.");
-      setStep(3);
+      setStep(4);
       return;
     }
 
@@ -312,18 +335,16 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
       ? Number.isInteger(Number(plots)) && Number(plots) > 0
       : title.trim().length > 2 && description.trim().length > 5;
 
-    if (!validPrice || address.trim().length <= 2 || !validDetails) {
+    if (!validPrice || !validDetails) {
       Alert.alert(
         "Check your details",
         !validDetails
           ? landSelected
             ? "Enter a valid number of plots (at least 1)."
             : "Enter a title (at least 3 characters) and description (at least 6 characters)."
-          : !validPrice
-            ? "Enter a valid price greater than zero."
-            : "Enter a location with at least 3 characters.",
+          : "Enter a valid price greater than zero.",
       );
-      setStep(4);
+      setStep(5);
       return;
     }
 
@@ -410,7 +431,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         </View>
 
         <View style={styles.progressRow}>
-          {[1, 2, 3, 4].map((item) => (
+          {[1, 2, 3, 4, 5].map((item) => (
             <View
               key={item}
               style={[
@@ -430,6 +451,64 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
           keyboardShouldPersistTaps="handled"
         >
           {step === 1 && (
+            <>
+              <Text style={[styles.heading, { color: colors.text }]}>
+                Where is this property?
+              </Text>
+              <Text style={[styles.subheading, { color: colors.placeholder }]}>
+                Choose one: detect it automatically, or pick state and LGA from
+                the list.
+              </Text>
+
+              <Pressable
+                onPress={useMyLocation}
+                disabled={locating}
+                style={[
+                  styles.choice,
+                  {
+                    borderColor:
+                      latitude != null ? colors.primary : colors.border,
+                    backgroundColor:
+                      latitude != null ? colors.primary + "14" : "transparent",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.choiceTitle,
+                    {
+                      color:
+                        latitude != null ? colors.primary : colors.text,
+                    },
+                  ]}
+                >
+                  {locating ? "Detecting state & LGA..." : "Use my location"}
+                </Text>
+                <Text
+                  style={[styles.choiceHint, { color: colors.placeholder }]}
+                >
+                  Automatically select state and LGA from GPS
+                </Text>
+              </Pressable>
+
+              <Text
+                style={[
+                  styles.label,
+                  { color: colors.text, marginTop: 8, marginBottom: 12 },
+                ]}
+              >
+                Or select from the list
+              </Text>
+              <LocationPicker value={place} onChange={setPlace} />
+              {latitude != null && longitude != null && (
+                <Text style={[styles.coords, { color: colors.placeholder }]}>
+                  Pin saved: {latitude.toFixed(5)}, {longitude.toFixed(5)}
+                </Text>
+              )}
+            </>
+          )}
+
+          {step === 2 && (
             <>
               <Text style={[styles.heading, { color: colors.text }]}>
                 What property type do you want to list?
@@ -474,7 +553,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
               <Text style={[styles.heading, { color: colors.text }]}>
                 Is this for sale or rent?
@@ -513,7 +592,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
             </>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
               <Text style={[styles.heading, { color: colors.text }]}>
                 Photos & video
@@ -594,15 +673,15 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
             </>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <>
               <Text style={[styles.heading, { color: colors.text }]}>
                 {landSelected ? "Land details" : "Listing details"}
               </Text>
               <Text style={[styles.subheading, { color: colors.placeholder }]}>
                 {landSelected
-                  ? "Land needs the number of plots, price and location."
-                  : "Add a title, description, price and location."}
+                  ? "Land needs the number of plots and price."
+                  : "Add a title, description and price."}
               </Text>
 
               {landSelected ? (
@@ -697,34 +776,6 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                 placeholderTextColor={colors.placeholder}
                 style={inputStyle}
               />
-
-              <View style={styles.locationHeader}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: colors.text, marginBottom: 0 },
-                  ]}
-                >
-                  Location
-                </Text>
-                <Pressable onPress={useMyLocation} disabled={locating}>
-                  <Text style={{ color: colors.primary, fontWeight: "800" }}>
-                    {locating ? "Getting location..." : "Use my location"}
-                  </Text>
-                </Pressable>
-              </View>
-              <TextInput
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Area, street or landmark"
-                placeholderTextColor={colors.placeholder}
-                style={inputStyle}
-              />
-              {latitude != null && longitude != null && (
-                <Text style={[styles.coords, { color: colors.placeholder }]}>
-                  Pin saved: {latitude.toFixed(5)}, {longitude.toFixed(5)}
-                </Text>
-              )}
             </>
           )}
         </ScrollView>
@@ -744,21 +795,23 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
             >
               <Text style={styles.ctaText}>
                 {step === 1
-                  ? "Next: sale or rent"
+                  ? "Next: property type"
                   : step === 2
-                    ? "Next: photos"
-                    : "Next: details"}
+                    ? "Next: sale or rent"
+                    : step === 3
+                      ? "Next: photos"
+                      : "Next: details"}
               </Text>
             </Pressable>
           ) : (
             <Pressable
-              disabled={saving || !canContinue[3]}
+              disabled={saving || !canContinue[4]}
               onPress={handleSubmit}
               style={[
                 styles.cta,
                 {
                   backgroundColor: colors.primary,
-                  opacity: saving || !canContinue[3] ? 0.5 : 1,
+                  opacity: saving || !canContinue[4] ? 0.5 : 1,
                 },
               ]}
             >

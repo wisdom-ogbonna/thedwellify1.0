@@ -1,3 +1,4 @@
+import { LocationPicker } from "@/components/listings/location-picker";
 import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
@@ -25,6 +26,8 @@ const ALL = "All";
 const DEFAULT_FILTERS = {
   purpose: ALL,
   propertyType: ALL,
+  state: "",
+  lga: "",
   location: "",
   minPrice: "",
   maxPrice: "",
@@ -170,116 +173,12 @@ function PriceInput({
   );
 }
 
-function LocationField({
-  value,
-  onChange,
-  suggestions,
-  colors,
-  borderColor,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  suggestions: string[];
-  colors: any;
-  borderColor: string;
-}) {
-  const [focused, setFocused] = useState(false);
-
-  const filteredSuggestions = useMemo(() => {
-    const query = value.trim().toLowerCase();
-    if (!query) return suggestions.slice(0, 6);
-    return suggestions
-      .filter((item) => item.toLowerCase().includes(query))
-      .slice(0, 6);
-  }, [value, suggestions]);
-
-  const showSuggestions = focused && filteredSuggestions.length > 0;
-
-  return (
-    <View style={styles.locationField}>
-      <View
-        style={[
-          styles.locationInputWrap,
-          { borderColor, backgroundColor: colors.disabled + "12" },
-        ]}
-      >
-        <Ionicons name="search-outline" size={17} color={colors.placeholder} />
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder="Search location or area..."
-          placeholderTextColor={colors.placeholder}
-          style={[styles.locationInput, { color: colors.text }]}
-          autoCorrect={false}
-          autoCapitalize="words"
-        />
-        {!!value && (
-          <Pressable onPress={() => onChange("")} hitSlop={8}>
-            <Ionicons
-              name="close-circle"
-              size={17}
-              color={colors.placeholder}
-            />
-          </Pressable>
-        )}
-      </View>
-
-      {showSuggestions && (
-        <View
-          style={[
-            styles.suggestionList,
-            { borderColor, backgroundColor: colors.disabled + "08" },
-          ]}
-        >
-          {filteredSuggestions.map((item) => {
-            const selected = item.toLowerCase() === value.trim().toLowerCase();
-            return (
-              <Pressable
-                key={item}
-                onPress={() => {
-                  onChange(item);
-                  setFocused(false);
-                }}
-                style={[
-                  styles.suggestionItem,
-                  selected && { backgroundColor: colors.primary + "14" },
-                ]}
-              >
-                <Ionicons
-                  name="location-outline"
-                  size={15}
-                  color={selected ? colors.primary : colors.placeholder}
-                />
-                <Text
-                  style={[
-                    styles.suggestionText,
-                    { color: selected ? colors.primary : colors.text },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item}
-                </Text>
-                {selected && (
-                  <Ionicons name="checkmark" size={16} color={colors.primary} />
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
-}
-
 function FiltersSheet({
   visible,
   onClose,
   onApply,
   filters,
   propertyTypes,
-  locations,
   purposes,
   colors,
   isDark,
@@ -290,7 +189,6 @@ function FiltersSheet({
   onApply: (filters: Filters) => void;
   filters: Filters;
   propertyTypes: string[];
-  locations: string[];
   purposes: string[];
 }) {
   const [draft, setDraft] = useState<Filters>(filters);
@@ -324,7 +222,7 @@ function FiltersSheet({
   const selectedCount = [
     draft.purpose !== ALL,
     draft.propertyType !== ALL,
-    !!draft.location.trim(),
+    !!draft.state.trim() || !!draft.lga.trim() || !!draft.location.trim(),
     !!draft.minPrice || !!draft.maxPrice,
     draft.sort !== "Newest",
   ].filter(Boolean).length;
@@ -448,13 +346,22 @@ function FiltersSheet({
               )}
             </FilterSection>
 
-            <FilterSection title="LOCATION / AREA" colors={colors}>
-              <LocationField
-                value={draft.location}
-                onChange={(value) => update("location", value)}
-                suggestions={locations}
-                colors={colors}
-                borderColor={borderColor}
+            <FilterSection title="LOCATION" colors={colors}>
+              <LocationPicker
+                compact
+                value={{
+                  state: draft.state,
+                  lga: draft.lga,
+                  landmark: draft.location,
+                }}
+                onChange={(next) =>
+                  setDraft((current) => ({
+                    ...current,
+                    state: next.state,
+                    lga: next.lga,
+                    location: next.landmark,
+                  }))
+                }
               />
             </FilterSection>
 
@@ -553,18 +460,6 @@ export default function ExploreScreen() {
     [listings],
   );
 
-  const locations = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          listings
-            .map((item) => item.location?.trim())
-            .filter((value): value is string => !!value),
-        ),
-      ).sort((a, b) => a.localeCompare(b)),
-    [listings],
-  );
-
   const purposes = useMemo(
     () => [
       ALL,
@@ -586,7 +481,16 @@ export default function ExploreScreen() {
 
     if (normalizedSearch) {
       result = result.filter((item) =>
-        [item.title, item.location, item.propertyType, item.tag, item.purpose]
+        [
+          item.title,
+          item.location,
+          item.state,
+          item.lga,
+          item.landmark,
+          item.propertyType,
+          item.tag,
+          item.purpose,
+        ]
           .filter(Boolean)
           .some((value) =>
             String(value).toLowerCase().includes(normalizedSearch),
@@ -608,11 +512,21 @@ export default function ExploreScreen() {
       );
     }
 
+    const blob = (item: PublicListing) =>
+      `${item.state || ""} ${item.lga || ""} ${item.landmark || ""} ${item.location || ""}`.toLowerCase();
+    if (filters.state.trim()) {
+      result = result.filter((item) =>
+        blob(item).includes(filters.state.trim().toLowerCase()),
+      );
+    }
+    if (filters.lga.trim()) {
+      result = result.filter((item) =>
+        blob(item).includes(filters.lga.trim().toLowerCase()),
+      );
+    }
     const locationQuery = filters.location.trim().toLowerCase();
     if (locationQuery) {
-      result = result.filter((item) =>
-        item.location?.toLowerCase().includes(locationQuery),
-      );
+      result = result.filter((item) => blob(item).includes(locationQuery));
     }
 
     const min = filters.minPrice ? Number(filters.minPrice) : null;
@@ -642,7 +556,7 @@ export default function ExploreScreen() {
   const activeFilterCount = [
     filters.purpose !== ALL,
     filters.propertyType !== ALL,
-    !!filters.location.trim(),
+    !!filters.state.trim() || !!filters.lga.trim() || !!filters.location.trim(),
     !!filters.minPrice || !!filters.maxPrice,
     filters.sort !== "Newest",
   ].filter(Boolean).length;
@@ -947,7 +861,6 @@ export default function ExploreScreen() {
         onApply={setFilters}
         filters={filters}
         propertyTypes={propertyTypes}
-        locations={locations}
         purposes={purposes}
         colors={colors}
         isDark={isDark}

@@ -47,6 +47,9 @@ export type Listing = {
   id: string;
   title: string;
   location: string;
+  state?: string;
+  lga?: string;
+  landmark?: string;
   price: string | number;
   propertyType: PropertyType | string;
   purpose: Purpose | string;

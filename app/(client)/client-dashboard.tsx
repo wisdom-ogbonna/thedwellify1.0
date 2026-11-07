@@ -1,3 +1,4 @@
+import { LocationPicker } from "@/components/listings/location-picker";
 import PriceFilter, {
   type PriceRange,
 } from "@/components/listings/price-filter";
@@ -60,6 +61,7 @@ const SORTS = [
 type SortId = (typeof SORTS)[number]["id"];
 type ThemeColors = ReturnType<typeof useTheme>["colors"];
 
+const EMPTY_PLACE = { state: "", lga: "", landmark: "" };
 const DEFAULT_PRICE: PriceRange = { min: null, max: null };
 const SCREEN_PAD = 16;
 const CARD_GAP = 12;
@@ -82,11 +84,13 @@ export default function RecommendedScreen() {
 
   const [propertyType, setPropertyType] = useState("All");
   const [purpose, setPurpose] = useState("All");
+  const [place, setPlace] = useState(EMPTY_PLACE);
   const [priceRange, setPriceRange] = useState<PriceRange>(DEFAULT_PRICE);
   const [sort, setSort] = useState<SortId>("newest");
 
   const [draftPropertyType, setDraftPropertyType] = useState("All");
   const [draftPurpose, setDraftPurpose] = useState("All");
+  const [draftPlace, setDraftPlace] = useState(EMPTY_PLACE);
   const [draftPriceRange, setDraftPriceRange] =
     useState<PriceRange>(DEFAULT_PRICE);
   const [draftSort, setDraftSort] = useState<SortId>("newest");
@@ -133,14 +137,27 @@ export default function RecommendedScreen() {
         purpose: purpose === "All" ? undefined : purpose,
         sort,
         q: search || undefined,
+        state: place.state || undefined,
+        lga: place.lga || undefined,
+        landmark: place.landmark || undefined,
         minPrice: priceRange.min ?? undefined,
         maxPrice: priceRange.max ?? undefined,
       });
 
       if (id !== requestId.current) return;
 
-      setListings(res.products);
-      setTotal(res.total);
+      const products = res.products.filter((item) => {
+        const blob = `${item.state || ""} ${item.lga || ""} ${item.landmark || ""} ${item.location || ""}`.toLowerCase();
+        if (place.state && !blob.includes(place.state.toLowerCase())) return false;
+        if (place.lga && !blob.includes(place.lga.toLowerCase())) return false;
+        if (place.landmark && !blob.includes(place.landmark.trim().toLowerCase())) {
+          return false;
+        }
+        return true;
+      });
+
+      setListings(products);
+      setTotal(products.length);
     } catch (err: any) {
       if (id !== requestId.current) return;
 
@@ -154,7 +171,7 @@ export default function RecommendedScreen() {
         setFetching(false);
       }
     }
-  }, [propertyType, purpose, priceRange.min, priceRange.max, sort, search]);
+  }, [propertyType, purpose, place.state, place.lga, place.landmark, priceRange.min, priceRange.max, sort, search]);
 
   useFocusEffect(
     useCallback(() => {
@@ -165,30 +182,34 @@ export default function RecommendedScreen() {
   const activeFilterCount =
     (propertyType !== "All" ? 1 : 0) +
     (purpose !== "All" ? 1 : 0) +
+    (place.state || place.lga || place.landmark ? 1 : 0) +
     (sort !== "newest" ? 1 : 0) +
     (priceRange.min != null || priceRange.max != null ? 1 : 0);
 
   const openFilters = useCallback(() => {
     setDraftPropertyType(propertyType);
     setDraftPurpose(purpose);
+    setDraftPlace(place);
     setDraftPriceRange(priceRange);
     setDraftSort(sort);
     setFilterSheetOpen(true);
-  }, [propertyType, purpose, priceRange, sort]);
+  }, [propertyType, purpose, place, priceRange, sort]);
 
   const applyFilters = useCallback(() => {
     hitImpact();
     setPropertyType(draftPropertyType);
     setPurpose(draftPurpose);
+    setPlace(draftPlace);
     setPriceRange(draftPriceRange);
     setSort(draftSort);
     setFilterSheetOpen(false);
-  }, [draftPropertyType, draftPurpose, draftPriceRange, draftSort]);
+  }, [draftPropertyType, draftPurpose, draftPlace, draftPriceRange, draftSort]);
 
   const resetDraftFilters = useCallback(() => {
     hitImpact();
     setDraftPropertyType("All");
     setDraftPurpose("All");
+    setDraftPlace(EMPTY_PLACE);
     setDraftPriceRange(DEFAULT_PRICE);
     setDraftSort("newest");
   }, []);
@@ -197,10 +218,12 @@ export default function RecommendedScreen() {
     hitImpact();
     setPropertyType("All");
     setPurpose("All");
+    setPlace(EMPTY_PLACE);
     setPriceRange(DEFAULT_PRICE);
     setSort("newest");
     setDraftPropertyType("All");
     setDraftPurpose("All");
+    setDraftPlace(EMPTY_PLACE);
     setDraftPriceRange(DEFAULT_PRICE);
     setDraftSort("newest");
   }, []);
@@ -370,7 +393,7 @@ export default function RecommendedScreen() {
         No available properties
       </Text>
       <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
-        Try another property type, listing purpose or price range.
+        Try another state, LGA, property type, listing purpose or price range.
       </Text>
       {activeFilterCount > 0 && (
         <Pressable
@@ -446,6 +469,8 @@ export default function RecommendedScreen() {
         setPropertyType={setDraftPropertyType}
         purpose={draftPurpose}
         setPurpose={setDraftPurpose}
+        place={draftPlace}
+        setPlace={setDraftPlace}
         priceRange={draftPriceRange}
         setPriceRange={setDraftPriceRange}
         sort={draftSort}
@@ -466,6 +491,8 @@ function ListingFilterSheet({
   setPropertyType,
   purpose,
   setPurpose,
+  place,
+  setPlace,
   priceRange,
   setPriceRange,
   sort,
@@ -481,6 +508,8 @@ function ListingFilterSheet({
   setPropertyType: (value: string) => void;
   purpose: string;
   setPurpose: (value: string) => void;
+  place: { state: string; lga: string; landmark: string };
+  setPlace: (value: { state: string; lga: string; landmark: string }) => void;
   priceRange: PriceRange;
   setPriceRange: (value: PriceRange) => void;
   sort: SortId;
@@ -551,6 +580,10 @@ function ListingFilterSheet({
                   />
                 ))}
               </View>
+            </FilterSection>
+
+            <FilterSection title="LOCATION" colors={colors}>
+              <LocationPicker value={place} onChange={setPlace} compact />
             </FilterSection>
 
             <FilterSection title="PROPERTY TYPE" colors={colors}>

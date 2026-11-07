@@ -20,6 +20,9 @@ export type PublicListing = Listing & {
 export type ListingPayload = {
   title?: string;
   location: string;
+  state?: string;
+  lga?: string;
+  landmark?: string;
   price: string;
   propertyType: string;
   purpose: string;
@@ -50,6 +53,9 @@ const toFormData = (payload: ListingPayload, isUpdate = false) => {
   const form = new FormData();
   if (payload.title) form.append("title", payload.title);
   form.append("location", payload.location);
+  if (payload.state) form.append("state", payload.state);
+  if (payload.lga) form.append("lga", payload.lga);
+  if (payload.landmark) form.append("landmark", payload.landmark);
   form.append("price", payload.price);
   form.append("propertyType", payload.propertyType);
   form.append("purpose", payload.purpose);
@@ -101,6 +107,9 @@ export const listingsApi = {
     purpose?: string;
     sort?: "newest" | "price_asc" | "price_desc";
     q?: string;
+    state?: string;
+    lga?: string;
+    landmark?: string;
     minPrice?: number;
     maxPrice?: number;
   } = {}) => {
@@ -120,6 +129,9 @@ export const listingsApi = {
       purpose?: string;
       sort?: "newest" | "price_asc" | "price_desc";
       q?: string;
+      state?: string;
+      lga?: string;
+      landmark?: string;
       minPrice?: number;
       maxPrice?: number;
     } = {},
