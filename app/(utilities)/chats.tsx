@@ -7,9 +7,9 @@ import {
   connectSocket,
   emitTyping,
   getSocket,
-  isSocketConnected,
   joinConversation,
   leaveConversation,
+  sendLiveMessage,
 } from "@/services/socket";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
@@ -25,6 +25,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  AppState,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -315,8 +316,7 @@ export default function ChatThreadScreen() {
       detach = fn;
     });
 
-    const fallback = setInterval(() => {
-      if (isSocketConnected()) return;
+    const pull = () => {
       chatApi
         .messages(conversationId)
         .then((rows) => {
@@ -324,13 +324,25 @@ export default function ChatThreadScreen() {
           setMessages((prev) => mergeThread(prev, rows));
         })
         .catch(() => undefined);
-    }, 15000);
+    };
+
+    pull();
+    const fallback = setInterval(pull, 2000);
+    const appSub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        connectSocket()
+          .then(() => joinConversation(conversationId))
+          .catch(() => undefined);
+        pull();
+      }
+    });
 
     return () => {
       active = false;
       detach?.();
       if (typingClear) clearTimeout(typingClear);
       clearInterval(fallback);
+      appSub.remove();
       leaveConversation(conversationId);
       emitTyping(conversationId, false);
     };
@@ -380,7 +392,12 @@ export default function ChatThreadScreen() {
       }
 
       try {
-        const message = await chatApi.send(conversationId, next, nonce);
+        let message: ChatMessage;
+        try {
+          message = await sendLiveMessage(conversationId, next, nonce);
+        } catch {
+          message = await chatApi.send(conversationId, next, nonce);
+        }
         setMessages((prev) => {
           const rest = prev.filter(
             (item) => item.id !== nonce && item.id !== message.id,

@@ -1,9 +1,12 @@
 import { io, type Socket } from "socket.io-client";
+import { AppState, type AppStateStatus } from "react-native";
 import { auth } from "../config/firebase";
 import { API } from "./api";
+import type { ChatMessage } from "./chat";
 
 let socket: Socket | null = null;
 let connecting: Promise<Socket | null> | null = null;
+let appStateBound = false;
 
 const socketOrigin = () =>
   String(API.defaults.baseURL || "").replace(/\/api\/?$/, "");
@@ -11,13 +14,27 @@ const socketOrigin = () =>
 const authPayload = async () => {
   const user = auth.currentUser;
   if (!user) return {};
-  const token = await user.getIdToken();
-  return { token };
+  try {
+    const token = await user.getIdToken();
+    return { token };
+  } catch {
+    return {};
+  }
 };
 
 export const getSocket = () => socket;
 
 export const isSocketConnected = () => Boolean(socket?.connected);
+
+const bindAppState = () => {
+  if (appStateBound) return;
+  appStateBound = true;
+  AppState.addEventListener("change", (state: AppStateStatus) => {
+    if (state === "active" && auth.currentUser) {
+      connectSocket().catch(() => undefined);
+    }
+  });
+};
 
 export const connectSocket = async () => {
   if (socket?.connected) return socket;
@@ -30,19 +47,23 @@ export const connectSocket = async () => {
     const origin = socketOrigin();
     if (!origin) return null;
 
+    bindAppState();
+
     if (!socket) {
       socket = io(origin, {
         autoConnect: false,
-        transports: ["websocket", "polling"],
+        transports: ["polling", "websocket"],
+        upgrade: true,
         reconnection: true,
         reconnectionAttempts: Infinity,
-        reconnectionDelay: 500,
-        reconnectionDelayMax: 4000,
-        timeout: 12000,
+        reconnectionDelay: 400,
+        reconnectionDelayMax: 3000,
+        timeout: 15000,
         extraHeaders: {
           "ngrok-skip-browser-warning": "true",
         },
       });
+
       socket.on("reconnect_attempt", async () => {
         if (socket) socket.auth = await authPayload();
       });
@@ -50,7 +71,6 @@ export const connectSocket = async () => {
 
     socket.auth = await authPayload();
     if (!socket.connected) socket.connect();
-
     if (socket.connected) return socket;
 
     await new Promise<void>((resolve) => {
@@ -61,7 +81,7 @@ export const connectSocket = async () => {
       };
       socket?.once("connect", done);
       socket?.once("connect_error", done);
-      setTimeout(done, 8000);
+      setTimeout(done, 6000);
     });
 
     return socket;
@@ -76,7 +96,6 @@ export const connectSocket = async () => {
 
 export const disconnectSocket = () => {
   connecting = null;
-  socket?.removeAllListeners();
   socket?.disconnect();
   socket = null;
 };
@@ -109,3 +128,32 @@ export const emitTyping = (conversationId: string, isTyping: boolean) => {
   if (!conversationId || !socket?.connected) return;
   socket.emit("typing", { conversationId, isTyping });
 };
+
+export const sendLiveMessage = (
+  conversationId: string,
+  text: string,
+  nonce: string,
+): Promise<ChatMessage> =>
+  new Promise((resolve, reject) => {
+    const live = socket;
+    if (!live?.connected) {
+      reject(new Error("socket_offline"));
+      return;
+    }
+    let settled = false;
+    const finish = (err: Error | null, message?: ChatMessage) => {
+      if (settled) return;
+      settled = true;
+      if (err || !message) reject(err || new Error("send_failed"));
+      else resolve(message);
+    };
+    live.emit(
+      "message:send",
+      { conversationId, text, nonce },
+      (res: { ok?: boolean; message?: ChatMessage; error?: string }) => {
+        if (res?.ok && res.message) finish(null, res.message);
+        else finish(new Error(res?.error || "send_failed"));
+      },
+    );
+    setTimeout(() => finish(new Error("socket_timeout")), 5000);
+  });

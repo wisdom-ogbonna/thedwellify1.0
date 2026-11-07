@@ -13,7 +13,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
+import { AppState, useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Colors } from "../constants/theme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
@@ -210,6 +210,12 @@ function AppContent() {
       return;
     }
     connectSocket().catch(() => undefined);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        connectSocket().catch(() => undefined);
+      }
+    });
+    return () => sub.remove();
   }, [user]);
 
   /* Hide android navigation buttons and auto-fade them out */

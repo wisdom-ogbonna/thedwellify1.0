@@ -3,7 +3,7 @@ import { formatPrice, purposeLabel } from "@/constants/listings";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/hooks/use-theme";
 import { chatApi, type ChatMessage, type Conversation } from "@/services/chat";
-import { connectSocket, getSocket, isSocketConnected } from "@/services/socket";
+import { connectSocket, getSocket } from "@/services/socket";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -62,12 +62,23 @@ export default function InboxScreen({ role }: { role: "client" | "agent" }) {
       load();
       connectSocket().catch(() => undefined);
       const timer = setInterval(() => {
-        if (isSocketConnected()) return;
         chatApi
           .list()
-          .then((rows) => setItems(rows))
+          .then((rows) => {
+            setItems((prev) => {
+              if (
+                prev.length === rows.length &&
+                prev[0]?.id === rows[0]?.id &&
+                prev[0]?.lastMessageAt === rows[0]?.lastMessageAt &&
+                prev[0]?.unreadCount === rows[0]?.unreadCount
+              ) {
+                return prev;
+              }
+              return rows;
+            });
+          })
           .catch(() => undefined);
-      }, 15000);
+      }, 2500);
       return () => clearInterval(timer);
     }, [load]),
   );

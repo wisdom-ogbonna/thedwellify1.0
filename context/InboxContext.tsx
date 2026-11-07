@@ -46,8 +46,13 @@ export function InboxProvider({ children }: { children: React.ReactNode }) {
         const onNew = () => {
           refresh();
         };
-        socket?.on("notification:new", onNew);
-        detach = () => socket?.off("notification:new", onNew);
+        const bump = () => refresh();
+        socket?.on("notification:new", bump);
+        socket?.on("message:new", bump);
+        detach = () => {
+          socket?.off("notification:new", bump);
+          socket?.off("message:new", bump);
+        };
       })
       .catch(() => undefined);
     const timer = setInterval(refresh, 20000);
