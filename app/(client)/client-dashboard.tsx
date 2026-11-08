@@ -59,6 +59,7 @@ const SORTS = [
 
 type SortId = (typeof SORTS)[number]["id"];
 type ThemeColors = ReturnType<typeof useTheme>["colors"];
+type FallbackNotice = "relaxed" | "random" | null;
 
 const EMPTY_PLACE = { state: "", lga: "", landmark: "" };
 const DEFAULT_PRICE: PriceRange = { min: null, max: null };
@@ -69,6 +70,17 @@ const SEARCH_DEBOUNCE_MS = 400;
 const hitFeedback = () => Haptics.selectionAsync().catch(() => {});
 const hitImpact = () =>
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
+// Fisher–Yates shuffle, used only for the last-resort "nothing matched,
+// here's something else" tier so those results don't read as a ranked list.
+function shuffle<T>(items: T[]): T[] {
+  const result = items.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 export default function RecommendedScreen() {
   const { colors } = useTheme();
@@ -98,6 +110,7 @@ export default function RecommendedScreen() {
   const [search, setSearch] = useState("");
   const [listings, setListings] = useState<PublicListing[]>([]);
   const [total, setTotal] = useState(0);
+  const [fallbackNotice, setFallbackNotice] = useState<FallbackNotice>(null);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -130,7 +143,7 @@ export default function RecommendedScreen() {
     try {
       setError("");
 
-      const res = await listingsApi.available({
+      const baseParams = {
         propertyType: propertyType === "All" ? undefined : propertyType,
         purpose: purpose === "All" ? undefined : purpose,
         sort,
@@ -140,20 +153,101 @@ export default function RecommendedScreen() {
         landmark: place.landmark || undefined,
         minPrice: priceRange.min ?? undefined,
         maxPrice: priceRange.max ?? undefined,
-      });
+      };
 
-      if (id !== requestId.current) return;
+      // Each tier drops one more filter than the last, ordered from least
+      // to most central to what the user actually asked for. The first
+      // tier that returns results wins. The final tier has nothing left
+      // to drop — it's a plain unfiltered browse, used as a last resort.
+      const relaxationTiers: Array<Partial<typeof baseParams>> = [
+        {},
+        { landmark: undefined },
+        { landmark: undefined, minPrice: undefined, maxPrice: undefined },
+        {
+          landmark: undefined,
+          minPrice: undefined,
+          maxPrice: undefined,
+          q: undefined,
+        },
+        {
+          landmark: undefined,
+          minPrice: undefined,
+          maxPrice: undefined,
+          q: undefined,
+          propertyType: undefined,
+        },
+        {
+          landmark: undefined,
+          minPrice: undefined,
+          maxPrice: undefined,
+          q: undefined,
+          propertyType: undefined,
+          purpose: undefined,
+        },
+        {
+          landmark: undefined,
+          minPrice: undefined,
+          maxPrice: undefined,
+          q: undefined,
+          propertyType: undefined,
+          purpose: undefined,
+          lga: undefined,
+        },
+        {
+          landmark: undefined,
+          minPrice: undefined,
+          maxPrice: undefined,
+          q: undefined,
+          propertyType: undefined,
+          purpose: undefined,
+          lga: undefined,
+          state: undefined,
+        },
+      ];
 
-      // Every active filter above is already sent to the API independently,
-      // which is the single source of truth for matching. We previously
-      // re-filtered the response on the client by checking raw filter text
-      // against a concatenated string of item fields — that duplicate pass
-      // could silently drop valid results (casing/formatting mismatches)
-      // and made combined filters behave inconsistently with each other.
-      const products = res.products ?? [];
+      let products: PublicListing[] = [];
+      let matchedTier = -1;
+      let lastParamsKey: string | null = null;
+
+      for (let tier = 0; tier < relaxationTiers.length; tier++) {
+        if (id !== requestId.current) return;
+
+        const params = { ...baseParams, ...relaxationTiers[tier] };
+        const paramsKey = JSON.stringify(params);
+
+        // A tier whose params are identical to the one we just tried (e.g.
+        // dropping a filter that was already unset) can't produce a new
+        // result — skip the redundant request.
+        if (paramsKey === lastParamsKey) continue;
+        lastParamsKey = paramsKey;
+
+        const res = await listingsApi.available(params);
+
+        if (id !== requestId.current) return;
+
+        products = res.products ?? [];
+        if (products.length > 0) {
+          matchedTier = tier;
+          break;
+        }
+      }
+
+      let notice: FallbackNotice = null;
+      if (products.length > 0) {
+        if (matchedTier === relaxationTiers.length - 1) {
+          // Only the fully unfiltered browse found anything — these
+          // results have no real relationship to the search, so shuffle
+          // them instead of presenting them as a ranked match.
+          products = shuffle(products);
+          notice = "random";
+        } else if (matchedTier > 0) {
+          notice = "relaxed";
+        }
+      }
 
       setListings(products);
       setTotal(products.length);
+      setFallbackNotice(notice);
     } catch (err: any) {
       if (id !== requestId.current) return;
 
@@ -333,9 +427,15 @@ export default function RecommendedScreen() {
             <Text style={[styles.count, { color: colors.text }]}>
               {loading
                 ? "Loading properties..."
-                : `${total} available ${
-                    total === 1 ? "property" : "properties"
-                  }`}
+                : fallbackNotice === "random"
+                  ? `${total} other ${
+                      total === 1 ? "property" : "properties"
+                    } to explore`
+                  : fallbackNotice === "relaxed"
+                    ? `${total} closest ${total === 1 ? "match" : "matches"}`
+                    : `${total} available ${
+                        total === 1 ? "property" : "properties"
+                      }`}
             </Text>
 
             {fetching && !loading && (
@@ -343,6 +443,29 @@ export default function RecommendedScreen() {
             )}
           </View>
         </View>
+
+        {!loading && !error && listings.length > 0 && fallbackNotice && (
+          <View
+            style={[
+              styles.infoBanner,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.primary + "12",
+              },
+            ]}
+          >
+            <Ionicons
+              name="information-circle-outline"
+              size={18}
+              color={colors.primary}
+            />
+            <Text style={[styles.infoBannerText, { color: colors.text }]}>
+              {fallbackNotice === "random"
+                ? "Nothing matched your filters — here are some other available properties."
+                : "No exact matches — showing the closest listings to your filters."}
+            </Text>
+          </View>
+        )}
 
         {!!error && listings.length > 0 && (
           <Pressable
@@ -370,6 +493,7 @@ export default function RecommendedScreen() {
       activeFilterCount,
       loading,
       total,
+      fallbackNotice,
       fetching,
       error,
       listings.length,
@@ -402,7 +526,8 @@ export default function RecommendedScreen() {
         No available properties
       </Text>
       <Text style={[styles.emptyCopy, { color: colors.placeholder }]}>
-        Try another state, LGA, property type, listing purpose or price range.
+        We even checked beyond your filters and couldn't find anything available
+        right now. Please check back soon.
       </Text>
       {activeFilterCount > 0 && (
         <Pressable
@@ -699,9 +824,9 @@ function FilterChip({
       style={[
         styles.filterChip,
         {
-          // Selection is now communicated with a thin colored border
-          // instead of a filled background, so the chip's background
-          // stays the same whether it's selected or not.
+          // Selection is communicated with a thin colored border instead
+          // of a filled background, so the chip's background stays the
+          // same whether it's selected or not.
           backgroundColor: colors.disabled + "18",
           borderColor: selected ? colors.primary : colors.border,
           borderWidth: selected ? 1.5 : 1,
@@ -1003,6 +1128,20 @@ const styles = StyleSheet.create({
   locationLabel: {
     fontSize: 13,
     fontWeight: "500",
+  },
+  infoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
   },
   banner: {
     flexDirection: "row",
