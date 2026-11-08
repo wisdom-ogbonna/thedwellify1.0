@@ -1,42 +1,82 @@
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
 import { auth } from "../config/firebase";
 import { API } from "./api";
 
-/**
- * ✅ SETUP NOTIFICATION CHANNELS
- */
+/** Bump this if the Android channel must be recreated (channels are immutable). */
+export const REQUEST_CHANNEL_ID = "requests_v6";
+export const DEFAULT_CHANNEL_ID = "default";
+
 export const setupNotifications = async () => {
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("requests_v3", {
-      name: "Incoming Requests",
+  if (Platform.OS !== "android") return;
 
-      importance: Notifications.AndroidImportance.MAX,
+  await Notifications.setNotificationChannelAsync(REQUEST_CHANNEL_ID, {
+    name: "Incoming Requests",
+    description: "Rings when a client books you, even if Dwellify is closed.",
+    importance: Notifications.AndroidImportance.MAX,
+    sound: "ringtone.wav",
+    vibrationPattern: [0, 500, 500, 500, 500, 500, 500],
+    enableVibrate: true,
+    enableLights: true,
+    bypassDnd: true,
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    audioAttributes: {
+      usage:
+        Notifications.AndroidAudioUsage?.NOTIFICATION_RINGTONE ??
+        Notifications.AndroidAudioUsage?.ALARM,
+      contentType:
+        Notifications.AndroidAudioContentType?.SONIFICATION ??
+        Notifications.AndroidAudioContentType?.MUSIC,
+    },
+  });
 
-      sound: "ringtone",
-
-      vibrationPattern: [0, 500, 500, 500],
-
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    });
-  }
+  await Notifications.setNotificationChannelAsync(DEFAULT_CHANNEL_ID, {
+    name: "General",
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: "default",
+  });
 };
 
-/**
- * ✅ REGISTER ANDROID FCM TOKEN
- */
 export const registerForPushNotificationsAsync = async () => {
   if (!Device.isDevice) {
-    alert("Must use physical device for Push Notifications");
-
+    console.log("Push skipped: must use a physical device");
     return null;
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-
+  const { status: existingStatus } =
+    await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
+
+  if (existingStatus !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+        allowCriticalAlerts: false,
+      },
+      android: {
+        allowAlert: true,
+        allowSound: true,
+        allowBadge: true,
+      },
+    });
+    finalStatus = status;
+  }
+
+  if (finalStatus !== "granted") {
+    console.log("Push permission not granted");
+    return null;
+  }
+
+  await setupNotifications();
+
+  const projectId =
+    Constants?.expoConfig?.extra?.eas?.projectId ||
+    Constants?.easConfig?.projectId;
+
   let deviceToken: string | null = null;
   try {
     const native = await Notifications.getDevicePushTokenAsync();
@@ -44,44 +84,37 @@ export const registerForPushNotificationsAsync = async () => {
       typeof native.data === "string"
         ? native.data
         : JSON.stringify(native.data);
+    if (Platform.OS === "android") {
+      console.log("✅ FCM Token:", deviceToken);
+    }
   } catch (err) {
     console.log("Native device token unavailable:", err);
   }
 
-  if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
-
-    finalStatus = status;
-  }
-
-  if (finalStatus !== "granted") {
-    alert("Permission not granted");
-
-    return null;
-  }
-
-  try {
-    let token = null;
-
-    if (Platform.OS === "android") {
-      // ✅ REAL FCM TOKEN
-      const tokenData = await Notifications.getDevicePushTokenAsync();
-
-      token = tokenData.data;
-
-      console.log("✅ FCM Token:", token);
+  let expoToken: string | null = null;
+  if (projectId) {
+    try {
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId,
+      });
+      expoToken = tokenData.data;
+      console.log("✅ Expo Push Token:", expoToken);
+    } catch (err) {
+      console.log("Expo push token unavailable:", err);
     }
+  } else {
+    console.log("❌ Missing projectId");
+  }
 
-    return {
-      token,
-      platform: Platform.OS,
-      deviceToken,
-    };
-  } catch (error) {
-    console.log("❌ Error getting FCM token:", error);
-
+  if (!expoToken && !deviceToken) {
     return null;
   }
+
+  return {
+    token: expoToken || deviceToken,
+    deviceToken,
+    platform: Platform.OS,
+  };
 };
 
 export const syncPushToken = async (role?: "agent" | "client" | null) => {
