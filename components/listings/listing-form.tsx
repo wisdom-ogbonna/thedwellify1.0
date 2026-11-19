@@ -65,7 +65,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
   const [place, setPlace] = useState({ state: "", lga: "", landmark: "" });
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
-  const [size, setSize] = useState("");
+  // const [size, setSize] = useState("");
   const [photos, setPhotos] = useState<LocalMedia[]>([]);
   const [video, setVideo] = useState<LocalMedia | null>(null);
   const [removeVideo, setRemoveVideo] = useState(false);
@@ -123,7 +123,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
         setBathrooms(
           listing.bathrooms != null ? String(listing.bathrooms) : "",
         );
-        setSize(listing.size || "");
+        // setSize(listing.size || "");
         setPhotos((listing.images || []).map((uri) => ({ uri, remote: true })));
         setVideo(listing.video ? { uri: listing.video, remote: true } : null);
         setLatitude(listing.latitude ?? null);
@@ -270,9 +270,9 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
     purpose,
     description: detailsSelected ? description.trim() : description.trim(),
     plots: landSelected ? plots.trim() : undefined,
-    bedrooms: needsRooms(propertyType) ? bedrooms : "",
-    bathrooms: needsRooms(propertyType) ? bathrooms : "",
-    size: size.trim(),
+    // bedrooms: needsRooms(propertyType) ? bedrooms : "",
+    // bathrooms: needsRooms(propertyType) ? bathrooms : "",
+    // size: size.trim(),
     features: [],
     latitude,
     longitude,
@@ -737,7 +737,7 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                 style={inputStyle}
               />
 
-              {needsRooms(propertyType) && (
+              {/* {needsRooms(propertyType) && (
                 <View style={styles.row}>
                   <View style={styles.flex}>
                     <Text style={[styles.label, { color: colors.text }]}>
@@ -766,16 +766,16 @@ export default function ListingForm({ listingId }: { listingId?: string }) {
                     />
                   </View>
                 </View>
-              )}
+              )} */}
 
-              <Text style={[styles.label, { color: colors.text }]}>Size</Text>
+              {/* <Text style={[styles.label, { color: colors.text }]}>Size</Text>
               <TextInput
                 value={size}
                 onChangeText={setSize}
                 placeholder="e.g. 450 sqm"
                 placeholderTextColor={colors.placeholder}
                 style={inputStyle}
-              />
+              /> */}
             </>
           )}
         </ScrollView>

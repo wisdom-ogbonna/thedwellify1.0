@@ -529,10 +529,10 @@ export default function CustomPropertyRequest() {
               </Text>
             ) : null}
 
-            <MapPreview
+            {/* <MapPreview
               place={location.split(",")[0].trim() || "Your area"}
               region={location.trim() || "Nigeria"}
-            />
+            /> */}
           </>
         );
 
@@ -1459,258 +1459,258 @@ function WhiteCard({
   );
 }
 
-function MapPreview({ place, region }: { place: string; region: string }) {
-  return (
-    <View
-      style={{
-        marginTop: 20,
-        height: 288,
-        borderRadius: 28,
-        overflow: "hidden",
-        backgroundColor: "#F4F7FB",
-      }}
-    >
-      {/* water + parks */}
-      <View
-        style={{
-          position: "absolute",
-          left: -60,
-          bottom: -80,
-          width: 360,
-          height: 170,
-          borderRadius: 90,
-          backgroundColor: "#D8E8FB",
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          right: -90,
-          top: 70,
-          width: 230,
-          height: 240,
-          borderRadius: 120,
-          backgroundColor: "#DCEAFB",
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          right: 30,
-          top: 6,
-          width: 80,
-          height: 60,
-          borderRadius: 30,
-          backgroundColor: "#E3F1E7",
-        }}
-      />
+// function MapPreview({ place, region }: { place: string; region: string }) {
+//   return (
+//     <View
+//       style={{
+//         marginTop: 20,
+//         height: 288,
+//         borderRadius: 28,
+//         overflow: "hidden",
+//         backgroundColor: "#F4F7FB",
+//       }}
+//     >
+//       {/* water + parks */}
+//       <View
+//         style={{
+//           position: "absolute",
+//           left: -60,
+//           bottom: -80,
+//           width: 360,
+//           height: 170,
+//           borderRadius: 90,
+//           backgroundColor: "#D8E8FB",
+//         }}
+//       />
+//       <View
+//         style={{
+//           position: "absolute",
+//           right: -90,
+//           top: 70,
+//           width: 230,
+//           height: 240,
+//           borderRadius: 120,
+//           backgroundColor: "#DCEAFB",
+//         }}
+//       />
+//       <View
+//         style={{
+//           position: "absolute",
+//           right: 30,
+//           top: 6,
+//           width: 80,
+//           height: 60,
+//           borderRadius: 30,
+//           backgroundColor: "#E3F1E7",
+//         }}
+//       />
 
-      {/* blocks */}
-      {[
-        { top: 30, left: 12, w: 80, h: 70 },
-        { top: 30, left: 140, w: 100, h: 52 },
-        { top: 200, left: 14, w: 100, h: 56 },
-        { top: 150, left: 150, w: 90, h: 60 },
-      ].map((b, i) => (
-        <View
-          key={i}
-          style={{
-            position: "absolute",
-            top: b.top,
-            left: b.left,
-            width: b.w,
-            height: b.h,
-            borderRadius: 8,
-            backgroundColor: "#EBF0F6",
-          }}
-        />
-      ))}
+//       {/* blocks */}
+//       {[
+//         { top: 30, left: 12, w: 80, h: 70 },
+//         { top: 30, left: 140, w: 100, h: 52 },
+//         { top: 200, left: 14, w: 100, h: 56 },
+//         { top: 150, left: 150, w: 90, h: 60 },
+//       ].map((b, i) => (
+//         <View
+//           key={i}
+//           style={{
+//             position: "absolute",
+//             top: b.top,
+//             left: b.left,
+//             width: b.w,
+//             height: b.h,
+//             borderRadius: 8,
+//             backgroundColor: "#EBF0F6",
+//           }}
+//         />
+//       ))}
 
-      {/* roads */}
-      <Road top={118} left={-40} width={460} rotate="0deg" thick={6} />
-      <Road top={80} left={-30} width={420} rotate="26deg" thick={9} />
-      <Road top={110} left={-60} width={520} rotate="18deg" thick={9} />
-      <Road top={150} left={20} width={380} rotate="-62deg" thick={8} />
-      <Road top={150} left="30%" width={420} rotate="62deg" thick={8} />
-      <Road top={190} left={-20} width={460} rotate="8deg" thick={7} />
+//       {/* roads */}
+//       <Road top={118} left={-40} width={460} rotate="0deg" thick={6} />
+//       <Road top={80} left={-30} width={420} rotate="26deg" thick={9} />
+//       <Road top={110} left={-60} width={520} rotate="18deg" thick={9} />
+//       <Road top={150} left={20} width={380} rotate="-62deg" thick={8} />
+//       <Road top={150} left="30%" width={420} rotate="62deg" thick={8} />
+//       <Road top={190} left={-20} width={460} rotate="8deg" thick={7} />
 
-      {/* labels */}
-      <MapLabel top={56} left={26}>
-        GRA PHASE 2
-      </MapLabel>
-      <MapLabel top={96} left="30%">
-        D-LINE
-      </MapLabel>
-      <MapLabel top={90} left="68%">
-        NS AMADI
-      </MapLabel>
-      <MapLabel top={170} left="26%">
-        OLD GRA
-      </MapLabel>
-      <MapLabel top={188} left="50%">
-        PETER ODILI RD
-      </MapLabel>
-      <MapLabel top={248} left="62%" color="#0A84C6">
-        BONNY RIVER
-      </MapLabel>
+//       {/* labels */}
+//       <MapLabel top={56} left={26}>
+//         GRA PHASE 2
+//       </MapLabel>
+//       <MapLabel top={96} left="30%">
+//         D-LINE
+//       </MapLabel>
+//       <MapLabel top={90} left="68%">
+//         NS AMADI
+//       </MapLabel>
+//       <MapLabel top={170} left="26%">
+//         OLD GRA
+//       </MapLabel>
+//       <MapLabel top={188} left="50%">
+//         PETER ODILI RD
+//       </MapLabel>
+//       <MapLabel top={248} left="62%" color="#0A84C6">
+//         BONNY RIVER
+//       </MapLabel>
 
-      {/* radius */}
-      <View
-        style={{
-          position: "absolute",
-          top: 86,
-          left: "50%",
-          marginLeft: -39,
-          width: 78,
-          height: 78,
-          borderRadius: 39,
-          borderWidth: 1.5,
-          borderStyle: "dashed",
-          borderColor: "#5AA2F0",
-          backgroundColor: "rgba(0,119,255,0.10)",
-        }}
-      />
+//       {/* radius */}
+//       <View
+//         style={{
+//           position: "absolute",
+//           top: 86,
+//           left: "50%",
+//           marginLeft: -39,
+//           width: 78,
+//           height: 78,
+//           borderRadius: 39,
+//           borderWidth: 1.5,
+//           borderStyle: "dashed",
+//           borderColor: "#5AA2F0",
+//           backgroundColor: "rgba(0,119,255,0.10)",
+//         }}
+//       />
 
-      {/* pill */}
-      <View
-        style={{
-          position: "absolute",
-          top: 66,
-          left: "50%",
-          marginLeft: -52,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 6,
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderRadius: 16,
-          backgroundColor: "#0077FF",
-          shadowColor: "#0077FF",
-          shadowOpacity: 0.4,
-          shadowRadius: 8,
-          elevation: 5,
-        }}
-      >
-        <View
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: "#FFFFFF",
-          }}
-        />
-        <Text
-          numberOfLines={1}
-          style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}
-        >
-          {place}
-        </Text>
-      </View>
+//       {/* pill */}
+//       <View
+//         style={{
+//           position: "absolute",
+//           top: 66,
+//           left: "50%",
+//           marginLeft: -52,
+//           flexDirection: "row",
+//           alignItems: "center",
+//           gap: 6,
+//           paddingHorizontal: 12,
+//           paddingVertical: 6,
+//           borderRadius: 16,
+//           backgroundColor: "#0077FF",
+//           shadowColor: "#0077FF",
+//           shadowOpacity: 0.4,
+//           shadowRadius: 8,
+//           elevation: 5,
+//         }}
+//       >
+//         <View
+//           style={{
+//             width: 6,
+//             height: 6,
+//             borderRadius: 3,
+//             backgroundColor: "#FFFFFF",
+//           }}
+//         />
+//         <Text
+//           numberOfLines={1}
+//           style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}
+//         >
+//           {place}
+//         </Text>
+//       </View>
 
-      {/* pin */}
-      <View
-        style={{
-          position: "absolute",
-          top: 108,
-          left: "50%",
-          marginLeft: -17,
-          width: 34,
-          height: 34,
-          borderRadius: 17,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#0077FF",
-          borderWidth: 3,
-          borderColor: "#FFFFFF",
-          shadowColor: "#0F172A",
-          shadowOpacity: 0.25,
-          shadowRadius: 6,
-          elevation: 5,
-        }}
-      >
-        <MapPin size={15} color="#FFFFFF" />
-      </View>
+//       {/* pin */}
+//       <View
+//         style={{
+//           position: "absolute",
+//           top: 108,
+//           left: "50%",
+//           marginLeft: -17,
+//           width: 34,
+//           height: 34,
+//           borderRadius: 17,
+//           alignItems: "center",
+//           justifyContent: "center",
+//           backgroundColor: "#0077FF",
+//           borderWidth: 3,
+//           borderColor: "#FFFFFF",
+//           shadowColor: "#0F172A",
+//           shadowOpacity: 0.25,
+//           shadowRadius: 6,
+//           elevation: 5,
+//         }}
+//       >
+//         <MapPin size={15} color="#FFFFFF" />
+//       </View>
 
-      {/* live chip */}
-      <WhiteCard
-        style={{
-          top: 14,
-          left: 14,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 8,
-          paddingHorizontal: 14,
-          paddingVertical: 9,
-        }}
-      >
-        <View
-          style={{
-            width: 9,
-            height: 9,
-            borderRadius: 5,
-            backgroundColor: "#10B981",
-          }}
-        />
-        <Text style={{ color: "#1E293B", fontSize: 14, fontWeight: "700" }}>
-          Live Map View
-        </Text>
-      </WhiteCard>
+//       {/* live chip */}
+//       <WhiteCard
+//         style={{
+//           top: 14,
+//           left: 14,
+//           flexDirection: "row",
+//           alignItems: "center",
+//           gap: 8,
+//           paddingHorizontal: 14,
+//           paddingVertical: 9,
+//         }}
+//       >
+//         <View
+//           style={{
+//             width: 9,
+//             height: 9,
+//             borderRadius: 5,
+//             backgroundColor: "#10B981",
+//           }}
+//         />
+//         <Text style={{ color: "#1E293B", fontSize: 14, fontWeight: "700" }}>
+//           Live Map View
+//         </Text>
+//       </WhiteCard>
 
-      {/* zoom */}
-      <WhiteCard style={{ top: 14, right: 14, width: 34, overflow: "hidden" }}>
-        <View
-          style={{ height: 33, alignItems: "center", justifyContent: "center" }}
-        >
-          <Plus size={16} color="#1E293B" />
-        </View>
-        <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
-        <View
-          style={{ height: 33, alignItems: "center", justifyContent: "center" }}
-        >
-          <Minus size={16} color="#1E293B" />
-        </View>
-      </WhiteCard>
+//       {/* zoom */}
+//       <WhiteCard style={{ top: 14, right: 14, width: 34, overflow: "hidden" }}>
+//         <View
+//           style={{ height: 33, alignItems: "center", justifyContent: "center" }}
+//         >
+//           <Plus size={16} color="#1E293B" />
+//         </View>
+//         <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
+//         <View
+//           style={{ height: 33, alignItems: "center", justifyContent: "center" }}
+//         >
+//           <Minus size={16} color="#1E293B" />
+//         </View>
+//       </WhiteCard>
 
-      {/* region card */}
-      <WhiteCard
-        style={{
-          bottom: 12,
-          left: 14,
-          maxWidth: "62%",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-        }}
-      >
-        <MapPin size={18} color="#0077FF" />
-        <View style={{ flexShrink: 1 }}>
-          <Text
-            numberOfLines={1}
-            style={{ color: "#0F172A", fontSize: 15, fontWeight: "800" }}
-          >
-            {region}
-          </Text>
-          <Text style={{ color: "#64748B", fontSize: 13 }}>
-            Within 15 km radius
-          </Text>
-        </View>
-      </WhiteCard>
+//       {/* region card */}
+//       <WhiteCard
+//         style={{
+//           bottom: 12,
+//           left: 14,
+//           maxWidth: "62%",
+//           flexDirection: "row",
+//           alignItems: "center",
+//           gap: 10,
+//           paddingHorizontal: 14,
+//           paddingVertical: 10,
+//         }}
+//       >
+//         <MapPin size={18} color="#0077FF" />
+//         <View style={{ flexShrink: 1 }}>
+//           <Text
+//             numberOfLines={1}
+//             style={{ color: "#0F172A", fontSize: 15, fontWeight: "800" }}
+//           >
+//             {region}
+//           </Text>
+//           <Text style={{ color: "#64748B", fontSize: 13 }}>
+//             Within 15 km radius
+//           </Text>
+//         </View>
+//       </WhiteCard>
 
-      {/* locate */}
-      <WhiteCard
-        style={{
-          bottom: 12,
-          right: 14,
-          width: 38,
-          height: 38,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Crosshair size={20} color="#1E293B" />
-      </WhiteCard>
-    </View>
-  );
-}
+//       {/* locate */}
+//       <WhiteCard
+//         style={{
+//           bottom: 12,
+//           right: 14,
+//           width: 38,
+//           height: 38,
+//           alignItems: "center",
+//           justifyContent: "center",
+//         }}
+//       >
+//         <Crosshair size={20} color="#1E293B" />
+//       </WhiteCard>
+//     </View>
+//   );
+// }

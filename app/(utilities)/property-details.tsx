@@ -32,7 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { API } from "../../services/api";
 
 const CONTENT_MAX_WIDTH = 640;
-const SHEET_OVERLAP = 24;
+const SHEET_OVERLAP = 10;
 const DESCRIPTION_PREVIEW_CHARS = 280;
 
 type MediaItem = { type: "image" | "video"; uri: string };
