@@ -687,7 +687,7 @@ export default function RequestMatchScreen() {
             onFocus={() => setIsEditingSearch(true)}
             onBlur={() => setIsEditingSearch(false)}
             onSubmitEditing={handleSearchSubmit}
-            editable={!searching}
+            editable={false}
             placeholder="Search for a location"
             placeholderTextColor="rgba(255,255,255,0.45)"
             returnKeyType="search"

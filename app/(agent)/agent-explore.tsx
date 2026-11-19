@@ -6,6 +6,7 @@ import { agentApi } from "@/services/agent";
 import { listingsApi, type PublicListing } from "@/services/listings";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
+import { UserIcon } from "phosphor-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -695,14 +696,9 @@ export default function ExploreScreen() {
           onPress={() => router.navigate("/(utilities)/agent-profile")}
         >
           <View style={{ position: "relative" }}>
-            <Image
-              source={{
-                uri:
-                  profile?.avatar ||
-                  "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
-              }}
-              style={styles.headerAvatar}
-            />
+            <View className="w-12 h-12 rounded-full border-2 border-blue-600 justify-center items-center bg-gray-200 dark:bg-gray-800">
+              <UserIcon color={isDark ? "#FFFFFF" : "#000000"} size={20} />
+            </View>
             <View
               style={[
                 styles.headerDot,

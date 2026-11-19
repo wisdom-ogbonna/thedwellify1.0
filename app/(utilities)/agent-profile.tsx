@@ -5,27 +5,21 @@ import { agentApi } from "@/services/agent";
 import { pickCameraImage, pickLibraryImages } from "@/services/media-picker";
 import { router } from "expo-router";
 import {
-  BadgeCheck,
   BellRing,
-  Building2,
   Camera,
   ChevronRight,
-  CircleHelp,
-  LockKeyhole,
   LogOut,
   Mail,
   Moon,
   Phone,
   Sun,
-  UserRound,
-  Wallet,
 } from "lucide-react-native";
+import { UserIcon } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Appearance,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -215,20 +209,20 @@ export default function ProfileScreen() {
       subtitle: "Push, inquiries, leads & alerts",
       icon: BellRing,
       path: "/(utilities)/notifications",
-    // },
-    // {
-    //   id: "privacy",
-    //   label: "Privacy & Security",
-    //   subtitle: "Two-factor auth, passcodes, sessions",
-    //   icon: LockKeyhole,
-    //   path: "/(agent)/privacy",
-    // },
-    // {
-    //   id: "help",
-    //   label: "Help & Support",
-    //   subtitle: "Agent concierge 24/7, FAQs",
-    //   icon: CircleHelp,
-    //   path: "/(agent)/help",
+      // },
+      // {
+      //   id: "privacy",
+      //   label: "Privacy & Security",
+      //   subtitle: "Two-factor auth, passcodes, sessions",
+      //   icon: LockKeyhole,
+      //   path: "/(agent)/privacy",
+      // },
+      // {
+      //   id: "help",
+      //   label: "Help & Support",
+      //   subtitle: "Agent concierge 24/7, FAQs",
+      //   icon: CircleHelp,
+      //   path: "/(agent)/help",
     },
   ];
 
@@ -297,20 +291,9 @@ export default function ProfileScreen() {
                 onPress={handleAvatarUpload}
                 style={styles.avatarPressable}
               >
-                <Image
-                  source={{
-                    uri:
-                      profile?.avatar ||
-                      "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300",
-                  }}
-                  style={[
-                    styles.avatar,
-                    {
-                      borderColor: C.primary,
-                      backgroundColor: C.surface,
-                    },
-                  ]}
-                />
+                <View className="w-30 h-30 rounded-full border-2 border-blue-600 justify-center items-center bg-gray-200 dark:bg-gray-800">
+                  <UserIcon color={isDark ? "#FFFFFF" : "#000000"} size={50} />
+                </View>
 
                 {uploadingAvatar && (
                   <View
@@ -324,7 +307,7 @@ export default function ProfileScreen() {
                 )}
               </Pressable>
 
-              <Pressable
+              {/* <Pressable
                 onPress={handleAvatarUpload}
                 style={[
                   styles.cameraButton,
@@ -335,7 +318,7 @@ export default function ProfileScreen() {
                 ]}
               >
                 <Camera size={18} color={C.white} />
-              </Pressable>
+              </Pressable> */}
             </View>
 
             <View style={styles.identity}>
@@ -346,13 +329,6 @@ export default function ProfileScreen() {
                 >
                   {profile?.name || "Agent"}
                 </Text>
-
-                <BadgeCheck
-                  size={21}
-                  color={C.primary}
-                  fill={C.primary}
-                  stroke={C.background}
-                />
               </View>
 
               <View style={styles.contactLine}>

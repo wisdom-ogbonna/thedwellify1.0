@@ -595,11 +595,7 @@ export default function ChatThreadScreen() {
           contentContainerStyle={styles.thread}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={[styles.emptyThread, { color: theme.meta }]}>
-                {isPeerChat
-                  ? "Chat this agent directly. You can also share listings from Explore."
-                  : "Message this agent about the listing. Your chat stays on this property."}
-              </Text>
+              
             </View>
           }
           renderItem={({ item }) => {

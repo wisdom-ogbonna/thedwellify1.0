@@ -12,6 +12,7 @@ import {
   StarIcon,
   Trash2Icon,
 } from "lucide-react-native";
+import { UserIcon } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -187,12 +188,9 @@ export default function PremiumProfileScreen() {
           }}
         >
           <View className="relative">
-            <Image
-              source={{
-                uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRiex10nhyzatAU0O2nOebIcdFLSolwIyMb1QY5IjZEgA&s=10",
-              }}
-              className="w-24 h-24 rounded-full border-2 border-blue-600"
-            />
+            <View className="w-24 h-24 rounded-full border-2 border-blue-600 justify-center items-center bg-gray-200 dark:bg-gray-800">
+              <UserIcon color={isDark ? "#FFFFFF" : "#000000"} size={50} />
+            </View>
             <View
               style={{
                 position: "absolute",
@@ -226,15 +224,11 @@ export default function PremiumProfileScreen() {
               color: "#2563EB",
               marginTop: 4,
               letterSpacing: 1,
-              textTransform: "uppercase",
+              textTransform: "lowercase",
             }}
           >
-            DWELLIFY USER • Joined 2023
+            {profile?.email}
           </Text>
-
-          <TouchableOpacity className="mt-4 bg-blue-600 px-6 py-2 rounded-full shadow-none">
-            <Text className="text-white text-xs font-bold">Edit Profile</Text>
-          </TouchableOpacity>
 
           {/* User Metrics Boxes */}
           <View className="flex-row justify-center gap-4 mt-6 w-full">

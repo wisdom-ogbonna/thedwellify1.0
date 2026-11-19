@@ -51,10 +51,6 @@ export default function PremiumProfileScreen() {
           <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB', marginTop: 4, letterSpacing: 1, textTransform: 'uppercase' }}>
             Platinum Member • Joined 2023
           </Text>
-          
-          <TouchableOpacity className="mt-4 bg-blue-600 px-6 py-2 rounded-full shadow-none">
-            <Text className="text-white text-xs font-bold">Edit Profile</Text>
-          </TouchableOpacity>
 
           {/* User Metrics Boxes */}
           <View className="flex-row justify-center space-x-4 mt-6 w-full">
