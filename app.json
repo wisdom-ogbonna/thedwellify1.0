@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "config": {
-        "googleMapsApiKey": "AIzaSyDVc-Wfofz_fpi397Ror_9YgI7PiuBjzbc"
+        "googleMapsApiKey": "AIzaSyD8nkFMgK28ykx_I9g-UQv7tS0xivPnDfs"
       },
       "bundleIdentifier": "com.doph574.dwellifyapp",
       "infoPlist": {
@@ -28,7 +28,7 @@
       "googleServicesFile": "./google-services.json",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDVc-Wfofz_fpi397Ror_9YgI7PiuBjzbc"
+          "apiKey": "AIzaSyD8nkFMgK28ykx_I9g-UQv7tS0xivPnDfs"
         }
       },
       "adaptiveIcon": {
